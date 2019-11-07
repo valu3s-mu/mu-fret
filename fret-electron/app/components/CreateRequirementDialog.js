@@ -11,7 +11,7 @@
 // TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
 // ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
 // OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT UMENTATION, IF PROVIDED, WILL CONFORM TO
+// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
 // THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
 // ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
 // RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
@@ -58,12 +58,6 @@ import ExpansionPanel from '@material-ui/core/ExpansionPanel';
 import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
 import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import InProgressIcon from '@material-ui/icons/MoreHoriz';
-import PauseIcon from '@material-ui/icons/Pause';
-import CompletedIcon from '@material-ui/icons/Done';
-import AttentionIcon from '@material-ui/icons/PriorityHigh';
-import TableCell from "@material-ui/core/TableCell";
-import DeprecatedIcon from "@material-ui/icons/Close";
 
 import styles from './CreateRequirementDialog.css';
 import Instructions from './Instructions';
@@ -71,11 +65,10 @@ import SlateEditor2 from './SlateEditor2';
 import VariablesSortableTable from './VariablesSortableTable';
 
 import templates from '../../templates/templates';
-import {getRequirementStyle} from "../utils/utilityFunctions";
 
 const db = require('electron').remote.getGlobal('sharedObj').db;
 const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
-const constants = require('../parser/Constants');
+
 const uuidv1 = require('uuid/v1');
 
 const formStyles = theme => ({
@@ -105,15 +98,7 @@ const formStyles = theme => ({
   heading: {
   fontSize: theme.typography.pxToRem(16),
   fontWeight: theme.typography.fontWeightRegular,
-  },
-  dialogTitle: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  selectRoot: {
-    width: 60
-  },
+},
 });
 
 class CreateRequirementDialog extends React.Component {
@@ -125,7 +110,6 @@ class CreateRequirementDialog extends React.Component {
     rationale: '',
     comments:'',
     focus: '',
-    status: '',
     selectedTemplate: -1,
     tabValue: 0,
   };
@@ -175,34 +159,34 @@ class CreateRequirementDialog extends React.Component {
     var oldModes = [];
 
     if (dbrev != undefined){
-      db.get(dbid).then(function(){
-        if (semantics){
-          if (semantics.variables && semantics.variables.regular){
-            oldVariables = oldVariables.concat(semantics.variables.regular);
+      db.get(dbid).then(function(doc){
+        if (doc.semantics){
+          if (doc.semantics.variables && doc.semantics.variables.regular){
+            oldVariables = oldVariables.concat(doc.semantics.variables.regular);
           }
         }
         oldVariables.forEach(function(oldv){
           var modeldbidOld = project + semantics.component_name + oldv;
           if (!semantics.variables.regular.includes(oldv)){
-            modeldb.get(modeldbidOld).then(function(vOld) {
-              if (vOld.reqs.length > 1) {
-                var index = vOld.reqs.indexOf(reqid);
+            modeldb.get(modeldbidOld).then(function(vdocOld) {
+              if (vdocOld.reqs.length > 1) {
+                var index = vdocOld.reqs.indexOf(reqid);
                 if (index > -1){
                   return modeldb.put({
                     _id: modeldbidOld,
-                    _rev: vOld._rev,
+                    _rev: vdocOld._rev,
                     project: project,
                     component_name: semantics.component_name,
                     variable_name: oldv,
-                    reqs: vOld.reqs.splice(index,1),
+                    reqs: vdocOld.reqs.splice(index,1),
                     dataType: '',
                     idType: '',
                     description: '',
                     assignment: '',
                     modeRequirement: '',
-                    model: false,
-                    modelComponent: vOld.modelComponent,
-                    model_id: vOld.model_id
+                    modeldoc: false,
+                    modelComponent: vdocOld.modelComponent,
+                    modeldoc_id: vdocOld.modeldoc_id
                   }).then (function (response) {
                   self.state.dialogCloseListener(true, newReqId);
                 }).catch(function (err) {
@@ -211,7 +195,7 @@ class CreateRequirementDialog extends React.Component {
                   })
                 }
              } else {
-               modeldb.remove(vOld, function(err, response) {
+               modeldb.remove(vdocOld, function(err, response) {
                  if (err) {
                    self.state.dialogCloseListener(false);
                    return console.log(err);
@@ -224,33 +208,33 @@ class CreateRequirementDialog extends React.Component {
            })
           }
         })
-        if (semantics){
-          if (semantics.variables && semantics.variables.modes){
-            oldModes = oldModes.concat(semantics.variables.modes);
+        if (doc.semantics){
+          if (doc.semantics.variables && doc.semantics.variables.modes){
+            oldModes = oldModes.concat(doc.semantics.variables.modes);
           }
         }
         oldModes.forEach(function(oldv){
           var modeldbidOld = project + semantics.component_name + oldv;
           if (!semantics.variables.modes.includes(oldv)){
-            modeldb.get(modeldbidOld).then(function(vOld) {
-              if (vOld.reqs.length > 1) {
-                var index = vOld.reqs.indexOf(reqid);
+            modeldb.get(modeldbidOld).then(function(vdocOld) {
+              if (vdocOld.reqs.length > 1) {
+                var index = vdocOld.reqs.indexOf(reqid);
                 if (index > -1){
                   return modeldb.put({
                     _id: modeldbidOld,
-                    _rev: vOld._rev,
+                    _rev: vdocOld._rev,
                     project: project,
                     component_name: semantics.component_name,
                     variable_name: oldv,
-                    reqs: vOld.reqs.splice(index,1),
-                    dataType: v.dataType,
-                    idType: v.idType,
+                    reqs: vdocOld.reqs.splice(index,1),
+                    dataType: vdoc.dataType,
+                    idType: vdoc.idType,
                     description: '',
                     assignment: '',
                     modeRequirement: '',
-                    model: false,
-                    modelComponent: v.modelComponent,
-                    model_id: v.model_id
+                    modeldoc: false,
+                    modelComponent: vdoc.modelComponent,
+                    modeldoc_id: vdoc.modeldoc_id
                   }).then (function (response) {
                   self.state.dialogCloseListener(true, newReqId);
                 }).catch(function (err) {
@@ -259,7 +243,7 @@ class CreateRequirementDialog extends React.Component {
                   })
                 }
              } else {
-               modeldb.remove(vOld, function(err, response) {
+               modeldb.remove(vdocOld, function(err, response) {
                  if (err) {
                    self.state.dialogCloseListener(false);
                    return console.log(err);
@@ -285,7 +269,6 @@ class CreateRequirementDialog extends React.Component {
         project : this.state.project,
         rationale : this.state.rationale,
         comments : this.state.comments,
-        status: this.state.status,
         fulltext : fulltext,
         semantics : semantics,
         template : template,
@@ -303,13 +286,13 @@ class CreateRequirementDialog extends React.Component {
     if (semantics && semantics.variables){
       semantics.variables.regular.forEach(function(variable){
         var modeldbid = project + semantics.component_name + variable;
-        modeldb.get(modeldbid).then(function (v){
+        modeldb.get(modeldbid).then(function (vdoc){
           var oldReqs = [];
-          oldReqs = oldReqs.concat(v.reqs);
+          oldReqs = oldReqs.concat(vdoc.reqs);
           if (oldReqs.indexOf(reqid) === -1) oldReqs.push(reqid);
           return modeldb.put({
             _id: modeldbid,
-            _rev: v._rev,
+            _rev: vdoc._rev,
             project: project,
             component_name: semantics.component_name,
             variable_name: variable,
@@ -319,9 +302,9 @@ class CreateRequirementDialog extends React.Component {
             description: '',
             assignment: '',
             modeRequirement: '',
-            model: false,
-            modelComponent: v.modelComponent,
-            model_id: v.model_id
+            modeldoc: false,
+            modelComponent: vdoc.modelComponent,
+            modeldoc_id: vdoc.modeldoc_id
           }).then(function (response) {
             console.log(response);
             self.state.dialogCloseListener(true, newReqId);
@@ -343,9 +326,9 @@ class CreateRequirementDialog extends React.Component {
               description: '',
               assignment: '',
               modeRequirement: '',
-              model: false,
+              modeldoc: false,
               modelComponent: '',
-              model_id: ''
+              modeldoc_id: ''
             }).then(function (response) {
                 console.log(response);
                 self.state.dialogCloseListener(true, newReqId);
@@ -357,26 +340,26 @@ class CreateRequirementDialog extends React.Component {
     })
     semantics.variables.modes.forEach(function(variable){
       var modeldbid = project + semantics.component_name + variable;
-      modeldb.get(modeldbid).then(function (v){
+      modeldb.get(modeldbid).then(function (vdoc){
         var oldReqs = [];
-        oldReqs = oldReqs.concat(v.reqs);
+        oldReqs = oldReqs.concat(vdoc.reqs);
         if (oldReqs.indexOf(reqid) === -1) oldReqs.push(reqid);
         return modeldb.put({
           _id: modeldbid,
-          _rev: v._rev,
+          _rev: vdoc._rev,
           project: project,
           component_name: semantics.component_name,
           variable_name: variable,
           reqs: oldReqs,
-          dataType: v.dataType,
-          tool: v.tool,
-          idType: v.idType,
-          description: v.description,
-          assignment: v.assignment,
-          modeRequirement: v.modeRequirement,
-          model: v.model,
-          modelComponent: v.modelComponent,
-          model_id: v.model_id
+          dataType: vdoc.dataType,
+          tool: vdoc.tool,
+          idType: vdoc.idType,
+          description: vdoc.description,
+          assignment: vdoc.assignment,
+          modeRequirement: vdoc.modeRequirement,
+          modeldoc: vdoc.modeldoc,
+          modelComponent: vdoc.modelComponent,
+          modeldoc_id: vdoc.modeldoc_id
         }).then(function (response) {
           console.log(response);
           self.state.dialogCloseListener(true, newReqId);
@@ -398,9 +381,9 @@ class CreateRequirementDialog extends React.Component {
             description: '',
             assignment: '',
             modeRequirement: '',
-            model: false,
+            modeldoc: false,
             modelComponent: '',
-            model_id: ''
+            modeldoc_id: ''
           }).then(function (response) {
               console.log(response);
               self.state.dialogCloseListener(true, newReqId);
@@ -460,7 +443,6 @@ class CreateRequirementDialog extends React.Component {
               parent_reqid: parentReqId,
               rationale: '',
               comments: '',
-              status: '',
               focus: '',
               selectedTemplate: -1,
             }
@@ -477,7 +459,6 @@ class CreateRequirementDialog extends React.Component {
               parent_reqid: props.editRequirement.parent_reqid,
               rationale: props.editRequirement.rationale,
               comments: props.editRequirement.comments,
-              status: props.editRequirement.status || '',
               focus: '',
               selectedTemplate,
             }
@@ -521,13 +502,6 @@ class CreateRequirementDialog extends React.Component {
     const templateValues = isRequirementUpdate ? edittingRequirement.template : undefined
     const requirementFields = this.stepper ? this.stepper.getRequirementFields() : undefined;
     const requirementText = requirementFields ? requirementFields.fulltext : undefined;
-    const semantics = isRequirementUpdate ? edittingRequirement.semantics : undefined;
-    const statusSelectStyle = {
-      borderStyle: 'None',
-      borderWidth: 1,
-      borderRadius: 5,
-    }
-    const colorStyle = isRequirementUpdate ? getRequirementStyle({semantics, fulltext},false) : 'req-grey';
     return (
       <div>
         <Dialog
@@ -539,39 +513,7 @@ class CreateRequirementDialog extends React.Component {
         >
           <div className={styles.layout}>
             <div className={styles.form}>
-            <DialogTitle id="form-dialog-title">
-                <div className={classes.dialogTitle}>
-                  {dialogTitle}
-                  <FormControl >
-                    <InputLabel id="status">Status</InputLabel>
-                    <Select
-                      classes={{ root: classes.selectRoot }}
-                      style={statusSelectStyle}
-                      disableUnderline
-                      className={colorStyle}
-                      value={this.state.status}
-                      onChange={this.handleTextFieldChange('status')}
-                    >
-                      <MenuItem value="None"/>
-                      <MenuItem value={'in progress'}>
-                        <Tooltip title="In progress"><InProgressIcon className={classes.inProgressIcon}/></Tooltip>
-                      </MenuItem>
-                      <MenuItem value={'paused'}>
-                        <Tooltip title="Paused"><PauseIcon className={classes.pauseIcon}/></Tooltip>
-                      </MenuItem>
-                      <MenuItem value={'completed'}>
-                        <Tooltip title="Completed"><CompletedIcon className={classes.completedIcon}/></Tooltip>
-                      </MenuItem>
-                      <MenuItem value={'attention'}>
-                        <Tooltip title="Attention"><AttentionIcon className={classes.attentionIcon}/></Tooltip>
-                      </MenuItem>
-                      <MenuItem value={'deprecated'}>
-                        <Tooltip title="Deprecated"><DeprecatedIcon/></Tooltip>
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                </div>
-              </DialogTitle>
+              <DialogTitle id="form-dialog-title">{dialogTitle}</DialogTitle>
               <Divider/>
               <DialogContent>
                     <DialogContentText>
