@@ -1,15 +1,15 @@
 // *****************************************************************************
 // Notices:
-// 
+//
 // Copyright � 2019 United States Government as represented by the Administrator
 // of the National Aeronautics and Space Administration.  All Rights Reserved.
-// 
+//
 // Disclaimers
-// 
+//
 // No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
 // ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, 
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, 
+// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
+// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
 // OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
 // ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
 // THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
@@ -18,7 +18,7 @@
 // RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 // DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
 // PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-// 
+//
 // Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
 // THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
 // ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
@@ -57,29 +57,14 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import ListIcon from '@material-ui/icons/List';
 import EditIcon from '@material-ui/icons/Edit';
 import AddIcon from '@material-ui/icons/AddCircle';
-// status icons
-import InProgressIcon from '@material-ui/icons/MoreHoriz';
-import RemoveIcon from '@material-ui/icons/Remove';
-import PauseIcon from '@material-ui/icons/Pause';
-import CompletedIcon from '@material-ui/icons/Done';
-import AttentionIcon from '@material-ui/icons/PriorityHigh';
 import { lighten } from '@material-ui/core/styles/colorManipulator';
 
 import DisplayRequirementDialog from './DisplayRequirementDialog';
 import CreateRequirementDialog from './CreateRequirementDialog';
 import DeleteRequirementDialog from './DeleteRequirementDialog';
 
-// select and menu for status column
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-
 import ExportIcon from '@material-ui/icons/ArrowUpward';
 
-import VariablesView from './VariablesView';
-import * as d3 from "d3";
-import {getRequirementStyle} from "../utils/utilityFunctions";
-
-const constants = require('../parser/Constants');
 const sharedObj = require('electron').remote.getGlobal('sharedObj');
 
 const db = sharedObj.db;
@@ -88,10 +73,9 @@ const system_dbkeys = sharedObj.system_dbkeys;
 let dbChangeListener = undefined;
 
 let counter = 0;
-// status is also saved in database
-function createData(dbkey, rev, reqid, summary, project, status, semantics, fulltext) {
+function createData(dbkey, rev, reqid, summary, project) {
   counter += 1;
-  return { rowid: counter, dbkey, rev, reqid, summary, project, status: status || 'None', semantics, fulltext};
+  return { rowid: counter, dbkey, rev, reqid, summary, project };
 }
 
 function desc(a, b, orderBy) {
@@ -100,8 +84,8 @@ function desc(a, b, orderBy) {
     element_a = a[orderBy]
     element_b = b[orderBy]
   } else {
-    element_a = a[orderBy].toLowerCase().trim();
-    element_b = b[orderBy].toLowerCase().trim();
+    element_a = a[orderBy].toLowerCase().trim()
+    element_b = b[orderBy].toLowerCase().trim()
   }
 
   if (element_b < element_a)
@@ -126,12 +110,11 @@ function getSorting(order, orderBy) {
 }
 
 const rows = [
-  { id: 'status', numeric: false, disablePadding: false, label: 'Status' },
   { id: 'reqid', numeric: false, disablePadding: false, label: 'ID' },
   { id: 'add', numeric: false, disablePadding: false, label: '' },
   { id: 'summary', numeric: false, disablePadding: false, label: 'Summary' },
   { id: 'project', numeric: false, disablePadding: false, label: 'Project' },
-]
+];
 
 class SortableTableHead extends React.Component {
   createSortHandler = property => event => {
@@ -223,7 +206,7 @@ const toolbarStyles = theme => ({
 });
 
 let TableToolbar = props => {
-  const { numSelected, classes, enableBulkChange, bulkChangeEnabler, deleteSelection, handleCoCoSpecWindow } = props;
+  const { numSelected, classes, enableBulkChange, bulkChangeEnabler, deleteSelection } = props;
 
   return (
     <Toolbar
@@ -255,11 +238,6 @@ let TableToolbar = props => {
                 <DeleteIcon />
               </IconButton>
             </Tooltip>
-            <IconButton onClick={() => handleCoCoSpecWindow()}>
-              <Tooltip title='Export Verification Code'>
-                <ExportIcon/>
-              </Tooltip>
-            </IconButton>
             <Tooltip title="Exit Bulk Change">
               <IconButton aria-label="Close Bulk Change" onClick={() => bulkChangeEnabler()}>
                 <CloseIcon />
@@ -268,16 +246,11 @@ let TableToolbar = props => {
           </div>
         ) : (
           <div className={classes.toolbar}>
-            <IconButton aria-label="Export Verification Code" onClick={() => handleCoCoSpecWindow()}>
-              <Tooltip title='Export Verification Code'>
-                <ExportIcon color='secondary'/>
-              </Tooltip>
-            </IconButton>
-            <IconButton aria-label="Bulk Change" onClick={() => bulkChangeEnabler()}>
-              <Tooltip title="Bulk Change">
-                <ListIcon color='secondary'/>
-              </Tooltip>
-            </IconButton>
+          <IconButton aria-label="Bulk Change" onClick={() => bulkChangeEnabler()}>
+            <Tooltip title="Bulk Change">
+            <ListIcon color='secondary'/>
+            </Tooltip>
+          </IconButton>
           </div>
         )}
       </div>
@@ -290,11 +263,7 @@ TableToolbar.propTypes = {
   numSelected: PropTypes.number.isRequired,
   enableBulkChange: PropTypes.bool.isRequired,
   bulkChangeEnabler: PropTypes.func.isRequired,
-  handleCoCoSpecWindow: PropTypes.func.isRequired
 };
-
-
-
 
 TableToolbar = withStyles(toolbarStyles)(TableToolbar);
 
@@ -309,22 +278,7 @@ const styles = theme => ({
   tableWrapper: {
     overflowX: 'auto',
   },
-  // style for status select button
-  select: {
-    borderStyle: 'None',
-    borderWidth: 1,
-    borderRadius: 5,    
-    width: 45,
-    height: 30,
-  }
 });
-
-// color to match select background to requirement bubble color
-const COLOR_RANGE = ["hsl(0, 0%, 80%)", "hsl(0, 0%, 20%)"]
-const colorRange= d3.scaleLinear()
-  .domain([1, 7])
-  .range(COLOR_RANGE)
-  .interpolate(d3.interpolateHcl);
 
 class SortableTable extends React.Component {
   state = {
@@ -343,8 +297,7 @@ class SortableTable extends React.Component {
     deleteDialogOpen: false,
     snackbarOpen: false,
     selectedProject: 'All Projects',
-    bulkChangeMode: false,
-    cocospecMode: false
+    bulkChangeMode: false
   };
 
   constructor(props){
@@ -389,30 +342,24 @@ class SortableTable extends React.Component {
   synchStateWithDB() {
     if (!this.mounted) return;
 
-    const { selectedProject } = this.props;
+    const { selectedProject } = this.props
     const filterOff = selectedProject == 'All Projects'
+
     db.allDocs({
       include_docs: true,
     }).then((result) => {
-      const data = result.rows
-        .filter(r => !system_dbkeys.includes(r.key))
-        .filter(r => filterOff || r.doc.project == selectedProject)      
-        .map(r => {
-          return createData(r.doc._id, r.doc._rev, r.doc.reqid, r.doc.fulltext, r.doc.project, r.doc.status, r.doc.semantics, r.doc.fulltext);
-        });
       this.setState({
-        data,
+        data: result.rows
+                .filter(r => !system_dbkeys.includes(r.key))
+                .filter(r => filterOff || r.doc.project == selectedProject)
+                .map(r => {
+                  return createData(r.doc._id, r.doc._rev, r.doc.reqid, r.doc.fulltext, r.doc.project)
+                })
+                .sort((a, b) => {return a.reqid > b.reqid})
       })
     }).catch((err) => {
       console.log(err);
     });
-  }
-
-  handleCoCoSpecWindow = () => {
-    const { classes, selectedProject } = this.props;
-    this.setState({
-      cocospecMode : !this.state.cocospecMode
-    })
   }
 
   handleEnableBulkChange = () => {
@@ -433,7 +380,7 @@ class SortableTable extends React.Component {
     })
   }
 
-  handleRequirementDialogOpen = (row) => event => {event.stopPropagation();
+  handleRequirementDialogOpen = (row) => {
     if (row.dbkey) {
       db.get(row.dbkey).then((doc) => {
         doc.dbkey = row.dbkey
@@ -461,7 +408,7 @@ class SortableTable extends React.Component {
     })
   }
 
-  handleAddChildRequirement = (selectedReqId, parentProject) => event => {event.stopPropagation();
+  handleAddChildRequirement = (selectedReqId, parentProject) => {
     this.setState({
       createDialogOpen: true,
       selectedRequirement: {},
@@ -560,29 +507,14 @@ class SortableTable extends React.Component {
 
   isSelected = id => this.state.selected.indexOf(id) !== -1;
 
-  // user select a status option from menu item 
-  handleChange = (event, row) => {
-    event.stopPropagation();    
-    if (row.dbkey) {
-      db.get(row.dbkey).then(function (doc) {
-        return db.put({ ...doc, status: event.target.value }, err => {
-          if (err) {
-            return console.log(err);
-          }
-        });
-      })
-    }
-  };
-
   render() {
     const { classes, selectedProject, existingProjectNames } = this.props;
-    const { data, order, orderBy, selected, rowsPerPage, page, bulkChangeMode, cocospecMode, snackBarDisplayInfo, selectionBulkChange, selectedRequirement } = this.state;
+    const { data, order, orderBy, selected, rowsPerPage, page, bulkChangeMode,
+       snackBarDisplayInfo, selectionBulkChange, selectedRequirement } = this.state;
     const emptyRows = rowsPerPage - Math.min(rowsPerPage, data.length - page * rowsPerPage);
     const title = 'Requirements: ' + selectedProject
     const selectionForDeletion = bulkChangeMode ? selectionBulkChange : [selectedRequirement]
 
-    if (this.state.cocospecMode){
-        return  <VariablesView selectedProject={selectedProject} existingProjectNames={existingProjectNames}/> };
     return (
       <div>
       <Typography variant='h6'>{title}
@@ -591,10 +523,8 @@ class SortableTable extends React.Component {
         <TableToolbar
           numSelected={selected.length}
           enableBulkChange={bulkChangeMode}
-          enableCoCoSpec={cocospecMode}
           bulkChangeEnabler={this.handleEnableBulkChange}
-          deleteSelection={this.handleDeleteSelectedRequirements}
-          handleCoCoSpecWindow={this.handleCoCoSpecWindow}/>
+          deleteSelection={this.handleDeleteSelectedRequirements}/>
         <div className={classes.tableWrapper}>
           <Table className={classes.table} aria-labelledby="tableTitle" padding="dense">
             <SortableTableHead
@@ -605,7 +535,6 @@ class SortableTable extends React.Component {
               onRequestSort={this.handleRequestSort}
               rowCount={data.length}
               enableBulkChange={bulkChangeMode}
-              enableCoCoSpec={cocospecMode}
             />
             <TableBody>{
                 stableSort(data, getSorting(order, orderBy))
@@ -613,9 +542,6 @@ class SortableTable extends React.Component {
                 .map(n => {
                   const isSelected = this.isSelected(n.dbkey);
                   const label = n.reqid ? n.reqid : 'NONE'
-                  // getting requirement bubble color
-                  const status = n.status;
-                  const colorStyle = getRequirementStyle(n,false);
                   if (this.state.bulkChangeMode) {
                     return (
                       <TableRow
@@ -630,34 +556,8 @@ class SortableTable extends React.Component {
                         <TableCell padding="checkbox">
                           <Checkbox checked={isSelected} />
                         </TableCell>
-                        <TableCell >
-                          <Select
-                            className={`${classes.select} ${colorStyle}`}
-                            disableUnderline
-                            value={status}
-                            onChange={(event) => this.handleChange(event, n)}
-                            onClick={event => event.stopPropagation()}
-                          >
-                            <MenuItem value="None"/>
-                            <MenuItem value={'in progress'}>
-                              <Tooltip title="In progress"><InProgressIcon/></Tooltip>
-                            </MenuItem>
-                            <MenuItem value={'paused'}>
-                              <Tooltip title="Paused"><PauseIcon/></Tooltip>
-                            </MenuItem>
-                            <MenuItem value={'completed'}>
-                              <Tooltip title="Completed"><CompletedIcon/></Tooltip>
-                            </MenuItem>
-                            <MenuItem value={'attention'}>
-                              <Tooltip title="Attention"><AttentionIcon/></Tooltip>
-                            </MenuItem>
-                            <MenuItem value={'deprecated'}>
-                              <Tooltip title="Deprecated"><CloseIcon/></Tooltip>
-                            </MenuItem>
-                          </Select>
-                        </TableCell>
                         <TableCell>
-                        <Button color='secondary' onClick={this.handleRequirementDialogOpen(n)}>
+                          <Button color='secondary' onClick={() => this.handleRequirementDialogOpen(n)}>
                             {label}
                           </Button>
                         </TableCell>
@@ -665,7 +565,7 @@ class SortableTable extends React.Component {
                           <Tooltip title="Add Child Requirement">
                             <IconButton
                               aria-label="Add Child Requirement"
-                              onClick={this.handleAddChildRequirement(n.reqid, n.project)}>
+                              onClick={() => this.handleAddChildRequirement(n.reqid, n.project)}>
                               <AddIcon/>
                             </IconButton>
                           </Tooltip>
@@ -676,34 +576,9 @@ class SortableTable extends React.Component {
                     );
                   } else {
                     return (
-                      <TableRow key={n.rowid}>                      
-                        <TableCell >
-                          <Select
-                            className={`${classes.select} ${colorStyle}`}
-                            disableUnderline
-                            value={status}
-                            onChange={(event) => this.handleChange(event, n)}
-                          >
-                            <MenuItem value="None"/>
-                            <MenuItem value={'in progress'}>
-                              <Tooltip title="In progress"><InProgressIcon/></Tooltip>
-                            </MenuItem>
-                            <MenuItem value={'paused'}>
-                              <Tooltip title="Paused"><PauseIcon/></Tooltip>
-                            </MenuItem>
-                            <MenuItem value={'completed'}>
-                              <Tooltip title="Completed"><CompletedIcon/></Tooltip>
-                            </MenuItem>
-                            <MenuItem value={'attention'}>
-                              <Tooltip title="Attention"><AttentionIcon/></Tooltip>
-                            </MenuItem>
-                            <MenuItem value={'deprecated'}>
-                              <Tooltip title="Deprecated"><CloseIcon/></Tooltip>
-                            </MenuItem>
-                          </Select>
-                        </TableCell>                        
+                      <TableRow key={n.rowid}>
                         <TableCell>
-                        <Button color='secondary' onClick={this.handleRequirementDialogOpen(n)}>
+                            <Button color='secondary' onClick={() => this.handleRequirementDialogOpen(n)}>
                               {label}
                             </Button>
                           </TableCell>
@@ -711,7 +586,7 @@ class SortableTable extends React.Component {
                             <Tooltip title="Add Child Requirement">
                               <IconButton
                                 aria-label="Add Child Requirement"
-                                onClick={this.handleAddChildRequirement(n.reqid, n.project)}>
+                                onClick={() => this.handleAddChildRequirement(n.reqid, n.project)}>
                                 <AddIcon />
                               </IconButton>
                             </Tooltip>
