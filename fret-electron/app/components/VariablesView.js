@@ -66,15 +66,14 @@ import MenuItem from '@material-ui/core/MenuItem';
 
 const sharedObj = require('electron').remote.getGlobal('sharedObj');
 const constants = require('../parser/Constants');
-const isDev = require('electron-is-dev');
-const utilities = require('../../support/utilities');
 const db = sharedObj.db;
+const modeldb = sharedObj.modeldb;
+const system_dbkeys = sharedObj.system_dbkeys;
+
 const fs = require('fs');
 const archiver = require('archiver');
 const app = require('electron').remote.app;
 const dialog = require('electron').remote.dialog;
-const modeldb = sharedObj.modeldb;
-const system_dbkeys = sharedObj.system_dbkeys;
 
 var dbChangeListener, modeldbChangeListener;
 let id = 0;
@@ -82,45 +81,6 @@ let id = 0;
 function createData(vID, cID, project, description) {
   id += 1;
   return {id ,vID, cID, project, description};
-}
-
-let ImportProjectModel = props => {
-  const {importProjectModel} = props;
-  return (
-    <IconButton aria-label="Import Model Information" onClick={() => importProjectModel()}>
-      <Tooltip title='Import Model Information.'>
-        <ImportIcon color='secondary' />
-      </Tooltip>
-    </IconButton>
-  );
-}
-
-ImportProjectModel.propTypes = {
-  importProjectModel: PropTypes.func.isRequired
-};
-
-let VariablesViewHeader = props => {
-  const { projectCompleted, importProjectModel, selectedProject} = props;
-  if (selectedProject === 'All Projects'){
-    return(
-      <Typography variant='subtitle1'>
-      Please choose a specific project
-      </Typography>
-    );
-  }
-  return (
-    <Typography variant='h6'>
-      Requirement Variables to Model Mapping: {selectedProject}
-      <ImportProjectModel
-        importProjectModel={importProjectModel}/>
-     </Typography>
-  );
-};
-
-VariablesViewHeader.propTypes = {
-  projectCompleted: PropTypes.bool.isRequired,
-  importProjectModel: PropTypes.func.isRequired,
-  selectedProject: PropTypes.string.isRequired
 }
 
 const styles = theme => ({
@@ -133,14 +93,71 @@ const styles = theme => ({
   heading: {
     fontSize: theme.typography.pxToRem(18),
     fontWeight: theme.typography.fontWeightRegular,
+    marginRight: theme.spacing.unit * 2,
   },
   formControl: {
     minWidth: 200,
-    marginBottom: theme.spacing.unit * 3,
     marginRight: theme.spacing.unit * 2
   },
-  buttonControl: {
+  selectEmpty: {
     marginTop: theme.spacing.unit * 2,
+  },
+});
+
+let VariablesViewHeader = props => {
+  const {classes, selectedProject, language, handleChange} = props;
+  if (selectedProject === 'All Projects'){
+    return(
+      <Typography variant='subtitle1'>
+      Please choose a specific project
+      </Typography>
+    );
+  }
+  return (
+    <div>
+      <Typography variant='h6'>
+        Requirement Variables to Model Mapping: {selectedProject}
+       </Typography>
+       <FormControl required className={classes.formControl}>
+         <InputLabel htmlFor="language-export-required"> Export Language</InputLabel>
+         <Select
+           value={language}
+           onChange={handleChange('language')}
+           inputProps={{
+             name: 'language',
+             id: 'language-export-required',
+           }}>
+           <MenuItem value="cocospec">CoCoSpec</MenuItem>
+           <MenuItem value="copilot">CoPilot</MenuItem>
+         </Select>
+       </FormControl>
+     </div>
+  );
+};
+
+VariablesViewHeader.propTypes = {
+  selectedProject: PropTypes.string.isRequired,
+  language: PropTypes.string.isRequired,
+  handleChange: PropTypes.func.isRequired
+}
+
+VariablesViewHeader = withStyles(styles)(VariablesViewHeader);
+
+
+
+const componentStyles = theme => ({
+  root: {
+    width: '100%',
+    marginTop: theme.spacing.unit * 3,
+    overflowX: 'auto',
+    flexWrap: 'wrap',
+  },
+  heading: {
+    fontSize: theme.typography.pxToRem(18),
+    fontWeight: theme.typography.fontWeightRegular,
+  },
+  buttonControl: {
+    marginRight: theme.spacing.unit * 100,
   },
   selectEmpty: {
     marginTop: theme.spacing.unit * 2,
@@ -148,14 +165,6 @@ const styles = theme => ({
 });
 
 class ComponentSummary extends React.Component {
-
-  state = {
-    language: '',
-  }
-
-  handleChange = name => event => {
-    this.setState({ [name]: event.target.value });
-  };
 
   getContractInfo(result) {
     var self = this;
@@ -276,7 +285,8 @@ class ComponentSummary extends React.Component {
     return properties;
   }
 
-  exportComponentCode = () => {
+  exportComponentCode = event => {
+    event.stopPropagation();
     const {component, selectedProject} = this.props;
     const {language} = this.state;
     const homeDir = app.getPath('home');
@@ -293,7 +303,6 @@ class ComponentSummary extends React.Component {
       if (filepath) {
         // create a file to stream archive data to.
         var output = fs.createWriteStream(filepath);
-        console.log(output);
         var archive = archiver('zip', {
           zlib: { level: 9 } // Sets the compression level.
         });
@@ -345,53 +354,26 @@ class ComponentSummary extends React.Component {
   }
 
   render() {
-    const {classes, component, completed} = this.props;
-    const {language} = this.state;
-    if (completed && language){
+    const {classes, component, completed, language} = this.props;
+    if ((completed && language)|| language === 'copilot'){
       return (
-        <div>
-        <FormControl required className={classes.formControl}>
-          <InputLabel htmlFor="language-export-required">Language</InputLabel>
-          <Select
-            value={language}
-            onChange={this.handleChange('language')}
-            inputProps={{
-              name: 'language',
-              id: 'language-export-required',
-            }}>
-            <MenuItem value="cocospec">CoCoSpec</MenuItem>
-            <MenuItem value="copilot">CoPilot</MenuItem>
-          </Select>
-        </FormControl>
         <Tooltip title='Export verification code.'>
+        <span>
           <Button size="small" onClick={this.exportComponentCode} color="secondary" variant='contained' className={classes.buttonControl}>
             Export
           </Button>
+          </span>
         </Tooltip>
-        </div>
       );
     } else {
       return (
-        <div>
-          <FormControl required className={classes.formControl}>
-            <InputLabel htmlFor="language-export-required">Language</InputLabel>
-            <Select
-              value={language}
-              onChange={this.handleChange('language')}
-              inputProps={{
-                name: 'language',
-                id: 'language-export-required',
-              }}>
-              <MenuItem value="cocospec">CoCoSpec</MenuItem>
-              <MenuItem value="copilot">CoPilot</MenuItem>
-            </Select>
-          </FormControl>
           <Tooltip title='To export verification code, please complete mandatory variable fields and export language first.'>
-            <Button size="small" color="secondary" disabled variant='contained' className={classes.buttonControl}>
-              Export
-            </Button>
+            <span>
+              <Button size="small" color="secondary" disabled variant='contained' className={classes.buttonControl}>
+                Export
+                </Button>
+            </span>
           </Tooltip>
-        </div>
       );
     }
   }
@@ -401,8 +383,11 @@ ComponentSummary.propTypes = {
   classes: PropTypes.object.isRequired,
   component: PropTypes.string.isRequired,
   completed: PropTypes.bool.isRequired,
-  selectedProject: PropTypes.string.isRequired
+  selectedProject: PropTypes.string.isRequired,
+  language: PropTypes.string.isRequired,
 };
+
+ComponentSummary = withStyles(componentStyles)(ComponentSummary);
 
 
 
@@ -412,8 +397,13 @@ class VariablesView extends React.Component {
     completedComponents: [],
     cocospecData: {},
     cocospecModes: {},
-    modelComponents: []
+    language: '',
   }
+
+  handleChange = name => event => {
+    event.stopPropagation();
+    this.setState({ [name]: event.target.value });
+  };
 
   constructor(props){
     super(props);
@@ -550,25 +540,6 @@ class VariablesView extends React.Component {
 
   synchStateWithModelDB () {
     if (!this.mounted) return;
-    var modelComponents= [];
-    const {selectedProject} = this.props,
-          self = this;
-    //TODO: Update here cocospec data
-    modeldb.find({
-      selector: {
-        project: selectedProject,
-        modeldoc: true
-      }
-    }).then(function (result){
-      result.docs.forEach(function(d){
-      if (!modelComponents.includes(d.component_name)) modelComponents.push(d.component_name);
-      })
-      self.setState({
-        modelComponents: modelComponents.sort((a, b) => {return a.toLowerCase().trim() > b.toLowerCase().trim()})
-      })
-    }).catch((err) => {
-      console.log(err);
-    });
   }
 
   checkComponentCompleted(component_name, project) {
@@ -600,75 +571,47 @@ class VariablesView extends React.Component {
     })
   }
 
-  importProjectModel = () => {
-    const {selectedProject} = this.props;
-    var homeDir = app.getPath('home');
-    var modelComponents = this.state.modelComponents;
-    var filepaths = dialog.showOpenDialog({
-      defaultPath : homeDir,
-      title : 'Import Simulink Model Information',
-      buttonLabel : 'Import',
-      filters: [
-        { name: "Documents", extensions: ['json'] }
-      ],
-      properties: ['openFile']})
-      if (filepaths && filepaths.length > 0) {
-      	  fs.readFile(filepaths[0], 'utf8',
-      		      function (err,buffer) {
-      			  if (err) throw err;
-              let content = utilities.replaceStrings([['\\"id\\"','\"_id\"']], buffer);
-      			  let data = JSON.parse(content);
-                    //console.log(data);
-              data.forEach((d) => {
-                d.project = selectedProject;
-              })
-              modeldb.bulkDocs(data)
-                .catch((err) => {
-                  console.log(err);
-                });
-      		  });
-         }
-  }
-
   render() {
     const self = this;
     const {classes, selectedProject, existingProjectNames} = this.props;
-    const {components, completedComponents, cocospecData, cocospecModes, modelComponents}= this.state;
+    const {components, completedComponents, cocospecData, cocospecModes, language}= this.state;
 
     return (
       <div>
           <div className={classes.actions}>
             <VariablesViewHeader
-              importProjectModel={this.importProjectModel}
-              projectCompleted={completedComponents.length === components.length}
-              selectedProject={selectedProject}/>
+              selectedProject={selectedProject}
+              language={language}
+              handleChange={this.handleChange}/>
           </div>
           <div className={classes.root}>
 
           {components.map(component => {
             return(
+              <div>
               <ExpansionPanel key={component}>
               <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography className={classes.heading}>{component}</Typography>
+                <ComponentSummary
+                  component = {component}
+                  classes = {classes}
+                  completed = {completedComponents.includes(component)}
+                  selectedProject={selectedProject}
+                  language={language}
+                />
               </ExpansionPanelSummary>
               <Divider />
                 <ExpansionPanelDetails>
                 <div>
-                  <ComponentSummary
-                    component = {component}
-                    classes = {classes}
-                    completed = {completedComponents.includes(component)}
-                    selectedProject={selectedProject}
-                  />
                   <VariablesSortableTable
                     selectedProject={selectedProject}
                     selectedComponent={component}
-                    modelComponents={modelComponents}
                     checkComponentCompleted={this.checkComponentCompleted}
                   />
                 </div>
                 </ExpansionPanelDetails>
               </ExpansionPanel>
+              </div>
             );
           })}
           </div>
