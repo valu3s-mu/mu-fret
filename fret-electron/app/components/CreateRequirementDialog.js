@@ -74,7 +74,7 @@ import templates from '../../templates/templates';
 
 const db = require('electron').remote.getGlobal('sharedObj').db;
 const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
-
+const constants = require('../parser/Constants');
 const uuidv1 = require('uuid/v1');
 
 const formStyles = theme => ({
@@ -111,7 +111,7 @@ const formStyles = theme => ({
     alignItems: 'center',
   },
   selectRoot: {
-    width: 70
+    width: 60
   },
 });
 
@@ -520,6 +520,24 @@ class CreateRequirementDialog extends React.Component {
     const templateValues = isRequirementUpdate ? edittingRequirement.template : undefined
     const requirementFields = this.stepper ? this.stepper.getRequirementFields() : undefined;
     const requirementText = requirementFields ? requirementFields.fulltext : undefined;
+    const semantics = isRequirementUpdate ? edittingRequirement.semantics : undefined;
+    const statusSelectStyle = {
+      borderStyle: 'None',
+      borderWidth: 1,
+      borderRadius: 5,
+    }
+    const colorStyle =
+      isRequirementUpdate ?
+        semantics
+        ? semantics.ft && [constants.nonsense_semantics,
+          constants.undefined_semantics,
+          constants.unhandled_semantics].indexOf(semantics.ft) < 0
+        ? 'req-leaf'
+        : constants.unhandled_semantics !== semantics.ft && fulltext
+          ? 'req-unformalized'
+          : 'req-grey'
+        : 'req-unformalized':
+        'req-grey';
     return (
       <div>
         <Dialog
@@ -538,6 +556,9 @@ class CreateRequirementDialog extends React.Component {
                     <InputLabel id="status">Status</InputLabel>
                     <Select
                       classes={{ root: classes.selectRoot }}
+                      style={statusSelectStyle}
+                      disableUnderline
+                      className={colorStyle}
                       value={this.state.status}
                       onChange={this.handleTextFieldChange('status')}
                     >
