@@ -1,6 +1,7 @@
-// Generated from NuSMV.g4 by ANTLR 4.7
+// Generated from NuSMV.g4 by ANTLR 4.8
 // jshint ignore: start
 var antlr4 = require('antlr4/index');
+
 
 
 var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
@@ -283,6 +284,12 @@ function NuSMVLexer(input) {
 NuSMVLexer.prototype = Object.create(antlr4.Lexer.prototype);
 NuSMVLexer.prototype.constructor = NuSMVLexer;
 
+Object.defineProperty(NuSMVLexer.prototype, "atn", {
+        get : function() {
+                return atn;
+        }
+});
+
 NuSMVLexer.EOF = antlr4.Token.EOF;
 NuSMVLexer.T__0 = 1;
 NuSMVLexer.T__1 = 2;
@@ -378,7 +385,6 @@ NuSMVLexer.prototype.ruleNames = [ "T__0", "T__1", "T__2", "T__3", "T__4",
                                    "WS" ];
 
 NuSMVLexer.prototype.grammarFileName = "NuSMV.g4";
-
 
 
 exports.NuSMVLexer = NuSMVLexer;

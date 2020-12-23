@@ -1,15 +1,15 @@
 // *****************************************************************************
 // Notices:
-// 
-// Copyright © 2019 United States Government as represented by the Administrator
+//
+// Copyright ï¿½ 2019 United States Government as represented by the Administrator
 // of the National Aeronautics and Space Administration.  All Rights Reserved.
-// 
+//
 // Disclaimers
-// 
+//
 // No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
 // ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, 
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, 
+// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
+// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
 // OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
 // ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
 // THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
@@ -18,7 +18,7 @@
 // RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 // DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
 // PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-// 
+//
 // Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
 // THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
 // ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
@@ -54,6 +54,7 @@ var execSync = require('child_process').execSync;
 
 const substitutionsCustomizeFret = [
   [constants.bound+'.0', '\$duration\$'],
+  [constants.conditionbound+'.0', '\$persistduration\$'],
   ['1', 'TRUE'], // and TRUE is 1, but we also have <$duration$+1
   [constants.boundplusone+'.0', '\$duration\$+1'],
   ['MODE', '\$scope_mode\$'],
@@ -67,7 +68,7 @@ const substitutionsCustomizeFret = [
   ['ACT1', '\$action1\$'],
   ['ACT2', '\$action2\$'],
   ['ACT', '\$action\$'],
-    ['STOPCOND', '\$stop_condition\$'],
+  ['STOPCOND', '\$stop_condition\$'],
   ['COND', '\$regular_condition\$'],
   ['<\\|\\[\=','O[='], // <|[=$duration$] ==> O[=$duration$]
   ['0', 'FALSE'] //SALT returns SMV format where FALSE is 0
@@ -163,9 +164,13 @@ function getCoCoSpecString (ptLTL, form) {
     if (form === 'ptExpanded')
       return cocospecSemantics.createCoCoSpecCode(ptLTL);
     else if (form === 'pt'){
+	if (constants.verboseSemanticsGenerator) console.log('*** getCoCoSpecString given: ' + ptLTL);
       var substitutions = utilities.removePairWithFirstElement(suggestedEndpointRewriteRules(form),'FTP');
+	if (constants.verboseSemanticsGenerator) console.log('*** getCoCoSpecString substs: ' + JSON.stringify(substitutions))
       var newPtLTL = utilities.replaceStrings(substitutions, ptLTL);
+	if (constants.verboseSemanticsGenerator) console.log('*** getCoCoSpecString intermediate: ' + newPtLTL)
       var cocospec = cocospecSemantics.createCoCoSpecCode(newPtLTL);
+	if (constants.verboseSemanticsGenerator) console.log('*** getCoCoSpecString returns: ' + cocospec);
       return cocospec
       //return cocospecSemantics.createCoCoSpecCode(newPtLTL);
     }
@@ -182,12 +187,11 @@ function get_LTL_from_old_SALT(SALT_string,SALT_env_var='SALT_HOME') {
   	var stdout = '';
   	try {
   	    compilation = execSync(SALT_command).toString();
-              stdout = execSync('/tmp/temp').toString();
+              stdout = execSync('/tmp/temp-salt').toString();
   	} catch (error) {
 	    console.log('SemanticsGenerator:get_LTL_from_old_SALT error:');
-            console.log(error);
+      console.log(error);
 	    console.log('SALT_string:\n' + SALT_string);
   	}
-
     return stdout;
   }

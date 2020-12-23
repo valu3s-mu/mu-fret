@@ -59,9 +59,20 @@ const SpecialCases =
 	   'historically (FTP implies (not RES))']
       ];
 
+var persistCondition = false;
 
 function determineBaseForm (negate, timing, condition) {
-  var cond = (condition=='regular')?'COND':'null';
+  // put a switch statement
+  var cond = 'null';
+  switch (condition) {
+    case 'persistsregular':
+    case 'regular':
+        cond = 'COND';
+      break;
+    default:
+      cond = 'null';
+  }
+
   var duration = 'BOUND';
   var property = 'RES';
   var stopCondition = 'STOPCOND'
@@ -141,8 +152,23 @@ function occursBeforeTime (duration, formula) {
 function previous(formula) {return `previous ${formula}`}
 
 function conditionTrigger (cond, left) {
+  if (!persistCondition)
+    return conditionTriggerSimple(cond, left);
+  else
+    return conditionTriggerTimed(cond, left, 'CONDBOUND');
+}
+
+function conditionTriggerSimple (cond, left) {
   return disjunction(`${cond} and previous (not (${cond}))`, `${cond} and ${left}`)
 }
+
+function conditionTriggerTimed (cond, left, duration) {
+  var persistsForDuration = `(historically timed[<${duration}] (${cond} and  (not ${left})))`;
+  var simpleTrigger = conditionTriggerSimple(cond, left);
+  var triggeredAtTime = `(previous timed[=${duration}] ${simpleTrigger})`;
+  return conjunction(triggeredAtTime, persistsForDuration);
+}
+
 
 function noCondInterval (cond, start) {
   return persistsTo(negate(cond), start)
@@ -209,7 +235,9 @@ function notAlways(property, cond='null') {
 // satisfy all previous ones!
 function eventually(property, cond='null') {
   var formula = occursBy(property, left);
+  console.log("Dim1");
   if (cond != 'null') {
+    console.log("Dim2");
     let trigger = conditionTrigger(cond,left);
     formula = disjunction(noCondInterval(cond,left),
                           occursBy(property, trigger))
@@ -378,13 +406,15 @@ exports.getEndPointRewriteRules = () => {
 // we use strong semantics as a default
 
 exports.getFormalization = (key, neg, leftP, rightP, options) => {
-
   let specialCase =  utilities.matchingBase2(key, SpecialCases)
   if (specialCase !== 'no_match' && specialCase[1](options)) return specialCase[2];
 
   if (options.sem === 'infinite') return constants.nonsense_semantics;
 
+  persistCondition = (key[1] == 'persistsregular')?true:false;
   var main_formula = determineBaseForm(neg, key[2], key[1]);
+
+  console.log("\n\nDimitra: " + key[1] + "    " + main_formula);
 
   if (main_formula == 'no_match')
   return constants.undefined_semantics

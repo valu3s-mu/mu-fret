@@ -42,7 +42,7 @@ module.exports = Object.freeze({
         FRET_TEST_RANGE_SCTR="llss", means
 
           scope: use large set
-          conditione: use large set
+          condition: use large set
           timing: use small set
           response: use small set
 
@@ -53,22 +53,21 @@ module.exports = Object.freeze({
 
   // All possible cases of requirements fields that need to be handled by the semantics
   // Consider some automatic check or generation with the grammar or SemanticsAnalyzer
-  fullScope : /*['null'],//*/['null', 'in', 'onlyAfter', 'after', 'onlyBefore', 'before', 'onlyIn', 'notin'].sort(),
-  fullCondition : /*['regular'],//*/['null', 'regular', 'only'].sort(),
-    fullTiming : /*['within'],//*/['always','null','immediately','eventually', 'never', 'for','within','after','until','before','next'].sort(),
-  fullResponse : /*['satisfaction'],//*/['satisfaction','action','order','not_order'].sort(),
+  fullScope : ['null'],//*/['null', 'in', 'onlyIn', 'notin', 'before', 'onlyBefore', 'after', 'onlyAfter'].sort(),
+  fullCondition : ['persistsregular'],//*/['null', 'regular', 'persistsregular'].sort(),
+    fullTiming : ['immediately'],//*/['null','immediately','next', 'eventually', 'always', 'never', 'for','within','after','until','before'].sort(),
+  fullResponse : /*['satisfaction'],//*/['satisfaction'/*,'action','order','not_order'*/].sort(),
 
   // We want to test with Bamboo only the combinations of keys for which semantics has been defined and tested -- to get more meaningful test results
-  testScope : ['null', 'in', 'onlyAfter', 'after', 'onlyBefore', 'before', 'onlyIn', 'notin'].sort(),
-  testCondition : ['null', 'regular', /*'only'*/].sort(),
-  testTiming : ['always','null','immediately','eventually', 'never', 'for','within','after','until','before','next'].sort(),
-  //testTiming : ['always','null','immediately','eventually', 'never', 'for','within','after'],
-  testResponse : ['satisfaction'/*,'action','order','not_order'*/].sort(),
+  testScope : ['null', 'in', 'onlyIn', 'notin', 'before', 'onlyBefore', 'after', 'onlyAfter'].sort(),
+  testCondition : ['null', 'regular', 'persist'].sort(),
+  testTiming : ['null','immediately','next', 'eventually', 'always', 'never', 'for','within','after','until','before'].sort(),
+  testResponse : ['satisfaction'].sort(),
 
 // Configuration - console logs
   verboseTesting: false,
   verboseSemanticsAnalyzer: false,
-  verboseSemanticsGenerator: false,
+  verboseSemanticsGenerator: true,
   verboseCacheSemantics:false,
   verboseCoCoSpecSemantics:true,
 
@@ -83,6 +82,7 @@ module.exports = Object.freeze({
 
   bound: 555,
   boundplusone: 556,
+  conditionbound: 444,
 
 // describes cases that we think do not make sense even though the grammar allows them
   nonsense_semantics: "No meaning assigned.",

@@ -37,7 +37,8 @@ const testOptions = require('./testingOptions');
 exports.applyConstraints =
     (scope, condition, timing, response,
      modeIntervals, conditionIntervals, stopCondIntervals, responseIntervals,
-     traceInterval, n) => {
+     traceInterval, n, npersist=n) => {
+       // npersist is for conditions - by default equal to n for simplicity
 
   var result = 'undefined';
 
@@ -45,21 +46,23 @@ exports.applyConstraints =
   var modesArray = this.activeScopeIntervals(scope,traceInterval,modeIntervals);
 
   var timingFunction = timing;
-  if (condition == 'regular') {
+  if (condition != 'null') {
     timingFunction = timingFunction + 'Cond'
-    //console.log("************  CHECK THIS OUT **************")
   }
+
   if (testOptions.verboseOracle) {
     console.log('\nKey: ' + scope + ',' + condition + ',' + timing + ',' + response)
     console.log('modeIntervals: ' + intervalLogic.intervalsToString(modeIntervals))
     console.log('active intervals: ' + intervalLogic.intervalsToString(modesArray))
   }
+
   var resultArray = [];
 
   for (let scopeInterval of modesArray) {
-      if (condition == 'regular') {
+  if (condition != 'null') {
+    // we must be careful as we expand the condition types
 	  for (let conditionInterval of conditionIntervals) {
-	      let trigger = findConditionTrigger(scopeInterval, conditionInterval);
+	      let trigger = findConditionTrigger(scopeInterval, conditionInterval, (condition=='persistsregular'), npersist);
 	      if (testOptions.verboseOracle)
               console.log('Trigger: scopeInterval: ' + intervalLogic.intervalToString(scopeInterval)
 			  + ' conditionInterval: ' + intervalLogic.intervalToString(conditionInterval)
@@ -72,12 +75,12 @@ exports.applyConstraints =
 		      resultArray.push(res)
 	      }
 	  }
-      }
-      else {
+  }
+  else {  // no condition
 	  res = this.checkTimings(n, scope, scopeInterval, null, stopCondIntervals,responseIntervals, timingFunction, traceInterval);
           if (res != null) // means it's a don't care
 	      resultArray.push(res)
-      }
+  }
   }
   //console.log(JSON.stringify(resultArray))
   return resultArray.every((x) => x)
@@ -184,13 +187,27 @@ exports.activeScopeIntervals = (scope, traceInterval, modeIntervals) => {
     return intervalLogic.removeEmptyIntervals(modesArray);
 }
 
-function findConditionTrigger(scopeInterval, conditionInterval) {
-  var triggerPoint = -1;
+function findConditionTrigger(scopeInterval, conditionInterval, persists, duration) {
+  var notrigger = -1;
+  var triggerPoint = notrigger;
+
   if (intervalLogic.includesPoint(scopeInterval,conditionInterval.left)) {
-    triggerPoint = conditionInterval.left;
-  } else if (intervalLogic.includesPoint(conditionInterval,scopeInterval.left)) {
+      triggerPoint = conditionInterval.left;
+    } else if (intervalLogic.includesPoint(conditionInterval,scopeInterval.left)) {
       triggerPoint = scopeInterval.left;
-  }
+    }
+ // if condition needs to persist we move the trigger point by duration, if applicable
+if ((triggerPoint!=notrigger) && persists && (duration>1)) {
+  var newTrigger = triggerPoint+duration-1;
+  console.log("\n\n1.******* " + newTrigger);
+  if (intervalLogic.includesPoint(scopeInterval, newTrigger) &&
+      intervalLogic.includesPoint(conditionInterval, newTrigger))
+      triggerPoint = newTrigger;
+  else
+      triggerPoint = notrigger;
+      console.log("2.******* " + triggerPoint);
+}
+
   return {point:triggerPoint, scope:intervalLogic.createInterval(triggerPoint, scopeInterval.right)}
 }
 

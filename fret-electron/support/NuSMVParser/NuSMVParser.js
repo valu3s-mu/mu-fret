@@ -1,10 +1,11 @@
-// Generated from NuSMV.g4 by ANTLR 4.7
+// Generated from NuSMV.g4 by ANTLR 4.8
 // jshint ignore: start
 var antlr4 = require('antlr4/index');
 var NuSMVListener = require('./NuSMVListener').NuSMVListener;
 var NuSMVVisitor = require('./NuSMVVisitor').NuSMVVisitor;
 
 var grammarFileName = "NuSMV.g4";
+
 
 var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u00035\u00e7\u0004\u0002\t\u0002\u0004\u0003\t\u0003\u0004\u0004\t",
@@ -277,6 +278,7 @@ NuSMVParser.RULE_equiv = 21;
 NuSMVParser.RULE_f = 22;
 NuSMVParser.RULE_t = 23;
 
+
 function PlHoldersContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -348,6 +350,7 @@ NuSMVParser.prototype.plHolders = function() {
     }
     return localctx;
 };
+
 
 function DurPlHoldersContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -421,6 +424,7 @@ NuSMVParser.prototype.durPlHolders = function() {
     return localctx;
 };
 
+
 function PropositionContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -487,6 +491,7 @@ NuSMVParser.prototype.proposition = function() {
     }
     return localctx;
 };
+
 
 function SimpleExprContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -745,6 +750,7 @@ NuSMVParser.prototype.simpleExpr = function(_p) {
     }
     return localctx;
 };
+
 
 function LtlExprContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -1691,6 +1697,7 @@ NuSMVParser.prototype.ltlExpr = function(_p) {
     return localctx;
 };
 
+
 function PastTimedUnaryOpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -1762,6 +1769,7 @@ NuSMVParser.prototype.pastTimedUnaryOp = function() {
     }
     return localctx;
 };
+
 
 function PastUnaryOpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -1845,6 +1853,7 @@ NuSMVParser.prototype.pastUnaryOp = function() {
     return localctx;
 };
 
+
 function PastBinaryOpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -1917,6 +1926,7 @@ NuSMVParser.prototype.pastBinaryOp = function() {
     return localctx;
 };
 
+
 function FutureTimedUnaryOpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -1988,6 +1998,7 @@ NuSMVParser.prototype.futureTimedUnaryOp = function() {
     }
     return localctx;
 };
+
 
 function FutureUnaryOpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -2071,6 +2082,7 @@ NuSMVParser.prototype.futureUnaryOp = function() {
     return localctx;
 };
 
+
 function FutureBinaryOpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -2143,6 +2155,7 @@ NuSMVParser.prototype.futureBinaryOp = function() {
     return localctx;
 };
 
+
 function ComparisonOpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -2214,6 +2227,7 @@ NuSMVParser.prototype.comparisonOp = function() {
     }
     return localctx;
 };
+
 
 function BoundContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -2298,6 +2312,7 @@ NuSMVParser.prototype.bound = function() {
     return localctx;
 };
 
+
 function SaltBoundContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -2375,6 +2390,7 @@ NuSMVParser.prototype.saltBound = function() {
     return localctx;
 };
 
+
 function LpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -2438,6 +2454,7 @@ NuSMVParser.prototype.lp = function() {
     }
     return localctx;
 };
+
 
 function RpContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -2503,6 +2520,7 @@ NuSMVParser.prototype.rp = function() {
     return localctx;
 };
 
+
 function NotContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -2566,6 +2584,7 @@ NuSMVParser.prototype.not = function() {
     }
     return localctx;
 };
+
 
 function AndContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -2631,6 +2650,7 @@ NuSMVParser.prototype.and = function() {
     return localctx;
 };
 
+
 function OrContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -2694,6 +2714,7 @@ NuSMVParser.prototype.or = function() {
     }
     return localctx;
 };
+
 
 function XorContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -2759,6 +2780,7 @@ NuSMVParser.prototype.xor = function() {
     return localctx;
 };
 
+
 function ImpliesContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -2822,6 +2844,7 @@ NuSMVParser.prototype.implies = function() {
     }
     return localctx;
 };
+
 
 function EquivContext(parser, parent, invokingState) {
 	if(parent===undefined) {
@@ -2887,6 +2910,7 @@ NuSMVParser.prototype.equiv = function() {
     return localctx;
 };
 
+
 function FContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
@@ -2950,6 +2974,7 @@ NuSMVParser.prototype.f = function() {
     }
     return localctx;
 };
+
 
 function TContext(parser, parent, invokingState) {
 	if(parent===undefined) {
