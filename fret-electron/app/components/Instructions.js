@@ -40,10 +40,11 @@ import PropTypes from 'prop-types';
 import ReactStars from 'react-stars'
 import classNames from 'classnames';
 import ReactMarkdown from 'react-markdown';
-import ExpansionPanel from '@material-ui/core/ExpansionPanel';
-import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
-import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import Accordion from '@material-ui/core/Accordion';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
+import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 
 import ThumbUp from '@material-ui/icons/ThumbUp';
 import ThumbDown from '@material-ui/icons/ThumbDown';
@@ -51,6 +52,9 @@ import ThumbDown from '@material-ui/icons/ThumbDown';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
+
+import TreeView from '@material-ui/lab/TreeView'
+import TreeItem from '@material-ui/lab/TreeItem'
 
 import css from './Instructions.css';
 import Help from './Help';
@@ -60,6 +64,8 @@ import LTLSimLauncher from './LTLSimLauncher';
 import TemplatePanel from './TemplatePanel'
 
 import {scopeInstruction, conditionInstruction, componentInstruction, timingInstruction, responseInstruction } from 'examples'
+const sharedObj = require('electron').remote.getGlobal('sharedObj');
+const modeldb = sharedObj.modeldb;
 
 const instructions = {
   'scopeField' : scopeInstruction,
@@ -84,13 +90,13 @@ const styles = theme => ({
     backgroundColor: theme.palette.background.paper,
   },
   button: {
-    margin: theme.spacing.unit,
+    margin: theme.spacing(),
   },
   leftIcon: {
-    marginRight: theme.spacing.unit,
+    marginRight: theme.spacing(),
   },
   rightIcon: {
-    marginLeft: theme.spacing.unit,
+    marginLeft: theme.spacing(),
   },
   iconSmall: {
     fontSize: 12,
@@ -114,7 +120,7 @@ const styles = theme => ({
   bootstrapRoot: {
     padding: 0,
     'label + &': {
-      marginTop: theme.spacing.unit * 3,
+      marginTop: theme.spacing(3),
     },
   },
   bootstrapInput: {
@@ -142,6 +148,9 @@ const styles = theme => ({
     fontSize: theme.typography.pxToRem(15),
     fontWeight: theme.typography.fontWeightRegular
   },
+  treeItemGroup: {
+    backgroundColor: 'white',
+  }
 });
 
 function TabContainer(props) {
@@ -169,6 +178,7 @@ class Instructions extends React.Component {
     this.state = {
       fieldColors : {},
       LTLSimDialogOpen: false,
+      components: {},
     };
 
     this.openLTLSimDialog = this.openLTLSimDialog.bind(this);
@@ -183,6 +193,7 @@ class Instructions extends React.Component {
   componentDidMount = () => {
     this.mounted = true
     var notationPath = `../docs/_media/user-interface/examples/svgDiagrams/Notation.svg`;
+    this.getComponents();
     this.setState({
       notationUrl: notationPath
     })
@@ -214,8 +225,42 @@ class Instructions extends React.Component {
     });
   }
 
+  componentDidUpdate(prevProps, prevState, snapshot) {
+    if(prevProps.projectName !== this.props.projectName){
+      this.getComponents();
+    }
+  }
+
   openDiagramNotationWindow = () => {
     window.open(this.state.notationUrl);
+  }
+
+  getComponents = async () => {
+    const {projectName} = this.props;
+    const project = await db.find({
+      selector: {
+        project: projectName,
+      }
+    });
+    const components_names = {};
+    project && project.docs.forEach(function(req) {
+      const component_name = req.semantics && req.semantics.component_name;
+      if(component_name && !components_names[component_name]) {
+        components_names[component_name] = {
+          variables: [],
+        };
+      }
+    });
+    const components = await modeldb.find({
+      selector: {
+        project: projectName,
+        component_name: { $in: Object.keys(components_names) }
+      }
+      });
+    components && components.docs && components.docs.forEach(comp => {
+      components_names[comp.component_name].variables.push(comp.variable_name);
+    })
+    this.setState({components: components_names})
   }
 
   handleColorUpdate = (color) => {
@@ -280,45 +325,45 @@ class Instructions extends React.Component {
         </div>
         <div className={classes.variableDescription} dangerouslySetInnerHTML={{ __html: this.props.formalization.semantics.diagramVariables}} />
         <br />
-        <ExpansionPanel>
-        <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+        <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography className={classes.heading}>Diagram Semantics</Typography>
-        </ExpansionPanelSummary>
-        <ExpansionPanelDetails>
+        </AccordionSummary>
+        <AccordionDetails>
         <div className={css.notationWrap}>
         <img src= {notationPath}/>
         </div>
-        </ExpansionPanelDetails>
-      </ExpansionPanel>
+        </AccordionDetails>
+      </Accordion>
         <br /><br />
         <Typography variant='subtitle1' color='primary'>
         Formalizations
         </Typography>
         <br />
-        <ExpansionPanel>
-        <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+        <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography className={classes.heading}>Future Time LTL</Typography>
-        </ExpansionPanelSummary>
-        <ExpansionPanelDetails>
+        </AccordionSummary>
+        <AccordionDetails>
           <div>
             <div className={classes.formula} dangerouslySetInnerHTML={{ __html: this.props.formalization.semantics.ft }} />
             <br />
             <div className={classes.description} dangerouslySetInnerHTML={{ __html:' Target: '+ this.props.formalization.semantics.component + ' component.'}} />
           </div>
-        </ExpansionPanelDetails>
-      </ExpansionPanel>
-      <ExpansionPanel>
-        <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+        </AccordionDetails>
+      </Accordion>
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography className={classes.heading}>Past Time LTL</Typography>
-        </ExpansionPanelSummary>
-        <ExpansionPanelDetails>
+        </AccordionSummary>
+        <AccordionDetails>
         <div>
           <div className={classes.formula} dangerouslySetInnerHTML={{ __html: this.props.formalization.semantics.pt}} />
           <br />
           <div className={classes.description} dangerouslySetInnerHTML={{ __html:' Target: '+ this.props.formalization.semantics.component + ' component.'}} />
         </div>
-        </ExpansionPanelDetails>
-      </ExpansionPanel>
+        </AccordionDetails>
+      </Accordion>
       <br />
       {ltlsimLauncher}
       </div>)
@@ -332,30 +377,30 @@ class Instructions extends React.Component {
           Formalizations
           </Typography>
           <br />
-          <ExpansionPanel>
-          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+          <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography className={classes.heading}>Future Time LTL</Typography>
-          </ExpansionPanelSummary>
-          <ExpansionPanelDetails>
+          </AccordionSummary>
+          <AccordionDetails>
           <div>
             <div className={classes.formula} dangerouslySetInnerHTML={{ __html: this.props.formalization.semantics.ft}} />
             <br />
             <div className={classes.description} dangerouslySetInnerHTML={{ __html:' Target: '+ this.props.formalization.semantics.component + ' component.'}} />
           </div>
-          </ExpansionPanelDetails>
-        </ExpansionPanel>
-        <ExpansionPanel>
-          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+          </AccordionDetails>
+        </Accordion>
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography className={classes.heading}>Past Time LTL</Typography>
-          </ExpansionPanelSummary>
-          <ExpansionPanelDetails>
+          </AccordionSummary>
+          <AccordionDetails>
           <div>
             <div className={classes.formula} dangerouslySetInnerHTML={{ __html: this.props.formalization.semantics.pt}} />
             <br />
             <div className={classes.description} dangerouslySetInnerHTML={{ __html:' Target: '+ this.props.formalization.semantics.component + ' component.'}} />
           </div>
-          </ExpansionPanelDetails>
-        </ExpansionPanel>
+          </AccordionDetails>
+        </Accordion>
         <br />
         {ltlsimLauncher}
         </div>)
@@ -370,16 +415,16 @@ class Instructions extends React.Component {
         </div>
         <div className={classes.variableDescription} dangerouslySetInnerHTML={{ __html: this.props.formalization.semantics.diagramVariables}} />
         <br />
-        <ExpansionPanel>
-        <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+        <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography className={classes.heading}>Diagram Semantics</Typography>
-        </ExpansionPanelSummary>
-        <ExpansionPanelDetails>
+        </AccordionSummary>
+        <AccordionDetails>
         <div className={css.notationWrap}>
         <img src= {notationPath}/>
         </div>
-        </ExpansionPanelDetails>
-      </ExpansionPanel>
+        </AccordionDetails>
+      </Accordion>
       </div>)
     else if ((ft === constants.undefined_semantics)&& diagram === constants.undefined_svg)
     return(
@@ -413,6 +458,7 @@ class Instructions extends React.Component {
   }
 
   renderInstruction(field) {
+    const { classes } = this.props;
     if (fieldsWithExplanation.includes(field)) {
       const mdsrc = instructions[field]
       return(
@@ -430,7 +476,32 @@ class Instructions extends React.Component {
           {this.renderFormula()}
           </div>
         )
-    } else {
+    } else if (field === 'dictField') {
+      return (<TreeView
+        defaultCollapseIcon={<ExpandMoreIcon />}
+        defaultExpandIcon={<ChevronRightIcon />}
+      >
+        {Object.entries(this.state.components).map(([componentName, {variables}]) =>
+        <TreeItem  key={componentName}
+                   nodeId={componentName}
+                   label={componentName}
+                   classes={{group: classes.treeItemGroup}}
+                   onMouseDown={event => event.preventDefault()}
+                   onClick={event => event.preventDefault()}>
+          {variables.map(variableName =>
+            <TreeItem key={`${componentName}-${variableName}`}
+                      nodeId={`${componentName}-${variableName}`}
+                      label={variableName}
+                      onMouseDown={event => event.preventDefault()}
+                      onLabelClick={this.props.handleVariableClick(variableName)}/>
+
+            )}
+        </TreeItem>)
+      }
+      </TreeView>)
+    }
+    else
+    {
       return (
         <div>
           <div style={{paddingBottom:20}}>
