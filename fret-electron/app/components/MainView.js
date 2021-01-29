@@ -389,9 +389,6 @@ class MainView extends React.Component {
     })
   }
 
-  handleExportRequirements = () => {
-    this.openExportRequirementsDialog()
-  }
 
   openExportRequirementsDialog = () => {
     this.setState({
@@ -532,7 +529,7 @@ class MainView extends React.Component {
                     <ListItemText primary="Import" />
                   </ListItem>
                   <ListItem button>
-                    <ListItemIcon onClick={() => this.handleExportRequirements()}>
+                    <ListItemIcon onClick={() => this.openExportRequirementsDialog()}>
                       <ExportIcon />
                     </ListItemIcon>
                     <ListItemText primary="Export" />
