@@ -85,6 +85,7 @@ const db = require('electron').remote.getGlobal('sharedObj').db;
 const fs = require('fs');
 const uuidv1 = require('uuid/v1');
 const system_dbkeys = require('electron').remote.getGlobal('sharedObj').system_dbkeys;
+const csv2json=require("csvtojson");
 
 const requirementsImport = require('../../support/requirementsImport/convertAndImportRequirements');
 
@@ -205,8 +206,13 @@ class MainView extends React.Component {
     listOfProjects: [],
     deleteProjectDialogOpen: false,
     projectTobeDeleted: '',
+<<<<<<< HEAD
     exportRequirementsDialogOpen: false,
     requirementImportDialogOpen: false
+=======
+    requirementImportDialogOpen: false,
+    csvFields: []
+>>>>>>> Added dropdown menus for import fields
   };
 
   //Dialog is an electron module
@@ -231,11 +237,24 @@ class MainView extends React.Component {
        //checking the extension of the file
        const fileExtension = filepath.split('.').pop();
        if (fileExtension === 'csv'){
-         self.handleImportRequirements();
+
+         csv2json().fromFile(filepath).then((importedReqs)=>{
+           console.log(importedReqs)
+           let csvFields = Object.keys(importedReqs[0]);
+           console.log(csvFields)
+           self.handleImportRequirements(csvFields);
+           //requirementsImport.csvToJsonConvert(filepath, 'csvProject', 'Requirement ID', 'Description', listOfProjects);
+          })
+        .catch(err => {
+                // log error if any
+                console.log(err);
+            });
+
          //TODO: Update
          // let userInput = self.handleImportRequirements();
          // console.log(userInput)
-         requirementsImport.csvToJsonConvert(filepath, 'csvProject', 'Requirement ID', 'Description', listOfProjects);
+
+
        } else if (fileExtension === 'json'){
          /*
          // Version using "require" causes error: Cannot find module "."
@@ -398,7 +417,11 @@ class MainView extends React.Component {
     })
   }
 
-  handleImportRequirements = () => {
+    handleImportRequirements = (csvFields) => {
+      this.setState({
+        csvFields: csvFields
+      })
+      console.log(this.state.csvFields)
     this.openRequirementImportDialog()
   }
 
@@ -588,6 +611,7 @@ class MainView extends React.Component {
           <RequirementImportDialogs
             open={this.state.requirementImportDialogOpen}
             handleDialogClose={this.closeRequirementImportDialog}
+            csvFields={this.state.csvFields}
           />
         </div>
         <Snackbar
