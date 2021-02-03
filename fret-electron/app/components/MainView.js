@@ -612,6 +612,7 @@ class MainView extends React.Component {
             open={this.state.requirementImportDialogOpen}
             handleDialogClose={this.closeRequirementImportDialog}
             csvFields={this.state.csvFields}
+            listOfProjects={this.state.listOfProjects}
           />
         </div>
         <Snackbar
