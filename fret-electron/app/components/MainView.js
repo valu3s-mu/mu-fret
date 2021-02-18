@@ -282,7 +282,7 @@ class MainView extends React.Component {
     this.setState({
       selectedProject: name,
       anchorEl: null
-    })
+    });
   }
 
   handleClose = () => {
@@ -324,6 +324,7 @@ class MainView extends React.Component {
         console.log(err);
       });
     }
+  }
 
 
   handleCreateDialogOpen = () => {
@@ -341,7 +342,7 @@ class MainView extends React.Component {
 
   /*
    * Handling project management BEGIN
-   */Ex
+   */
 
   handleNewProject = () => {
     // Close dropdown menu
@@ -431,7 +432,6 @@ class MainView extends React.Component {
       exportRequirementsDialogOpen: true,
       anchorEl: null
     })
-
   }
 
   closeExportRequirementsDialog = () => {
@@ -441,7 +441,7 @@ class MainView extends React.Component {
     })
   }
 
-    handleImportRequirements = (csvFields) => {
+    handleImportRequirements = (csvFields, importedReqs) => {
       this.setState({
         csvFields: csvFields,
         importedReqs: importedReqs
