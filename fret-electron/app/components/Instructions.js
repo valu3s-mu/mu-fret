@@ -44,7 +44,6 @@ import Accordion from '@material-ui/core/Accordion';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
 import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 
 import ThumbUp from '@material-ui/icons/ThumbUp';
 import ThumbDown from '@material-ui/icons/ThumbDown';
@@ -52,9 +51,6 @@ import ThumbDown from '@material-ui/icons/ThumbDown';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
-
-import TreeView from '@material-ui/lab/TreeView'
-import TreeItem from '@material-ui/lab/TreeItem'
 
 import css from './Instructions.css';
 import Help from './Help';
@@ -64,8 +60,6 @@ import LTLSimLauncher from './LTLSimLauncher';
 import TemplatePanel from './TemplatePanel'
 
 import {scopeInstruction, conditionInstruction, componentInstruction, timingInstruction, responseInstruction } from 'examples'
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const modeldb = sharedObj.modeldb;
 
 const instructions = {
   'scopeField' : scopeInstruction,
@@ -148,9 +142,6 @@ const styles = theme => ({
     fontSize: theme.typography.pxToRem(15),
     fontWeight: theme.typography.fontWeightRegular
   },
-  treeItemGroup: {
-    backgroundColor: 'white',
-  }
 });
 
 function TabContainer(props) {
@@ -178,7 +169,6 @@ class Instructions extends React.Component {
     this.state = {
       fieldColors : {},
       LTLSimDialogOpen: false,
-      components: {},
     };
 
     this.openLTLSimDialog = this.openLTLSimDialog.bind(this);
@@ -193,7 +183,6 @@ class Instructions extends React.Component {
   componentDidMount = () => {
     this.mounted = true
     var notationPath = `../docs/_media/user-interface/examples/svgDiagrams/Notation.svg`;
-    this.getComponents();
     this.setState({
       notationUrl: notationPath
     })
@@ -225,42 +214,8 @@ class Instructions extends React.Component {
     });
   }
 
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if(prevProps.projectName !== this.props.projectName){
-      this.getComponents();
-    }
-  }
-
   openDiagramNotationWindow = () => {
     window.open(this.state.notationUrl);
-  }
-
-  getComponents = async () => {
-    const {projectName} = this.props;
-    const project = await db.find({
-      selector: {
-        project: projectName,
-      }
-    });
-    const components_names = {};
-    project && project.docs.forEach(function(req) {
-      const component_name = req.semantics && req.semantics.component_name;
-      if(component_name && !components_names[component_name]) {
-        components_names[component_name] = {
-          variables: [],
-        };
-      }
-    });
-    const components = await modeldb.find({
-      selector: {
-        project: projectName,
-        component_name: { $in: Object.keys(components_names) }
-      }
-      });
-    components && components.docs && components.docs.forEach(comp => {
-      components_names[comp.component_name].variables.push(comp.variable_name);
-    })
-    this.setState({components: components_names})
   }
 
   handleColorUpdate = (color) => {
@@ -458,7 +413,6 @@ class Instructions extends React.Component {
   }
 
   renderInstruction(field) {
-    const { classes } = this.props;
     if (fieldsWithExplanation.includes(field)) {
       const mdsrc = instructions[field]
       return(
@@ -476,40 +430,7 @@ class Instructions extends React.Component {
           {this.renderFormula()}
           </div>
         )
-    } else if (field === 'dictField') {
-      return (   
-        <div>  
-          <div style={{paddingBottom:5}}>
-            <Typography variant='subtitle1' color='primary'>Variable dictionary per component</Typography>
-          </div>        
-          <div>
-            <TreeView
-              defaultCollapseIcon={<ExpandMoreIcon />}
-              defaultExpandIcon={<ChevronRightIcon />}
-            >
-              {Object.entries(this.state.components).map(([componentName, {variables}]) =>
-              <TreeItem  key={componentName}
-                        nodeId={componentName}
-                        label={componentName}
-                        classes={{group: classes.treeItemGroup}}
-                        onMouseDown={event => event.preventDefault()}
-                        onClick={event => event.preventDefault()}>
-                {variables.map(variableName =>
-                  <TreeItem key={`${componentName}-${variableName}`}
-                            nodeId={`${componentName}-${variableName}`}
-                            label={variableName}
-                            onMouseDown={event => event.preventDefault()}
-                            onLabelClick={this.props.handleVariableClick(variableName)}/>
-
-                  )}
-              </TreeItem>)
-            }
-            </TreeView>
-          </div>
-        </div>   )
-    }
-    else
-    {
+    } else {
       return (
         <div>
           <div style={{paddingBottom:20}}>
