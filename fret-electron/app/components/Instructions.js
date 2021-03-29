@@ -44,6 +44,7 @@ import Accordion from '@material-ui/core/Accordion';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
 import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 
 import ThumbUp from '@material-ui/icons/ThumbUp';
 import ThumbDown from '@material-ui/icons/ThumbDown';
@@ -52,6 +53,9 @@ import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 
+import TreeView from '@material-ui/lab/TreeView'
+import TreeItem from '@material-ui/lab/TreeItem'
+
 import css from './Instructions.css';
 import Help from './Help';
 import ColorPicker from './ColorPicker';
@@ -59,7 +63,15 @@ import LTLSimLauncher from './LTLSimLauncher';
 
 import TemplatePanel from './TemplatePanel'
 
-import {scopeInstruction, conditionInstruction, componentInstruction, timingInstruction, responseInstruction } from 'examples'
+import {
+  scopeInstruction,
+  conditionInstruction,
+  componentInstruction,
+  timingInstruction,
+  responseInstruction
+} from 'examples'
+import Dictionary from "./Dictionary";
+
 
 const instructions = {
   'scopeField' : scopeInstruction,
@@ -169,6 +181,8 @@ class Instructions extends React.Component {
     this.state = {
       fieldColors : {},
       LTLSimDialogOpen: false,
+      components: {},
+      selectedItem: null,
     };
 
     this.openLTLSimDialog = this.openLTLSimDialog.bind(this);
@@ -413,6 +427,7 @@ class Instructions extends React.Component {
   }
 
   renderInstruction(field) {
+    const { classes } = this.props;
     if (fieldsWithExplanation.includes(field)) {
       const mdsrc = instructions[field]
       return(
@@ -428,8 +443,8 @@ class Instructions extends React.Component {
       return(
         <div style={{display: 'block'}}>
           {this.renderFormula()}
-          </div>
-        )
+        </div>
+      )
     } else {
       return (
         <div>
@@ -454,15 +469,22 @@ class Instructions extends React.Component {
           onChange={handleTabChange}
           indicatorColor="secondary"
           textColor="secondary"
-          centered >
-            <Tab label="Assistant" />
-            <Tab label="Templates" />
-          </Tabs>
+          centered>
+          <Tab label="Assistant"/>
+          <Tab label="Templates"/>
+          <Tab label="Dictionary"/>
+        </Tabs>
         {tabValue === 0 && <TabContainer>{this.renderInstruction(field)}</TabContainer>}
-        {tabValue === 1 && <TabContainer>{this.renderTemplate(templates, selectedTemplate,handleSelectedTemplateChange)}</TabContainer>}
-       </div>
-     );
-   }
+        {tabValue === 1 &&
+        <TabContainer>{this.renderTemplate(templates, selectedTemplate, handleSelectedTemplateChange)}</TabContainer>}
+        {tabValue === 2 && <TabContainer>
+          <Dictionary
+            projectName={this.props.projectName}
+            setAutoFillVariables={this.props.setAutoFillVariables}/>
+        </TabContainer>}
+      </div>
+    );
+  }
 }
 
 Instructions.propTypes = {

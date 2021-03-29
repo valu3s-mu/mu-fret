@@ -11,7 +11,7 @@
 // TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
 // ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
 // OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT UMENTATION, IF PROVIDED, WILL CONFORM TO
+// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
 // THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
 // ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
 // RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
@@ -54,9 +54,9 @@ import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import Tooltip from '@material-ui/core/Tooltip';
-import ExpansionPanel from '@material-ui/core/ExpansionPanel';
-import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
-import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import Accordion from '@material-ui/core/Accordion';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
+import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import InProgressIcon from '@material-ui/icons/MoreHoriz';
 import PauseIcon from '@material-ui/icons/Pause';
@@ -72,6 +72,9 @@ import VariablesSortableTable from './VariablesSortableTable';
 
 import templates from '../../templates/templates';
 import {getRequirementStyle} from "../utils/utilityFunctions";
+import {withReact} from "slate-react";
+import {createEditor, Node, Range, Text, Transforms} from "slate";
+import withFields from "../utils/withFields";
 
 const db = require('electron').remote.getGlobal('sharedObj').db;
 const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
@@ -81,22 +84,22 @@ const uuidv1 = require('uuid/v1');
 const formStyles = theme => ({
   accordion: {
     width: '98%',
-    marginTop: theme.spacing.unit * 2,
-    marginBottom: theme.spacing.unit * 2,
-    marginLeft:  theme.spacing.unit
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    marginLeft:  theme.spacing()
   },
   aux:{
-    marginTop: theme.spacing.unit * 2,
-    marginBottom: theme.spacing.unit * 2,
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
   },
   list: {
     width: '100%',
   },
   text: {
-    marginBottom: theme.spacing.unit * 3,
+    marginBottom: theme.spacing(3),
   },
   button: {
-    margin: theme.spacing.unit,
+    margin: theme.spacing(),
   },
   gridList: {
     width: 600,
@@ -116,10 +119,15 @@ const formStyles = theme => ({
   },
 });
 
+
+
 class CreateRequirementDialog extends React.Component {
+
+  dialogRef = React.createRef();
+
   state = {
     createDialogOpen: false,
-    project: null,
+    project: '',
     reqid: '',
     parent_reqid: '',
     rationale: '',
@@ -128,7 +136,32 @@ class CreateRequirementDialog extends React.Component {
     status: '',
     selectedTemplate: -1,
     tabValue: 0,
+    editor: withFields(withReact(createEditor())),
+    dialogTop: 0,
+    dialogLeft: 0,
+    autoFillVariables: [],
   };
+
+
+  componentDidUpdate(prevProps, prevState, snapshot) {
+    if (prevProps.open !== this.props.open) {
+      const editor = withFields(withReact(createEditor()));
+      this.setState({ editor })
+    }
+    this.setDialogPosition();
+  }
+
+  setDialogPosition = () => {
+    if(this.dialogRef && this.dialogRef.current) {
+      const { dialogTop, dialogLeft } = this.state;
+      const clientRect = this.dialogRef.current.getBoundingClientRect();
+      if (clientRect.top !== dialogTop || clientRect.left !== dialogLeft) {
+        this.setState({ dialogTop: clientRect.top, dialogLeft: clientRect.left })
+      }
+    }
+  }
+
+
 
   handleTextFieldFocused = name => event => {
     this.setState({
@@ -155,9 +188,63 @@ class CreateRequirementDialog extends React.Component {
     this.setState({ tabValue });
   };
 
+  createOrUpdateVariables = (variables, componentName, projectName, reqid , isRegular) => {
+    variables.map(function (variableName) {
+      var modeldbid = projectName + componentName + variableName;
+      modeldb.get(modeldbid).then(function (v) {
+        if(!v.reqs.includes(reqid)) {
+          modeldb.put({
+            ...v,
+            reqs: v.reqs.concat(reqid),
+          })
+        }
+      }).catch(function (err) {
+        if(err && err.message === 'missing') {
+          modeldb.put({
+            _id: modeldbid,
+            project: projectName,
+            component_name: componentName,
+            variable_name: variableName,
+            reqs: [reqid],
+            dataType: isRegular ? '' : 'boolean',
+            idType: isRegular ? '' : 'Mode',
+            description: '',
+            assignment: '',
+            modeRequirement: '',
+            model: false,
+            modelComponent: '',
+            model_id: ''
+          });
+        }
+      })
+    })
+  }
+
+  removeVariables = (oldVariables, newVariables, projectName, componentName, reqid) => {
+    oldVariables.map(function(variableName){
+      var modeldbidOld = projectName + componentName + variableName;
+      if (!newVariables.includes(variableName)){
+        modeldb.get(modeldbidOld).then(function(v) {
+          if (v.reqs.length > 1) {
+            var index = v.reqs.indexOf(reqid);
+            if (index > -1){
+              const newReqs = [...v.reqs];
+              newReqs.splice(index, 1)
+              modeldb.put({
+                ...v,
+                reqs: newReqs,
+              })
+            }
+          } else {
+            modeldb.remove(v);
+          }
+        })
+      }
+    })
+  }
+
   handleCreate = () => {
     var self = this;
-    const { addChildRequirementToParent } = this.props;
     const { edittingRequirement, project, reqid, parent_reqid, rationale, comments} = this.state;
 
 
@@ -175,108 +262,30 @@ class CreateRequirementDialog extends React.Component {
     var oldModes = [];
 
     if (dbrev != undefined){
-      db.get(dbid).then(function(){
-        if (semantics){
-          if (semantics.variables && semantics.variables.regular){
-            oldVariables = oldVariables.concat(semantics.variables.regular);
-          }
+      db.get(dbid).then(function(req){
+        if (req.semantics && req.semantics.variables){
+            oldVariables = oldVariables.concat(req.semantics.variables.regular);
+            oldModes = oldModes.concat(req.semantics.variables.modes);
         }
-        oldVariables.forEach(function(oldv){
-          var modeldbidOld = project + semantics.component_name + oldv;
-          if (!semantics.variables.regular.includes(oldv)){
-            modeldb.get(modeldbidOld).then(function(vOld) {
-              if (vOld.reqs.length > 1) {
-                var index = vOld.reqs.indexOf(reqid);
-                if (index > -1){
-                  return modeldb.put({
-                    _id: modeldbidOld,
-                    _rev: vOld._rev,
-                    project: project,
-                    component_name: semantics.component_name,
-                    variable_name: oldv,
-                    reqs: vOld.reqs.splice(index,1),
-                    dataType: '',
-                    idType: '',
-                    description: '',
-                    assignment: '',
-                    modeRequirement: '',
-                    model: false,
-                    modelComponent: vOld.modelComponent,
-                    model_id: vOld.model_id
-                  }).then (function (response) {
-                  self.state.dialogCloseListener(true, newReqId);
-                }).catch(function (err) {
-                      self.state.dialogCloseListener(false);
-                      return console.log(err);
-                  })
-                }
-             } else {
-               modeldb.remove(vOld, function(err, response) {
-                 if (err) {
-                   self.state.dialogCloseListener(false);
-                   return console.log(err);
-                 }
-               })
-             }
-           }).catch(function (err){
-             self.state.dialogCloseListener(false);
-             return console.log(err);
-           })
-          }
-        })
-        if (semantics){
-          if (semantics.variables && semantics.variables.modes){
-            oldModes = oldModes.concat(semantics.variables.modes);
-          }
-        }
-        oldModes.forEach(function(oldv){
-          var modeldbidOld = project + semantics.component_name + oldv;
-          if (!semantics.variables.modes.includes(oldv)){
-            modeldb.get(modeldbidOld).then(function(vOld) {
-              if (vOld.reqs.length > 1) {
-                var index = vOld.reqs.indexOf(reqid);
-                if (index > -1){
-                  return modeldb.put({
-                    _id: modeldbidOld,
-                    _rev: vOld._rev,
-                    project: project,
-                    component_name: semantics.component_name,
-                    variable_name: oldv,
-                    reqs: vOld.reqs.splice(index,1),
-                    dataType: v.dataType,
-                    idType: v.idType,
-                    description: '',
-                    assignment: '',
-                    modeRequirement: '',
-                    model: false,
-                    modelComponent: v.modelComponent,
-                    model_id: v.model_id
-                  }).then (function (response) {
-                  self.state.dialogCloseListener(true, newReqId);
-                }).catch(function (err) {
-                      self.state.dialogCloseListener(false);
-                      return console.log(err);
-                  })
-                }
-             } else {
-               modeldb.remove(vOld, function(err, response) {
-                 if (err) {
-                   self.state.dialogCloseListener(false);
-                   return console.log(err);
-                 }
-               })
-             }
-           }).catch(function (err){
-             self.state.dialogCloseListener(false);
-             return console.log(err);
-           })
-          }
-        })
-      }).catch(function (err) {
-        self.state.dialogCloseListener(false);
-        return console.log(err);
-      });
+        // remove reqid From regular variables
+        self.removeVariables(oldVariables, semantics.variables ? semantics.variables.regular : [], project, semantics.component_name, reqid)
+
+
+        // remove reqid From modes variables
+        self.removeVariables(oldModes, semantics.variables ? semantics.variables.modes : [], project, semantics.component_name, reqid)
+      })
     }
+
+    if (semantics && semantics.variables){
+      // create or update regular variables
+      self.createOrUpdateVariables(semantics.variables.regular,semantics.component_name, project, reqid, true);
+
+      // create or update modes variables
+      self.createOrUpdateVariables(semantics.variables.modes,semantics.component_name, project, reqid, false);
+    }
+
+
+    // create req
     db.put({
         _id : dbid,
         _rev : dbrev,
@@ -291,126 +300,14 @@ class CreateRequirementDialog extends React.Component {
         template : template,
         input : input
       }, (err, responses) => {
-            if (err) {
-              self.state.dialogCloseListener(false);
-              return console.log(err);
-            }
-            console.log(responses);
-            self.state.dialogCloseListener(true, newReqId);
-          }
-    )
-
-    if (semantics && semantics.variables){
-      semantics.variables.regular.forEach(function(variable){
-        var modeldbid = project + semantics.component_name + variable;
-        modeldb.get(modeldbid).then(function (v){
-          var oldReqs = [];
-          oldReqs = oldReqs.concat(v.reqs);
-          if (oldReqs.indexOf(reqid) === -1) oldReqs.push(reqid);
-          return modeldb.put({
-            _id: modeldbid,
-            _rev: v._rev,
-            project: project,
-            component_name: semantics.component_name,
-            variable_name: variable,
-            reqs: oldReqs,
-            dataType: '',
-            idType: '',
-            description: '',
-            assignment: '',
-            modeRequirement: '',
-            model: false,
-            modelComponent: v.modelComponent,
-            model_id: v.model_id
-          }).then(function (response) {
-            console.log(response);
-            self.state.dialogCloseListener(true, newReqId);
-          }).catch(function (err){
-            self.state.dialogCloseListener(false);
-            return console.log(err);
-          })
-        }).catch(function (err){
-          var reqsAux = []
-          reqsAux.push(reqid);
-        return  modeldb.put({
-              _id: modeldbid,
-              project: project,
-              component_name: semantics.component_name,
-              variable_name: variable,
-              reqs: reqsAux,
-              dataType: '',
-              idType: '',
-              description: '',
-              assignment: '',
-              modeRequirement: '',
-              model: false,
-              modelComponent: '',
-              model_id: ''
-            }).then(function (response) {
-                console.log(response);
-                self.state.dialogCloseListener(true, newReqId);
-              }).catch(function (err){
-                self.state.dialogCloseListener(false);
-                return console.log(err);
-              })
-        })
-    })
-    semantics.variables.modes.forEach(function(variable){
-      var modeldbid = project + semantics.component_name + variable;
-      modeldb.get(modeldbid).then(function (v){
-        var oldReqs = [];
-        oldReqs = oldReqs.concat(v.reqs);
-        if (oldReqs.indexOf(reqid) === -1) oldReqs.push(reqid);
-        return modeldb.put({
-          _id: modeldbid,
-          _rev: v._rev,
-          project: project,
-          component_name: semantics.component_name,
-          variable_name: variable,
-          reqs: oldReqs,
-          dataType: v.dataType,
-          tool: v.tool,
-          idType: v.idType,
-          description: v.description,
-          assignment: v.assignment,
-          modeRequirement: v.modeRequirement,
-          model: v.model,
-          modelComponent: v.modelComponent,
-          model_id: v.model_id
-        }).then(function (response) {
-          console.log(response);
-          self.state.dialogCloseListener(true, newReqId);
-        }).catch(function (err){
+        if (err) {
           self.state.dialogCloseListener(false);
           return console.log(err);
-        })
-      }).catch(function (err){
-        var reqsAux = []
-        reqsAux.push(reqid);
-      return  modeldb.put({
-            _id: modeldbid,
-            project: project,
-            component_name: semantics.component_name,
-            variable_name: variable,
-            reqs: reqsAux,
-            dataType: 'boolean',
-            idType: 'Mode',
-            description: '',
-            assignment: '',
-            modeRequirement: '',
-            model: false,
-            modelComponent: '',
-            model_id: ''
-          }).then(function (response) {
-              console.log(response);
-              self.state.dialogCloseListener(true, newReqId);
-            }).catch(function (err){
-              self.state.dialogCloseListener(false);
-              return console.log(err);
-            })
-      })
-  })
-  }
+        }
+        console.log(responses);
+        self.state.dialogCloseListener(true, newReqId);
+      }
+    )
 };
 
   handleUpdateInstruction = (field) => {
@@ -437,6 +334,7 @@ class CreateRequirementDialog extends React.Component {
   }
 
   componentDidMount() {
+    window.addEventListener('resize', this.setDialogPosition);
     this.mounted = true;
   }
 
@@ -497,15 +395,23 @@ class CreateRequirementDialog extends React.Component {
     }
   }
 
+  setAutoFillVariables = (autoFillVariables) => {
+    this.setState({autoFillVariables})
+  }
+
   renderEditor = (inputFields, selectedTemplate) => {
-    const {tabValue} = this.state;
+    const {tabValue, dialogTop, dialogLeft} = this.state;
     return (
       <SlateEditor2
+        editor={this.state.editor}
         onRef={ref => (this.stepper = ref)}
         updateInstruction={this.handleUpdateInstruction}
         updateSemantics={this.handleUpdateSemantics}
         inputFields={inputFields}
         template={templates[selectedTemplate]}
+        autoFillVariables={this.state.autoFillVariables}
+        dialogTop={dialogTop}
+        dialogLeft={dialogLeft}
         />
     )
   }
@@ -539,7 +445,8 @@ class CreateRequirementDialog extends React.Component {
         >
           <div className={styles.layout}>
             <div className={styles.form}>
-            <DialogTitle id="form-dialog-title">
+            <DialogTitle id="form-dialog-title"
+                         ref={this.dialogRef}>
                 <div className={classes.dialogTitle}>
                   {dialogTitle}
                   <FormControl >
@@ -621,11 +528,11 @@ class CreateRequirementDialog extends React.Component {
                         </FormControl>
                       </GridListTile>
                       <GridListTile cols={3} className={classes.aux}>
-                        <ExpansionPanel className={classes.accordion}>
-                          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+                        <Accordion className={classes.accordion}>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                             <Typography className={classes.heading}>Rationale and Comments</Typography>
-                        </ExpansionPanelSummary>
-                        <ExpansionPanelDetails>
+                        </AccordionSummary>
+                        <AccordionDetails>
                         <div className={classes.list}>
                         <TextField
                           id="rationale"
@@ -650,8 +557,8 @@ class CreateRequirementDialog extends React.Component {
                           className={classes.text}
                         />
                         </div>
-                        </ExpansionPanelDetails>
-                        </ExpansionPanel>
+                        </AccordionDetails>
+                        </Accordion>
                       </GridListTile>
                     </GridList>
                     {this.renderEditor({
@@ -680,6 +587,8 @@ class CreateRequirementDialog extends React.Component {
               handleSelectedTemplateChange={this.handleSelectedTemplateChange}
               tabValue={tabValue}
               handleTabChange={this.handleTabChange}
+              projectName={this.state.project}
+              setAutoFillVariables={this.setAutoFillVariables}
               />
             </div>
           </div>
