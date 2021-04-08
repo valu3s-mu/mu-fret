@@ -45,27 +45,35 @@ import ExportIcon from '@material-ui/icons/ArrowUpward';
 import ImportIcon from '@material-ui/icons/ArrowDownward';
 
 /* Accordion Imports */
-import Accordion from '@material-ui/core/Accordion';
-import AccordionSummary from '@material-ui/core/AccordionSummary';
-import AccordionDetails from '@material-ui/core/AccordionDetails';
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import ExpansionPanelActions from '@material-ui/core/ExpansionPanelActions';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import Divider from '@material-ui/core/Divider';
+import Button from '@material-ui/core/Button';
 
-import SortableTable from './SortableTable';
 import VariablesSortableTable from './VariablesSortableTable';
 import ejsCache from '../../support/CoCoSpecTemplates/ejsCache';
+import ejsCacheCoPilot from '../../support/CoPilotTemplates/ejsCacheCoPilot';
+
+import FormHelperText from '@material-ui/core/FormHelperText';
+import FormControl from '@material-ui/core/FormControl';
+import Select from '@material-ui/core/Select';
+import InputLabel from '@material-ui/core/InputLabel';
+import MenuItem from '@material-ui/core/MenuItem';
 
 
 const sharedObj = require('electron').remote.getGlobal('sharedObj');
 const constants = require('../parser/Constants');
-const isDev = require('electron-is-dev');
-const utilities = require('../../support/utilities');
 const db = sharedObj.db;
+const modeldb = sharedObj.modeldb;
+const system_dbkeys = sharedObj.system_dbkeys;
+
 const fs = require('fs');
 const archiver = require('archiver');
 const app = require('electron').remote.app;
 const dialog = require('electron').remote.dialog;
-const modeldb = sharedObj.modeldb;
-const system_dbkeys = sharedObj.system_dbkeys;
 
 var dbChangeListener, modeldbChangeListener;
 let id = 0;
@@ -75,97 +83,85 @@ function createData(vID, cID, project, description) {
   return {id ,vID, cID, project, description};
 }
 
-let ExportProjectCode = props => {
-  const {projectCompleted, exportProjectCode} = props;
-  if (projectCompleted){
-    return (
-      <IconButton aria-label="Export CoCoSpec code" onClick={() => exportProjectCode()}>
-        <Tooltip title='Export project CoCoSpec code.'>
-          <ExportIcon color='secondary' />
-        </Tooltip>
-      </IconButton>
-    );
-  } else {
-    return (
-      <IconButton  aria-label="Export CoCoSpec code">
-        <Tooltip title='To export CoCoSpec code, please complete mandatory fields first.'>
-          <ExportIcon color = "disabled"/>
-        </Tooltip>
-      </IconButton>
-    );
-  }
-}
-
-ExportProjectCode.propTypes = {
-  exportProjectCode: PropTypes.func.isRequired,
-  projectCompleted: PropTypes.bool.isRequired
-};
-
-let ImportProjectModel = props => {
-  const {importProjectModel} = props;
-  return (
-    <IconButton aria-label="Import Model Information" onClick={() => importProjectModel()}>
-      <Tooltip title='Import Model Information.'>
-        <ImportIcon color='secondary' />
-      </Tooltip>
-    </IconButton>
-  );
-}
-
-ImportProjectModel.propTypes = {
-  importProjectModel: PropTypes.func.isRequired
-};
-
-let VariablesViewHeader = props => {
-  const {exitVariablesViewEnabler, projectCompleted, exportProjectCode, importProjectModel, selectedProject} = props;
-  if (selectedProject === 'All Projects'){
-    return(
-      <Typography variant='subtitle1'>
-      Please choose a specific project
-      <IconButton aria-label="Exit Verification Code Export" onClick={() => exitVariablesViewEnabler()}>
-        <Tooltip title="Exit Verification Code Export">
-          <CloseIcon color='secondary'/>
-        </Tooltip>
-      </IconButton>
-      </Typography>
-    );
-  }
-  return (
-    <Typography variant='h6'>
-      Requirement Variables to Model Mapping: {selectedProject}
-      <ExportProjectCode
-        exportProjectCode={exportProjectCode}
-        projectCompleted={projectCompleted}/>
-      <ImportProjectModel
-        importProjectModel={importProjectModel}/>
-       <IconButton aria-label="Exit Verification Code Export" onClick={() => exitVariablesViewEnabler()}>
-         <Tooltip title="Exit Verification Code Export">
-           <CloseIcon color='secondary'/>
-         </Tooltip>
-       </IconButton>
-     </Typography>
-  );
-};
-
-VariablesViewHeader.propTypes = {
-  exitVariablesViewEnabler: PropTypes.func.isRequired,
-  projectCompleted: PropTypes.bool.isRequired,
-  exportProjectCode: PropTypes.func.isRequired,
-  importProjectModel: PropTypes.func.isRequired,
-  selectedProject: PropTypes.string.isRequired
-}
-
 const styles = theme => ({
   root: {
     width: '100%',
-    marginTop: theme.spacing(3),
+    marginTop: theme.spacing.unit * 3,
     overflowX: 'auto',
     flexWrap: 'wrap',
   },
   heading: {
     fontSize: theme.typography.pxToRem(18),
     fontWeight: theme.typography.fontWeightRegular,
+    marginRight: theme.spacing.unit * 2,
+  },
+  formControl: {
+    minWidth: 200,
+    marginRight: theme.spacing.unit * 2
+  },
+  selectEmpty: {
+    marginTop: theme.spacing.unit * 2,
+  },
+});
+
+let VariablesViewHeader = props => {
+  const {classes, selectedProject, language, handleChange} = props;
+  if (selectedProject === 'All Projects'){
+    return(
+      <Typography variant='subtitle1'>
+      Please choose a specific project
+      </Typography>
+    );
   }
+  return (
+    <div>
+      <Typography variant='h6'>
+        Requirement Variables to Model Mapping: {selectedProject}
+       </Typography>
+       <FormControl required className={classes.formControl}>
+         <InputLabel htmlFor="language-export-required"> Export Language</InputLabel>
+         <Select
+           value={language}
+           onChange={handleChange('language')}
+           inputProps={{
+             name: 'language',
+             id: 'language-export-required',
+           }}>
+           <MenuItem value="cocospec">CoCoSpec</MenuItem>
+           <MenuItem value="copilot">CoPilot</MenuItem>
+         </Select>
+       </FormControl>
+     </div>
+  );
+};
+
+VariablesViewHeader.propTypes = {
+  selectedProject: PropTypes.string.isRequired,
+  language: PropTypes.string.isRequired,
+  handleChange: PropTypes.func.isRequired
+}
+
+VariablesViewHeader = withStyles(styles)(VariablesViewHeader);
+
+
+
+const componentStyles = theme => ({
+  root: {
+    width: '100%',
+    marginTop: theme.spacing.unit * 3,
+    overflowX: 'auto',
+    flexWrap: 'wrap',
+  },
+  heading: {
+    fontSize: theme.typography.pxToRem(18),
+    fontWeight: theme.typography.fontWeightRegular,
+  },
+  buttonControl: {
+    marginRight: theme.spacing.unit * 100,
+  },
+  selectEmpty: {
+    marginTop: theme.spacing.unit * 2,
+  },
 });
 
 class ComponentSummary extends React.Component {
@@ -177,26 +173,33 @@ class ComponentSummary extends React.Component {
       outputVariables: [],
       inputVariables: [],
       internalVariables: [],
+      functions: [],
       assignments: [],
+      copilotAssignments: [],
       modes: [],
       properties: []
     };
     result.docs.forEach(function(doc){
       var variable ={};
       variable.name = doc.variable_name;
-      variable.type = self.getCoCoSpecDataType(doc.dataType);
       if (doc.idType === 'Input'){
+        variable.type = self.getCoCoSpecDataType(doc.dataType);
         contract.inputVariables.push(variable);
       } else if (doc.idType === 'Output'){
+        variable.type = self.getCoCoSpecDataType(doc.dataType);
         contract.outputVariables.push(variable);
       } else if (doc.idType === 'Internal'){
+        variable.type = self.getCoCoSpecDataType(doc.dataType);
         contract.internalVariables.push(variable);
-        if (doc.assignment !== '')
-          contract.assignments.push(doc.assignment);
+        contract.assignments.push(doc.assignment);
+        contract.copilotAssignments.push(doc.copilotAssignment);
       } else if (doc.idType === 'Mode'){
         if (doc.modeRequirement !== '')
           variable.assignment = doc.modeRequirement;
-        contract.modes.push(variable);
+          contract.modes.push(variable);
+      } else if (doc.idType === 'Function'){
+        variable.moduleName = doc.moduleName;
+        contract.functions.push(variable);
       }
     })
     return contract;
@@ -289,8 +292,9 @@ class ComponentSummary extends React.Component {
     return properties;
   }
 
-  exportComponentCode = () => {
-    const {component, selectedProject} = this.props;
+  exportComponentCode = event => {
+    event.stopPropagation();
+    const {component, selectedProject, language} = this.props;
     const homeDir = app.getPath('home');
     const self = this;
     var filepath = dialog.showSaveDialog({
@@ -330,7 +334,9 @@ class ComponentSummary extends React.Component {
           contract.componentName = component+'Spec';
           var variableMapping = self.getMappingInfo(modelResult, contract.componentName);
           archive.pipe(output);
-          archive.append(JSON.stringify(variableMapping), {name: 'cocospecMapping'+component+'.json'});
+          if (language === 'cocospec')
+            archive.append(JSON.stringify(variableMapping), {name: 'cocospecMapping'+component+'.json'});
+
           db.find({
             selector: {
               project: selectedProject
@@ -338,9 +344,14 @@ class ComponentSummary extends React.Component {
           }).then(function (fretResult){
             contract.properties = self.getPropertyInfo(fretResult, contract.outputVariables, component);
             contract.delays = self.getDelayInfo(fretResult, component);
-            archive.append(ejsCache.renderContractCode().contract.complete(contract), {name: contract.componentName+'.lus'})
+            if (language === 'cocospec'){
+              archive.append(ejsCache.renderContractCode().contract.complete(contract), {name: contract.componentName+'.lus'})
+            } else if (language === 'copilot'){
+              archive.append(ejsCacheCoPilot.renderCoPilotSpec().contract.complete(contract), {name: contract.componentName+'.json'})
+            }
             // finalize the archive (ie we are done appending files but streams have to finish yet)
             archive.finalize();
+
           }).catch((err) => {
             console.log(err);
           })
@@ -349,26 +360,26 @@ class ComponentSummary extends React.Component {
   }
 
   render() {
-    const {classes, component, completed} = this.props;
-    if (completed){
+    const {classes, component, completed, language} = this.props;
+    if ((completed && language)|| language === 'copilot'){
       return (
-        <Typography className={classes.heading}>{component}
-        <IconButton aria-label="Export CoCoSpec code" onClick={this.exportComponentCode}>
-        <Tooltip title='Export CoCoSpec code.'>
-            <ExportIcon color='secondary' />
-          </Tooltip>
-        </IconButton>
-        </Typography>
+        <Tooltip title='Export verification code.'>
+        <span>
+          <Button size="small" onClick={this.exportComponentCode} color="secondary" variant='contained' className={classes.buttonControl}>
+            Export
+          </Button>
+          </span>
+        </Tooltip>
       );
     } else {
       return (
-          <Typography className={classes.heading}>{component}
-          <IconButton  aria-label="Export CoCoSpec code">
-            <Tooltip title='To export CoCoSpec code, please complete mandatory fields first.'>
-              <ExportIcon color = "disabled"/>
-            </Tooltip>
-          </IconButton>
-          </Typography>
+          <Tooltip title='To export verification code, please complete mandatory variable fields and export language first.'>
+            <span>
+              <Button size="small" color="secondary" disabled variant='contained' className={classes.buttonControl}>
+                Export
+                </Button>
+            </span>
+          </Tooltip>
       );
     }
   }
@@ -378,20 +389,27 @@ ComponentSummary.propTypes = {
   classes: PropTypes.object.isRequired,
   component: PropTypes.string.isRequired,
   completed: PropTypes.bool.isRequired,
-  selectedProject: PropTypes.string.isRequired
+  selectedProject: PropTypes.string.isRequired,
+  language: PropTypes.string.isRequired,
 };
+
+ComponentSummary = withStyles(componentStyles)(ComponentSummary);
 
 
 
 class VariablesView extends React.Component {
   state = {
-    exitVariablesView: false,
     components: [],
     completedComponents: [],
     cocospecData: {},
     cocospecModes: {},
-    modelComponents: []
+    language: '',
   }
+
+  handleChange = name => event => {
+    event.stopPropagation();
+    this.setState({ [name]: event.target.value });
+  };
 
   constructor(props){
     super(props);
@@ -528,41 +546,6 @@ class VariablesView extends React.Component {
 
   synchStateWithModelDB () {
     if (!this.mounted) return;
-    var modelComponents= [];
-    const {selectedProject} = this.props,
-          self = this;
-
-    modeldb.find({
-      selector: {
-        project: selectedProject,
-        modeldoc: true
-      }
-    }).then(function (result){
-      result.docs.forEach(function(d){
-      if (!modelComponents.includes(d.component_name)) modelComponents.push(d.component_name);
-      })
-      self.setState({
-        modelComponents: modelComponents.sort((a, b) => {return a.toLowerCase().trim() > b.toLowerCase().trim()})
-      })
-    }).catch((err) => {
-      console.log(err);
-    });
-  }
-
-
-  handleExitVariablesView = () => {
-    this.setState({
-      exitVariablesView : !this.state.exitVariablesView
-    })
-  }
-
-  exportProjectCode = () => {
-    const { selectedProject, completedComponents } = this.props;
-     if (selectedProject !== 'AllProjects'){
-    //   completedComponents.forEach(function(component){
-    //     exportComponentCode;
-    //   })
-     }
   }
 
   checkComponentCompleted(component_name, project) {
@@ -570,7 +553,6 @@ class VariablesView extends React.Component {
     const {cocospecData, cocospecModes,completedComponents} = this.state;
     var dataAndModesLength = 0;
     cocospecModes[component_name] ? dataAndModesLength = cocospecData[component_name].length + cocospecModes[component_name].length : dataAndModesLength = cocospecData[component_name].length;
-
     modeldb.find({
       selector: {
         component_name: component_name,
@@ -579,7 +561,7 @@ class VariablesView extends React.Component {
         modeldoc: false
       }
     }).then(function (result) {
-      if (result.docs.length === dataAndModesLength && dataAndModesLength !== 0){
+      if (result.docs.length >= dataAndModesLength && dataAndModesLength !== 0){
         if (!completedComponents.includes(component_name))
          completedComponents.push(component_name);
       } else {
@@ -595,70 +577,47 @@ class VariablesView extends React.Component {
     })
   }
 
-  importProjectModel = () => {
-    const {selectedProject} = this.props;
-    var homeDir = app.getPath('home');
-    var modelComponents = this.state.modelComponents;
-    var filepaths = dialog.showOpenDialog({
-      defaultPath : homeDir,
-      title : 'Import Simulink Model Information',
-      buttonLabel : 'Import',
-      filters: [
-        { name: "Documents", extensions: ['json'] }
-      ],
-      properties: ['openFile']})
-    if (filepaths && filepaths.length > 0) {
-      var content = utilities.replaceStrings([['\\"id\\"','\"_id\"']], fs.readFileSync(filepaths[0], 'utf8'));
-      var data = JSON.parse(content);
-      data.forEach((d) => {
-        d.project = selectedProject;
-      })
-      modeldb.bulkDocs(data)
-        .catch((err) => {
-          console.log(err);
-        });
-    }
-  }
-
   render() {
     const self = this;
     const {classes, selectedProject, existingProjectNames} = this.props;
-    const {exitVariablesView, components, completedComponents, cocospecData, cocospecModes, modelComponents}= this.state;
+    const {components, completedComponents, cocospecData, cocospecModes, language}= this.state;
 
-    if (exitVariablesView){
-      return <SortableTable selectedProject={selectedProject} existingProjectNames={existingProjectNames}/> };
     return (
       <div>
           <div className={classes.actions}>
             <VariablesViewHeader
-              exitVariablesViewEnabler={this.handleExitVariablesView}
-              exportProjectCode={this.exportProjectCode}
-              importProjectModel={this.importProjectModel}
-              projectCompleted={completedComponents.length === components.length}
-              selectedProject={selectedProject}/>
+              selectedProject={selectedProject}
+              language={language}
+              handleChange={this.handleChange}/>
           </div>
           <div className={classes.root}>
 
           {components.map(component => {
             return(
-              <Accordion key={component}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <ComponentSummary
-                component = {component}
-                classes = {classes}
-                completed = {completedComponents.includes(component)}
-                selectedProject={selectedProject}
-              />
-              </AccordionSummary>
-                <AccordionDetails>
+              <div>
+              <ExpansionPanel key={component}>
+              <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography className={classes.heading}>{component}</Typography>
+                <ComponentSummary
+                  component = {component}
+                  classes = {classes}
+                  completed = {completedComponents.includes(component)}
+                  selectedProject={selectedProject}
+                  language={language}
+                />
+              </ExpansionPanelSummary>
+              <Divider />
+                <ExpansionPanelDetails>
+                <div>
                   <VariablesSortableTable
                     selectedProject={selectedProject}
                     selectedComponent={component}
-                    modelComponents={modelComponents}
                     checkComponentCompleted={this.checkComponentCompleted}
                   />
-                </AccordionDetails>
-              </Accordion>
+                </div>
+                </ExpansionPanelDetails>
+              </ExpansionPanel>
+              </div>
             );
           })}
           </div>
