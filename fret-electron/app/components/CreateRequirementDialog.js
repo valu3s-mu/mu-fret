@@ -86,7 +86,7 @@ const formStyles = theme => ({
     width: '98%',
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
-    marginLeft:  theme.spacing()
+    marginLeft:  theme.spacing(),
   },
   aux:{
     marginTop: theme.spacing(2),
@@ -127,7 +127,7 @@ class CreateRequirementDialog extends React.Component {
 
   state = {
     createDialogOpen: false,
-    project: '',
+    project: null,
     reqid: '',
     parent_reqid: '',
     rationale: '',
@@ -444,7 +444,7 @@ class CreateRequirementDialog extends React.Component {
           // fox for autocomplete new bug
           onScroll={this.setDialogPosition}
           // possible fix for dialog resizing due to variable expansions
-          style={{height: '60%'}}
+          style={{height: '95%'}}
         >
           <div className={styles.layout}>
             <div className={styles.form}>
@@ -513,7 +513,7 @@ class CreateRequirementDialog extends React.Component {
                         <FormControl fullWidth>
                           <InputLabel htmlFor="project-field">Project</InputLabel>
                           <Select
-                            value={this.state.project}
+                            value={this.state.project || ''}
                             onChange={this.handleTextFieldChange('project')}
                             inputProps={{
                               name: 'project',
