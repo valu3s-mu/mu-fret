@@ -45,10 +45,9 @@ import ExportIcon from '@material-ui/icons/ArrowUpward';
 import ImportIcon from '@material-ui/icons/ArrowDownward';
 
 /* Accordion Imports */
-import ExpansionPanel from '@material-ui/core/ExpansionPanel';
-import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
-import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
-import ExpansionPanelActions from '@material-ui/core/ExpansionPanelActions';
+import Accordion from '@material-ui/core/Accordion';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
+import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
@@ -86,21 +85,21 @@ function createData(vID, cID, project, description) {
 const styles = theme => ({
   root: {
     width: '100%',
-    marginTop: theme.spacing.unit * 3,
+    marginTop: theme.spacing(3),
     overflowX: 'auto',
     flexWrap: 'wrap',
   },
   heading: {
     fontSize: theme.typography.pxToRem(18),
     fontWeight: theme.typography.fontWeightRegular,
-    marginRight: theme.spacing.unit * 2,
+    marginRight: theme.spacing(2),
   },
   formControl: {
     minWidth: 200,
-    marginRight: theme.spacing.unit * 2
+    marginRight: theme.spacing(2)
   },
   selectEmpty: {
-    marginTop: theme.spacing.unit * 2,
+    marginTop: theme.spacing(2),
   },
 });
 
@@ -148,7 +147,7 @@ VariablesViewHeader = withStyles(styles)(VariablesViewHeader);
 const componentStyles = theme => ({
   root: {
     width: '100%',
-    marginTop: theme.spacing.unit * 3,
+    marginTop: theme.spacing(3),
     overflowX: 'auto',
     flexWrap: 'wrap',
   },
@@ -157,10 +156,10 @@ const componentStyles = theme => ({
     fontWeight: theme.typography.fontWeightRegular,
   },
   buttonControl: {
-    marginRight: theme.spacing.unit * 100,
+    marginRight: theme.spacing(100),
   },
   selectEmpty: {
-    marginTop: theme.spacing.unit * 2,
+    marginTop: theme.spacing(2),
   },
 });
 
@@ -594,20 +593,18 @@ class VariablesView extends React.Component {
 
           {components.map(component => {
             return(
-              <div>
-              <ExpansionPanel key={component}>
-              <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+              <Accordion key={component}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography className={classes.heading}>{component}</Typography>
                 <ComponentSummary
                   component = {component}
-                  classes = {classes}
                   completed = {completedComponents.includes(component)}
                   selectedProject={selectedProject}
                   language={language}
                 />
-              </ExpansionPanelSummary>
+              </AccordionSummary>
               <Divider />
-                <ExpansionPanelDetails>
+                <AccordionDetails>
                 <div>
                   <VariablesSortableTable
                     selectedProject={selectedProject}
@@ -615,9 +612,8 @@ class VariablesView extends React.Component {
                     checkComponentCompleted={this.checkComponentCompleted}
                   />
                 </div>
-                </ExpansionPanelDetails>
-              </ExpansionPanel>
-              </div>
+                </AccordionDetails>
+              </Accordion>
             );
           })}
           </div>
