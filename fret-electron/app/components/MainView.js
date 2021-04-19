@@ -53,6 +53,7 @@ import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
 
 import MenuIcon from '@material-ui/icons/Menu';
+import CodeIcon from '@material-ui/icons/Code';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import ImportIcon from '@material-ui/icons/ArrowDownward';
@@ -75,6 +76,9 @@ import CreateRequirementDialog from './CreateRequirementDialog';
 import CreateProjectDialog from './CreateProjectDialog';
 import DeleteProjectDialog from './DeleteProjectDialog';
 import AppMainContent from './AppMainContent';
+import RequirementImportDialogs from './RequirementImportDialogs';
+
+import ExportRequirementsDialog from './ExportRequirementsDialog';
 
 const app = require('electron').remote.app
 const dialog = require('electron').remote.dialog
@@ -84,6 +88,8 @@ const fs = require('fs');
 const uuidv1 = require('uuid/v1');
 const system_dbkeys = require('electron').remote.getGlobal('sharedObj').system_dbkeys;
 const FretSemantics = require('../parser/FretSemantics');
+const csv2json=require("csvtojson");
+const requirementsImport = require('../../support/requirementsImport/convertAndImportRequirements');
 
 const drawerWidth = 240;
 
@@ -202,26 +208,29 @@ class MainView extends React.Component {
     anchorEl: null,
     listOfProjects: [],
     deleteProjectDialogOpen: false,
-    projectTobeDeleted: ''
+    projectTobeDeleted: '',
+    exportRequirementsDialogOpen: false,
+    requirementImportDialogOpen: false,
+    csvFields: [],
+    importedReqs: []
   };
 
-
-  populateVariables = () => {
-    db.allDocs({
+  populateVariables = async () => {
+    const result = await db.allDocs({
       include_docs: true,
-    }).then((result) => {
+    });
       const rows = result.rows;
-      rows.forEach(r => {
+      for(let i = 0; i < rows.length; i++){
+        const r = rows[i];
         const text = r.doc.fulltext;
-        if(text){
+        if (text) {
           const semantics = this.extractSemantics(text);
-          if(semantics.variables) {
-            this.createOrUpdateVariables(semantics.variables.regular, semantics.component_name, r.doc.project, r.doc.reqid, true);
-            this.createOrUpdateVariables(semantics.variables.modes, semantics.component_name, r.doc.project, r.doc.reqid, false);
+          if (semantics.variables) {
+            await this.createOrUpdateVariables(semantics.variables.regular, semantics.component_name, r.doc.project, r.doc.reqid, true);
+            await this.createOrUpdateVariables(semantics.variables.modes, semantics.component_name, r.doc.project, r.doc.reqid, false);
           }
         }
-      })
-    });
+      }
   }
 
   extractSemantics = (text) => {
@@ -232,19 +241,22 @@ class MainView extends React.Component {
       return result.collectedSemantics
   }
 
-  createOrUpdateVariables = (variables, componentName, projectName, reqid , isRegular) => {
-    variables.map(function (variableName) {
-      var modeldbid = projectName + componentName + variableName;
-      modeldb.get(modeldbid).then(function (v) {
-        if(!v.reqs.includes(reqid)) {
-          modeldb.put({
+  createOrUpdateVariables = async (variables, componentName, projectName, reqid, isRegular) => {
+    for (let i = 0; i < variables.length; i++) {
+      const variableName = variables[i]
+      const modeldbid = projectName + componentName + variableName;
+      let v;
+      try {
+        v = await modeldb.get(modeldbid);
+        if (!v.reqs.includes(reqid)) {
+          const result = await modeldb.put({
             ...v,
             reqs: v.reqs.concat(reqid),
-          })
+          });
         }
-      }).catch(function (err) {
-        if(err && err.message === 'missing') {
-          modeldb.put({
+      } catch (err) {
+        if (err && err.message === 'missing') {
+          await modeldb.put({
             _id: modeldbid,
             project: projectName,
             component_name: componentName,
@@ -260,11 +272,9 @@ class MainView extends React.Component {
             model_id: ''
           });
         }
-      })
-    })
+      }
+    }
   }
-
-
 
   handleImport = () => {
     const self = this;
@@ -275,60 +285,51 @@ class MainView extends React.Component {
       title : 'Import Requirements',
       buttonLabel : 'Import',
       filters: [
-        { name: "Documents", extensions: ['json'] }
+        { name: "Documents",
+          extensions: ['json', 'csv']
+        }
       ],
-      properties: ['openFile' ]})
-      if (filepaths && filepaths.length > 0) {
-	  const filepath = filepaths[0];
+      properties: ['openFile']});
+    if (filepaths && filepaths.length > 0) {
+	     const filepath = filepaths[0];
+       //checking the extension of the file
+       const fileExtension = filepath.split('.').pop();
+       if (fileExtension === 'csv'){
 
-	  /*
-	  // Version using "require" causes error: Cannot find module "."
-	  const filepathnoext = filepath.slice(0,-5); // The slice is to remove the .json suffix
-	  console.log('*** filepathnoext = ' + JSON.stringify(filepathnoext));
-	  data = require(filepathnoext);
-	  db.bulkDocs(data).catch((err) => {console.log(err);});
-	  */
-
-	  /*
-	  // Version using "readFileSync" causes error: Cannot read property 'shift' of undefined
-	  var content = fs.readFileSync(filepath);  // maybe add "utf8" to return a string instead of a buffer
-	  var data = JSON.parse(content);
-	  db.bulkDocs(data).catch((err) => {console.log(err);});
-	  */
-
-	  /*
-	  // Version using readTextFile defined above, works.
-	  readTextFile(filepath, function (text) {
-	      let data = JSON.parse(text);
-	      console.log('length = ' + data.length);
-	      db.bulkDocs(data).catch((err) => {console.log(err);});
-	  })
-	  */
-
-	  // Version using readFile, works.
-	  fs.readFile(filepath,
-		      function (err,buffer) {
-			  if (err) throw err;
-			  let data = JSON.parse(buffer);
-			  db.bulkDocs(data).catch((err) => {console.log(err);});
-        var projects = listOfProjects;
-        data.forEach((d) => {
-          if (d.project && !projects.includes(d.project)){;
-            projects.push(d.project);
-          }
-        })
-        //If new projects were introduced through the imported reqs, update FRET_PROJECTS in db
-        db.get('FRET_PROJECTS').then((doc) => {
-          return db.put({
-            _id: 'FRET_PROJECTS',
-            _rev: doc._rev,
-            names: projects
-          })
+         csv2json().fromFile(filepath).then((importedReqs)=>{
+           //console.log(importedReqs);
+           let csvFields = Object.keys(importedReqs[0]);
+           self.handleImportRequirements(csvFields, importedReqs);
         }).then(() => self.populateVariables()).catch((err) => {
           console.log(err);
         });
-		      });
 
+       } else if (fileExtension === 'json'){
+         /*
+         // Version using "require" causes error: Cannot find module "."
+         const filepathnoext = filepath.slice(0,-5); // The slice is to remove the .json suffix
+         console.log('*** filepathnoext = ' + JSON.stringify(filepathnoext));
+         data = require(filepathnoext);
+
+         // Version using "readFileSync" causes error: Cannot read property 'shift' of undefined
+         var content = fs.readFileSync(filepath);  // maybe add "utf8" to return a string instead of a buffer
+         var data = JSON.parse(content);
+
+         // Version using readTextFile defined above, works.
+         readTextFile(filepath, function (text) {
+             let data = JSON.parse(text);
+         })
+         */
+         // Version using readFile, works.
+         fs.readFile(filepath, function (err,buffer) {
+             if (err) throw err;
+             let data = JSON.parse(buffer);
+             requirementsImport.importRequirements(data, listOfProjects);
+              });
+       }
+       else{
+         console.log("We do not support yet this file import")
+       }
     }
   }
 
@@ -340,7 +341,7 @@ class MainView extends React.Component {
     this.setState({
       selectedProject: name,
       anchorEl: null
-    })
+    });
   }
 
   handleClose = () => {
@@ -372,7 +373,6 @@ class MainView extends React.Component {
           filteredResult.push(doc)
         })
         var content = JSON.stringify(filteredResult, null, 4)
-        console.log(content)
         fs.writeFile(filepath, content, (err) => {
             if(err) {
                 return console.log(err);
@@ -383,8 +383,8 @@ class MainView extends React.Component {
         console.log(err);
       });
     }
-
   }
+
 
   handleCreateDialogOpen = () => {
     this.setState({ createDialogOpen: true});
@@ -404,7 +404,6 @@ class MainView extends React.Component {
    */
 
   handleNewProject = () => {
-
     // Close dropdown menu
     this.setState({ anchorEl: null });
     this.setState({ createProjectDialogOpen: true });
@@ -477,13 +476,49 @@ class MainView extends React.Component {
       projectTobeDeleted: name,
       anchorEl: null
     })
-
   }
 
   closeDeleteProjectDialog = () => {
     this.setState({
       deleteProjectDialogOpen: false,
       projectTobeDeleted: '',
+      anchorEl: null
+    })
+  }
+
+
+  openExportRequirementsDialog = () => {
+    this.setState({
+      exportRequirementsDialogOpen: true,
+      anchorEl: null
+    })
+  }
+
+  closeExportRequirementsDialog = () => {
+    this.setState({
+      exportRequirementsDialogOpen: false,
+      anchorEl: null
+    })
+  }
+
+    handleImportRequirements = (csvFields, importedReqs) => {
+      this.setState({
+        csvFields: csvFields,
+        importedReqs: importedReqs
+      })
+    this.openRequirementImportDialog()
+  }
+
+  openRequirementImportDialog = () => {
+    this.setState({
+      requirementImportDialogOpen: true,
+      anchorEl: null
+    })
+  }
+
+  closeRequirementImportDialog = () => {
+    this.setState({
+      requirementImportDialogOpen: false,
       anchorEl: null
     })
   }
@@ -538,7 +573,7 @@ class MainView extends React.Component {
                                     key={name}
                                     dense>
                                     <ListItemText primary = {name} onClick={() => this.handleSetProject(name)}/>
-                                    <IconButton onClick={() => this.handleDeleteProject(name)} size="small">
+                                    <IconButton onClick={() => this.handleDeleteProject(name)} size="small" aria-label="delete" >
                                       <Tooltip id="tooltip-icon-delete" title="Delete Project">
                                       <DeleteIcon color='error'/>
                                       </Tooltip>
@@ -600,6 +635,12 @@ class MainView extends React.Component {
                   </ListItemIcon>
                   <ListItemText primary="Requirements" />
                 </ListItem>
+                <ListItem button onClick={() => this.setMainContent('analysis')}>
+                  <ListItemIcon>
+                    <CodeIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Analysis Portal" />
+                </ListItem>
               </div>
               </List>
               <Divider />
@@ -611,8 +652,8 @@ class MainView extends React.Component {
                     </ListItemIcon>
                     <ListItemText primary="Import" />
                   </ListItem>
-                  <ListItem button>
-                    <ListItemIcon onClick={() => this.handleExport()}>
+                  <ListItem button onClick={() => this.openExportRequirementsDialog()}>
+                    <ListItemIcon>
                       <ExportIcon />
                     </ListItemIcon>
                     <ListItemText primary="Export" />
@@ -651,6 +692,18 @@ class MainView extends React.Component {
             open={this.state.deleteProjectDialogOpen}
             projectTobeDeleted={this.state.projectTobeDeleted}
             handleDialogClose={this.closeDeleteProjectDialog}
+          />
+          <ExportRequirementsDialog
+            open={this.state.exportRequirementsDialogOpen}
+            fretProjects={this.state.listOfProjects}
+            handleDialogClose={this.closeExportRequirementsDialog}
+          />
+          <RequirementImportDialogs
+            open={this.state.requirementImportDialogOpen}
+            handleDialogClose={this.closeRequirementImportDialog}
+            csvFields={this.state.csvFields}
+            listOfProjects={this.state.listOfProjects}
+            importedReqs={this.state.importedReqs}
           />
         </div>
         <Snackbar
