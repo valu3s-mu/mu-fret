@@ -66,15 +66,13 @@ import DisplayVariableDialog from './DisplayVariableDialog';
 const sharedObj = require('electron').remote.getGlobal('sharedObj');
 const modeldb = sharedObj.modeldb;
 
-var dbChangeListener;
+const fs = require('fs');
+const archiver = require('archiver');
+const app = require('electron').remote.app;
+const dialog = require('electron').remote.dialog;
+const utilities = require('../../support/utilities');
 
-const rows = [
-  {id: 'variable_name', numeric: false, disablePadding:false, label: 'FRET Variable Name'},
-  {id: 'modeldoc_id', numeric: false, disablePadding:false, label: 'Model Variable Name'},
-  {id: 'idType', numeric: false, disablePadding:false, label: 'Variable Type*'},
-  {id: 'dataType', numeric: false, disablePadding:false, label: 'Data Type*'},
-  {id: 'description', numeric: false, disablePadding:false, label: 'Description'}
-];
+var dbChangeListener;
 
 let counter = 0;
 function createData(variable_name, modeldoc_id, idType, dataType, description) {
@@ -91,6 +89,7 @@ function desc(a, b, orderBy) {
     element_a = a[orderBy].toLowerCase().trim()
     element_b = b[orderBy].toLowerCase().trim()
   }
+
   if (element_b < element_a)
     return -1
   if (element_b > element_a)
@@ -112,13 +111,21 @@ function getSorting(order, orderBy) {
   return order === 'desc' ? (a, b) => desc(a, b, orderBy) : (a, b) => -desc(a, b, orderBy);
 }
 
+const rows = [
+  {id: 'variable_name', numeric: false, disablePadding:false, label: 'FRET Variable Name'},
+  {id: 'modeldoc_id', numeric: false, disablePadding:false, label: 'Model Variable Name'},
+  {id: 'idType', numeric: false, disablePadding:false, label: 'Variable Type'},
+  {id: 'dataType', numeric: false, disablePadding:false, label: 'Data Type'},
+  {id: 'description', numeric: false, disablePadding:false, label: 'Description'}
+];
+
 class VariablesSortableHead extends React.Component {
   createSortHandler = property => event => {
     this.props.onRequestSort(event, property);
   };
 
   render() {
-    const {order, orderBy, rowCount} = this.props;
+    const {order, orderBy} = this.props;
 
     return (
       <TableHead>
@@ -128,6 +135,7 @@ class VariablesSortableHead extends React.Component {
               <TableCell
                 key={row.id}
                 align={row.numeric?'right':'left'}
+                padding={row.disablePadding ? 'none' : 'default'}
                 sortDirection={orderBy === row.id ? order : false}
               >
                 <Tooltip
@@ -155,7 +163,6 @@ class VariablesSortableHead extends React.Component {
 VariablesSortableHead.propTypes = {
   order: PropTypes.string.isRequired,
   orderBy: PropTypes.string.isRequired,
-  rowCount: PropTypes.number.isRequired,
   onRequestSort: PropTypes.func.isRequired
 };
 
@@ -191,22 +198,17 @@ const tableComponentBarStyles = theme => ({
     flex: '1 1 100%',
   },
   formControl: {
-    paddingLeft: theme.spacing(25),
+    minWidth: 400,
     padding: theme.spacing(-2),
-    minWidth: 300,
+    marginRight: theme.spacing(2)
+
   },
 });
 
 let TableComponentBar = props => {
-  const {classes, handleModelChange, modelComponents, modelComponent, fretComponent} = props;
+  const {classes, handleModelChange, importedComponents, modelComponent, fretComponent, importComponentModel} = props;
   return(
     <Toolbar className={classNames(classes.root, classes.componentBar)}>
-      <div className={classes.title}>
-        <Typography color="inherit" variant="subtitle1">
-           FRET Component: {fretComponent}
-        </Typography>
-      </div>
-      <div className={classes.spacer}>
       <form className={classes.formControl} autoComplete="off">
         <FormControl className={classes.modelRoot}>
           <InputLabel htmlFor="component-helper">Corresponding Model Component</InputLabel>
@@ -221,7 +223,7 @@ let TableComponentBar = props => {
             >
               <em>None</em>
             </MenuItem>
-            {modelComponents.map(c => {
+            {importedComponents.map(c => {
               return (<MenuItem value={c} key={c}>
                         {c}
                       </MenuItem>)
@@ -229,7 +231,11 @@ let TableComponentBar = props => {
           </Select>
         </FormControl>
       </form>
-      </div>
+      <Tooltip title='Import model information'>
+        <Button size="small" onClick={importComponentModel} color="secondary" variant='contained' >
+          Import
+        </Button>
+      </Tooltip>
     </Toolbar>
   );
 };
@@ -237,9 +243,9 @@ let TableComponentBar = props => {
 TableComponentBar.propTypes = {
   classes: PropTypes.object.isRequired,
   handleModelChange: PropTypes.func.isRequired,
-  modelComponents: PropTypes.array.isRequired,
+  importedComponents: PropTypes.array.isRequired,
   modelComponent: PropTypes.string.isRequired,
-  fretComponent: PropTypes.string.isRequired
+  importComponentModel: PropTypes.func.isRequired
 }
 
 TableComponentBar = withStyles(tableComponentBarStyles)(TableComponentBar);
@@ -258,6 +264,8 @@ const styles = theme => ({
   },
 });
 
+
+
 class VariablesSortableTable extends React.Component {
   state = {
     order: 'asc',
@@ -270,8 +278,11 @@ class VariablesSortableTable extends React.Component {
     snackbarOpen: false,
     snackBarDisplayInfo: {},
     modelComponent: '',
-    modelVariables: []
+    modelVariables: [],
+    language: '',
+    importedComponents: []
   }
+
 
   constructor(props){
     super(props);
@@ -309,7 +320,25 @@ class VariablesSortableTable extends React.Component {
     const {selectedProject, selectedComponent} = this.props,
         self = this;
     var componentModel = '',
-        modelVariables = [];
+        modelVariables = [],
+        importedComponents = [];
+
+      modeldb.find({
+        selector: {
+          project: selectedProject,
+          fretComponent: selectedComponent,
+          modeldoc: true
+        }
+        }).then(function(result){
+          result.docs.forEach(function(v){
+            if (!importedComponents.includes(v.component_name)) importedComponents.push(v.component_name);
+          })
+          self.setState({
+            importedComponents: importedComponents.sort((a, b) => {return a.toLowerCase().trim() > b.toLowerCase().trim()})
+          })
+        }).catch((err) => {
+          console.log(err);
+        });
 
     modeldb.find({
       selector: {
@@ -319,9 +348,8 @@ class VariablesSortableTable extends React.Component {
     }).then(function(result){
         self.setState({
           data: result.docs.map(r => {
-                  //console.log(r);
                   componentModel = r.modelComponent;
-                  return createData(r.variable_name, r.modeldoc_id, r.dataType, r.idType, r.description)
+                  return createData(r.variable_name, r.modeldoc_id, r.idType, r.dataType, r.description)
                 }).sort((a, b) => {return a.variable_name > b.variable_name}),
           modelComponent: componentModel
         })
@@ -336,7 +364,7 @@ class VariablesSortableTable extends React.Component {
             modelVariables.push(v);
           })
           self.setState({
-            modelVariables: modelVariables
+            modelVariables: modelVariables,
           })
         })
     }).catch((err) => {
@@ -407,11 +435,14 @@ class VariablesSortableTable extends React.Component {
             component_name: vdoc.component_name,
             variable_name: vdoc.variable_name,
             reqs: vdoc.reqs,
+            otherDeps: vdoc.otherDeps,
             dataType: vdoc.dataType,
             idType: vdoc.idType,
             tool: vdoc.tool,
+            otherDeps: vdoc.otherDeps,
             description: vdoc.description,
             assignment: vdoc.assignment,
+            copilotAssignment: vdoc.copilotAssignment,
             modeRequirement: vdoc.modeRequirement,
             modeldoc: vdoc.modeldoc,
             modelComponent: modelComponent,
@@ -424,6 +455,35 @@ class VariablesSortableTable extends React.Component {
     })
  };
 
+ importComponentModel = () => {
+   var homeDir = app.getPath('home');
+   const {selectedProject, selectedComponent} = this.props;
+   var filepaths = dialog.showOpenDialog({
+     defaultPath : homeDir,
+     title : 'Import Simulink Model Information',
+     buttonLabel : 'Import',
+     filters: [
+       { name: "Documents", extensions: ['json'] }
+     ],
+     properties: ['openFile']})
+     if (filepaths && filepaths.length > 0) {
+         fs.readFile(filepaths[0], 'utf8',
+               function (err,buffer) {
+             if (err) throw err;
+             let content = utilities.replaceStrings([['\\"id\\"','\"_id\"']], buffer);
+             let data = JSON.parse(content);
+             data.forEach((d) => {
+               d.project = selectedProject;
+               d.fretComponent = selectedComponent;
+             })
+             modeldb.bulkDocs(data)
+               .catch((err) => {
+                 console.log(err);
+               });
+           });
+        }
+ }
+
   handleSnackbarClose = (event, reason) => {
     if (reason === 'clickaway') {
       return;
@@ -432,18 +492,19 @@ class VariablesSortableTable extends React.Component {
   };
 
   render() {
-    const {classes, selectedProject, selectedComponent, modelComponents} = this.props;
-    const {data, order, orderBy, rowsPerPage, page, selectedVariable, modelComponent} = this.state;
+    const {classes, selectedProject, selectedComponent} = this.props;
+    const {data, order, orderBy, rowsPerPage, page, selectedVariable, modelComponent, importedComponents} = this.state;
     const emptyRows = rowsPerPage - Math.min(rowsPerPage, data.length - page * rowsPerPage);
     return(
       <div>
         <Paper className={classes.root}>
         <div className={classes.tableWrapper}>
           <TableComponentBar
-            modelComponents={modelComponents}
+            importedComponents={importedComponents}
             modelComponent={modelComponent}
             fretComponent={selectedComponent}
             handleModelChange={this.handleModelChange}
+            importComponentModel={this.importComponentModel}
           />
           <Table className={classes.table} aria-labelledby="tableTitle" size="small">
             <VariablesSortableHead
@@ -465,8 +526,8 @@ class VariablesSortableTable extends React.Component {
                       </Button>
                     </TableCell>
                     <TableCell>{n.modeldoc_id}</TableCell>
-                    <TableCell>{n.dataType}</TableCell>
                     <TableCell>{n.idType}</TableCell>
+                    <TableCell>{n.dataType}</TableCell>
                     <TableCell>{n.description}</TableCell>
                   </TableRow>
                 )
@@ -535,7 +596,6 @@ VariablesSortableTable.propTypes = {
   classes: PropTypes.object.isRequired,
   selectedProject: PropTypes.string.isRequired,
   selectedComponent: PropTypes.string.isRequired,
-  modelComponents: PropTypes.array.isRequired,
   checkComponentCompleted: PropTypes.func.isRequired
 };
 
