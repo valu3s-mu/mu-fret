@@ -38,6 +38,11 @@ import RequirementDialogs from './RequirementDialogs';
 
 const constants = require('../parser/Constants');
 
+const sharedObj = require('electron').remote.getGlobal('sharedObj');
+const db = sharedObj.db;
+const system_dbkeys = sharedObj.system_dbkeys;
+
+
 const COLOR_RANGE = ["hsl(0, 0%, 80%)", "hsl(0, 0%, 20%)"]
 
 class CirclePacking extends React.Component {
@@ -188,7 +193,7 @@ class CirclePacking extends React.Component {
       .enter().append("circle")
         .attr("class", function(d) {
           return getRequirementStyle(d, true)})
-        .style("fill", function(d) {return d.children ? color(d.depth) : d.data.doc.semantics ? ((d.data.doc.semantics.ft === constants.unhandled_semantics || d.data.doc.fulltext === "")  ? "white": "node node--leaf-unformalized") : "white" })
+        .style("fill", function(d) {return d.children ? color(d.depth) : d.data.doc && d.data.doc.semantics ? ((d.data.doc.semantics.ft === constants.unhandled_semantics || d.data.doc.fulltext === "")  ? "white": "node node--leaf-unformalized") : "white" })
         .on("click", function(d) {
           if (focus !== d)
             zoom(d), d3.event.stopPropagation();
@@ -321,7 +326,7 @@ class CirclePacking extends React.Component {
     }
     if(this.props.requirements !== prevProps.requirements) {
       this.createGraph()
-    }    
+    }
   }
 
   render() {
