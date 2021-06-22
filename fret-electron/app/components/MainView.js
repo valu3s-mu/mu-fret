@@ -252,7 +252,7 @@ class MainView extends React.Component {
       }
       if (!system_dbkeys.includes(change.id) && !this.state.importing) {
         this.synchStateWithDB();
-      }      
+      }
     })
   }
 
@@ -649,8 +649,8 @@ class MainView extends React.Component {
             </div>
           </Drawer>
           <main className={classes.content}>
-          <AppMainContent content={this.state.mainContent} selectedProject={this.state.selectedProject} 
-          existingProjectNames={this.state.listOfProjects} requirements={requirements}/>            
+          <AppMainContent content={this.state.mainContent} selectedProject={this.state.selectedProject}
+          existingProjectNames={this.state.listOfProjects} requirements={requirements}/>
           </main>
           <CreateRequirementDialog
             open={this.state.createDialogOpen}
@@ -658,6 +658,7 @@ class MainView extends React.Component {
             editRequirement={undefined}
             selectedProject={this.state.selectedProject}
             existingProjectNames={this.state.listOfProjects}
+            requirements={this.state.requirements}
             />
           <CreateProjectDialog
               open={this.state.createProjectDialogOpen}
