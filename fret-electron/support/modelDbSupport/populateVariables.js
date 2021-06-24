@@ -12,8 +12,11 @@ function extractSemantics (text) {
   const result = FretSemantics.compile(text)
   if (result.parseErrors)
     return {}
-  else if (result.collectedSemantics)
+  else if (result.collectedSemantics){
     return result.collectedSemantics
+
+  }
+
 };
 
 function batchCreateOrUpdate (variables) {
@@ -38,6 +41,9 @@ function checkforUnusedVariables() {
   })
 };
 
+
+
+
 //This function populates the model DB when a new requirement is added (imported) or updated
   function populateVariables() {
     let rows = [];
@@ -60,20 +66,17 @@ function checkforUnusedVariables() {
         if (text) {
           const semantics = extractSemantics(text);
           if (semantics.variables) {
-            const regularVariables = semantics.variables.regular;
-            const modesVariables = semantics.variables.modes;
             const projectName = r.doc.project;
             const componentName = semantics.component_name;
-            const reqId = r.doc.reqid;
-            const concatVariables = regularVariables.concat(modesVariables);
-            for (let i = 0; i < concatVariables.length; i++) {
-              let isRegular = i < regularVariables.length;
-              const variableName = concatVariables[i]
+            const dbId = r.doc._id;
+            const variables = semantics.variables;
+            for (let i = 0; i < variables.length; i++) {
+              const variableName = variables[i]
               const variableId = projectName + componentName + variableName;
               if (mapIdsToVariables[variableId]) {
-                if (!mapIdsToVariables[variableId].reqs.includes(reqId)) {
+                if (!mapIdsToVariables[variableId].reqs.includes(dbId)) {
                   shouldUpdate = true;
-                  mapIdsToVariables[variableId].reqs.push(reqId);
+                  mapIdsToVariables[variableId].reqs.push(dbId);
                 }
               } else {
                 shouldUpdate = true;
@@ -82,9 +85,9 @@ function checkforUnusedVariables() {
                   project: projectName,
                   component_name: componentName,
                   variable_name: variableName,
-                  reqs: [reqId],
-                  dataType: isRegular ? '' : 'boolean',
-                  idType: isRegular ? '' : 'Mode',
+                  reqs: [dbId],
+                  dataType: '',
+                  idType: '' ,
                   description: '',
                   assignment: '',
                   modeRequirement: '',
