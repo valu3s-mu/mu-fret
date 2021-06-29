@@ -80,6 +80,12 @@ import * as d3 from "d3";
 import {getRequirementStyle} from "../utils/utilityFunctions";
 
 const constants = require('../parser/Constants');
+const sharedObj = require('electron').remote.getGlobal('sharedObj');
+
+const db = sharedObj.db;
+const app = require('electron').remote.app;
+const system_dbkeys = sharedObj.system_dbkeys;
+
 
 let counter = 0;
 // status is also saved in database
@@ -345,7 +351,7 @@ class SortableTable extends React.Component {
     }
     if(this.props.requirements !== prevProps.requirements) {
       this.formatData()
-    }    
+    }
   }
 
   formatData() {
@@ -701,7 +707,8 @@ class SortableTable extends React.Component {
         selectedProject={this.state.selectedProject}
         editRequirement={this.state.selectedRequirement}
         addChildRequirementToParent={this.state.addChildRequirementMode}
-        existingProjectNames={this.props.existingProjectNames} />
+        existingProjectNames={this.props.existingProjectNames}
+        requirements = {this.props.requirements} />
       <DeleteRequirementDialog
         open={this.state.deleteDialogOpen}
         requirementsToBeDeleted={selectionForDeletion}
@@ -740,7 +747,8 @@ class SortableTable extends React.Component {
 SortableTable.propTypes = {
   classes: PropTypes.object.isRequired,
   selectedProject: PropTypes.string.isRequired,
-  existingProjectNames: PropTypes.array.isRequired
+  existingProjectNames: PropTypes.array.isRequired,
+  requirements: PropTypes.array.isRequired
 };
 
 export default withStyles(styles)(SortableTable);
