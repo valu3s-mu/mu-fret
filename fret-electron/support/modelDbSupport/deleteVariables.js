@@ -15,9 +15,11 @@ function createVariableMappingToDeleteRequirements (requirements) {
   let mapVariablesToReqIds = {};
   requirements.forEach(r => {
     if (r.semantics && r.semantics.variables) {
-      const regularVariables = r.semantics.variables.regular;
-      const modeVariables = r.semantics.variables.modes;
-      const variables = regularVariables.concat(modeVariables);
+
+      const variables = typeof r.semantics.variables === "object" && !Array.isArray(r.semantics.variables) ?
+      r.semantics.variables.modes.concat(r.semantics.variables.regular):
+      r.semantics.variables
+
       variables.forEach(variable => {
         // glossary id requires project name, component name and variable name
         const variableId = r.project + r.semantics.component_name + variable;

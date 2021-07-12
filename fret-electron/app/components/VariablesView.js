@@ -443,6 +443,7 @@ class VariablesView extends React.Component {
   }
 
   setVariablesAndModes(result){
+    const self = this;
     var data = {
       cocospecData: {},
       cocospecModes: {},
@@ -458,8 +459,8 @@ class VariablesView extends React.Component {
             && req.semantics.ft !== constants.undefined_semantics
             && req.semantics.ft !== constants.unhandled_semantics){
             if (typeof req.semantics.variables !== 'undefined') {
-                if (typeof req.semantics.variables.regular !== 'undefined'){
-                  req.semantics.variables.regular.forEach(function(variable){
+                const variables = req.semantics.variables;
+                  variables.forEach(function(variable){
                   if (!data.variablesData.includes(req.project + req.semantics.component_name + variable)){
                     if (!(req.semantics.component_name in data.cocospecData)){
                       data.cocospecData[req.semantics.component_name] = [];
@@ -469,7 +470,6 @@ class VariablesView extends React.Component {
                     data.variablesData.push(req.project + req.semantics.component_name + variable);
                   }
                 })
-              }
             }
           }
         }
@@ -530,8 +530,8 @@ class VariablesView extends React.Component {
   checkComponentCompleted(component_name, project) {
     const self = this;
     const {cocospecData, cocospecModes,completedComponents} = this.state;
-    var dataAndModesLength = 0;
-    cocospecModes[component_name] ? dataAndModesLength = cocospecData[component_name].length + cocospecModes[component_name].length : dataAndModesLength = cocospecData[component_name].length;
+    var dataAndModesLength = cocospecData[component_name].length;
+    //cocospecModes[component_name] ? dataAndModesLength = cocospecData[component_name].length + cocospecModes[component_name].length : dataAndModesLength = cocospecData[component_name].length;
     modeldb.find({
       selector: {
         component_name: component_name,
