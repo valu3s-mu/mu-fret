@@ -89,6 +89,7 @@ const system_dbkeys = require('electron').remote.getGlobal('sharedObj').system_d
 const csv2json=require("csvtojson");
 const requirementsImport = require('../../support/requirementsImport/convertAndImportRequirements');
 const modelSupport = require('../../support/modelDbSupport/populateVariables');
+const checkDbFormat = require('../../support/fretDbSupport/checkDBFormat.js');
 const drawerWidth = 240;
 let dbChangeListener = null;
 
@@ -222,7 +223,10 @@ class MainView extends React.Component {
       include_docs: true,
     }).then((result) => {
       this.setState({
-        requirements : result.rows.filter(r => !system_dbkeys.includes(r.key))
+        requirements : result.rows.filter(r => !system_dbkeys.includes(r.key)).map(r => {
+          r.doc.semantics.variables = checkDbFormat.checkVariableFormat(r.doc.semantics.variables);
+          return r;
+        })
       })
     }).catch((err) => {
       console.log(err);
@@ -589,12 +593,6 @@ class MainView extends React.Component {
                   </ListItemIcon>
                   <ListItemText primary="Dashboard" />
                 </ListItem>
-                <ListItem button onClick={() => this.setMainContent('graph')}>
-                  <ListItemIcon>
-                    <GraphIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Graph View" />
-                </ListItem>
                 <ListItem button onClick={() => this.setMainContent('requirements')}>
                   <ListItemIcon>
                     <ListIcon />
@@ -640,8 +638,11 @@ class MainView extends React.Component {
             </div>
           </Drawer>
           <main className={classes.content}>
-          <AppMainContent content={this.state.mainContent} selectedProject={this.state.selectedProject}
-          existingProjectNames={this.state.listOfProjects} requirements={requirements}/>
+          <AppMainContent
+          content={this.state.mainContent}
+          selectedProject={this.state.selectedProject}
+          existingProjectNames={this.state.listOfProjects}
+          requirements={requirements}/>
           </main>
           <CreateRequirementDialog
             open={this.state.createDialogOpen}
