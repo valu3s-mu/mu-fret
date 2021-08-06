@@ -31,79 +31,41 @@
 // AGREEMENT.
 // *****************************************************************************
 import React from 'react';
-import PropTypes from 'prop-types';
-import { withStyles } from '@material-ui/core/styles';
-import Avatar from '@material-ui/core/Avatar';
-import Chip from '@material-ui/core/Chip';
-import Paper from '@material-ui/core/Paper';
-import TagFacesIcon from '@material-ui-icons/core/TagFaces';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
 
-const styles = theme => ({
-  root: {
-    display: 'flex',
-    justifyContent: 'left',
-    flexWrap: 'wrap',
-    padding: theme.spacing(1/2),
-  },
-  chip: {
-    margin: theme.spacing(1/2),
-  },
-});
+function VariablesDropdownMenu(props) {
 
-class Tags extends React.Component {
-  state = {
-    chipData: [
-      { key: 0, label: 'L4' },
-      { key: 1, label: 'letio' },
-      { key: 2, label: 'Build 5' },
-    ],
-  };
+  const {position, options, selection, onClick} = props;
 
-  handleDelete = data => () => {
-    if (data.label === 'React') {
-      alert('Why would you want to delete React?! :)'); // eslint-disable-line no-alert
-      return;
-    }
+  return (
+    <div
+      style={{
+        top: `${position ? position[0] : -9999}px`,
+        left: `${position ? position[1] : -9999}px`,
+        maxWidth: '425px',
+        maxHeight: '200px',
+        overflowY: 'auto',
+        position: 'absolute',
+        zIndex: 1,
+        padding: '3px',
+        background: 'white',
+        borderRadius: '4px',
+        boxShadow: '0 1px 5px rgba(0,0,0,.2)',
+      }}>
+      {options.map((option, i) => (
+        <ListItem
+          key={option}
+          selected={i === selection}
+          button
+          onMouseDown={event => event.preventDefault()}
+          onClick={onClick(i)}>
+          <ListItemText primary={option} />
+        </ListItem>
+      ))}
+    </div>
+  )
 
-    const chipData = [...this.state.chipData];
-    const chipToDelete = chipData.indexOf(data);
-    chipData.splice(chipToDelete, 1);
-    this.setState({ chipData });
-  };
-
-  render() {
-    const { classes } = this.props;
-
-    return (
-      <Paper className={classes.root}>
-        {this.state.chipData.map(data => {
-          let avatar = null;
-
-          if (data.label === 'React') {
-            avatar = (
-              <Avatar>
-                <TagFacesIcon className={classes.svgIcon} />
-              </Avatar>
-            );
-          }
-
-          return (
-            <Chip
-              key={data.key}
-              avatar={avatar}
-              label={data.label}
-              onDelete={this.handleDelete(data)}
-              className={classes.chip}
-            />
-          );
-        })}
-      </Paper>
-    );
-  }
 }
 
-Tags.propTypes = {
-  classes: PropTypes.object.isRequired,
-};
-
-export default withStyles(styles)(Tags);
+export default VariablesDropdownMenu

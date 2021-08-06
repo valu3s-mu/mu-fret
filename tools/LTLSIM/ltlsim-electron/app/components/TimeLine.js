@@ -1,15 +1,15 @@
 // *****************************************************************************
 // Notices:
-// 
-// Copyright © 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
-// 
+//
+// Copyright Â©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
+//
 // Disclaimers
-// 
+//
 // No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
 // ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, 
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, 
+// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
+// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
 // OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
 // ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
 // THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
@@ -18,7 +18,7 @@
 // RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 // DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
 // PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-// 
+//
 // Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
 // THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
 // ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
@@ -33,10 +33,10 @@
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import { withStyles, withTheme } from '@material-ui/core/styles';
-import { ResponsiveContainer, 
-         LineChart, 
-         XAxis, 
-         YAxis, 
+import { ResponsiveContainer,
+         LineChart,
+         XAxis,
+         YAxis,
          Line,
          ReferenceDot,
          Tooltip } from 'recharts';
@@ -69,14 +69,14 @@ class TimeLine extends Component {
                         width={600}
                         height={50}
                         data={data}
-                        margin={{top: 10, right: 10, left: 0, bottom: 10}} 
+                        margin={{top: 10, right: 10, left: 0, bottom: 10}}
                         syncId={this.props.syncId}
                         onClick={(this.props.onClick) ? this.props.onClick : undefined} >
-                        <Tooltip 
+                        <Tooltip
                             cursor={{ stroke: 'red', strokeWidth: 2 }}
                             content={()=>(null)}/>
                         <XAxis
-                            domain={[this.props.tStart, this.props.tEnd]} 
+                            domain={[this.props.tStart, this.props.tEnd]}
                             orientation={this.props.orientation}
                         />
                         <YAxis
@@ -84,16 +84,16 @@ class TimeLine extends Component {
                             interval="preserveStartEnd"
                             minTickGap={0}
                         />
-                        <Line 
+                        <Line
                             name="TIMELINE"
                             type="step"
-                            dataKey="TIMELINE" 
+                            dataKey="TIMELINE"
                             stroke={primaryColor}
                             strokeWidth={this.props.strokeWidth}
-                            isAnimationActive={false} 
+                            isAnimationActive={false}
                         />
                     </LineChart>
-                </ResponsiveContainer>  
+                </ResponsiveContainer>
             </div>
         )
     }
@@ -117,4 +117,4 @@ TimeLine.defaultProps = {
     orientation: "top"
 }
 
-export default withTheme()(withStyles(styles)(TimeLine));
+export default withTheme(withStyles(styles)(TimeLine));

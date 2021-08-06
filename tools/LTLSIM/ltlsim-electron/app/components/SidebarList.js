@@ -1,15 +1,15 @@
 // *****************************************************************************
 // Notices:
-// 
-// Copyright © 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
-// 
+//
+// Copyright Â©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
+//
 // Disclaimers
-// 
+//
 // No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
 // ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS, 
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, 
+// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
+// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
 // OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
 // ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
 // THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
@@ -18,7 +18,7 @@
 // RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
 // DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
 // PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-// 
+//
 // Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
 // THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
 // ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
@@ -54,10 +54,10 @@ import FormulaRenderer from './FormulaRenderer';
 
 const styles = theme => ({
     nested: {
-        paddingLeft: theme.spacing.unit * 4
+        paddingLeft: theme.spacing(4)
     },
     nestednested: {
-        paddingLeft: theme.spacing.unit * 6
+        paddingLeft: theme.spacing(6)
     },
     listCheckbox: {
         paddingTop: 0,
@@ -96,10 +96,10 @@ class SidebarList extends Component {
     }
 
     render () {
-        const {classes, 
-                model, 
-                visibleAtomics, 
-                visibleFormulas, 
+        const {classes,
+                model,
+                visibleAtomics,
+                visibleFormulas,
                 visibleSubformulas,
                 selectedFormula,
                 settings } = this.props;
@@ -108,34 +108,34 @@ class SidebarList extends Component {
 
         let atomicsList = (atomicKeys.length > 0) ? (
             <Collapse
-                in={this.state.atomicsOpen && 
-                    !this.props.settings.focusOnSelection && 
+                in={this.state.atomicsOpen &&
+                    !this.props.settings.focusOnSelection &&
                     !this.props.settings.displayAtomicsWithFormulas
                     }
-                timeout="auto" 
+                timeout="auto"
                 unmountOnExit >
                 <List component="div" disablePadding >
                     {atomicKeys.map((key) => {
                         let longName = key.length > maxNameLength;
-                        let listItem = <ListItem 
-                            key={'sidebar-atomic-'+key} 
-                                button 
+                        let listItem = <ListItem
+                            key={'sidebar-atomic-'+key}
+                                button
                                 className={classes.nested}
                                 onClick={this.props.onAtomicSelection(key)}>
-                                <Checkbox 
+                                <Checkbox
                                     checked={visibleAtomics.indexOf(key) !== -1}
                                     className={classes.listCheckbox}
                                     tabIndex={-1}
                                     disableRipple
                                 />
-                                <ListItemText primary={(longName) ? 
+                                <ListItemText primary={(longName) ?
                                     key.slice(0, maxNameLength-2) + "..." : key}/>
                         </ListItem>;
 
-                        return (longName) ? 
-                        <Tooltip 
-                            title={key} 
-                            key={'sidebar-atomic-tooltip-'+key} 
+                        return (longName) ?
+                        <Tooltip
+                            title={key}
+                            key={'sidebar-atomic-tooltip-'+key}
                             placement="right"
                             classes={{tooltip: classes.tooltip}}>
                             {listItem}
@@ -147,24 +147,24 @@ class SidebarList extends Component {
         let formulaList = (formulaKeys.length > 0) ? (
             <Collapse
                 in={this.state.formulasOpen}
-                timeout="auto" 
+                timeout="auto"
                 unmountOnExit >
                 <List component="div" disablePadding >
                         {formulaKeys.map((key) => {
                             let formula = model.formulas.values[key];
-                            let flabel = formula.label.length > maxNameLength ? 
+                            let flabel = formula.label.length > maxNameLength ?
                                 formula.label.slice(0, maxNameLength-2) + "..." :
                                 formula.label;
-                            let subformulaList = (formula.subexpressions.length > 0) ? 
-                                <Collapse 
-                                    in={this.state.formulasOpen && 
-                                        settings.focusOnSelection && 
+                            let subformulaList = (formula.subexpressions.length > 0) ?
+                                <Collapse
+                                    in={this.state.formulasOpen &&
+                                        settings.focusOnSelection &&
                                         key === selectedFormula}
-                                    timeout="auto" 
+                                    timeout="auto"
                                     unmountOnExit
                                     key={'sidebar-subformula-collapse-'+key} >
-                                    <List 
-                                        component="div" 
+                                    <List
+                                        component="div"
                                         disablePadding
                                         key={'sidebar-subformula-list-'+key} >
                                         {formula.subexpressions.map((s, i) => {
@@ -178,17 +178,17 @@ class SidebarList extends Component {
                                                     }
                                                     placement="right"
                                                     classes={{tooltip: classes.tooltip}}>
-                                                <ListItem 
-                                                    button 
+                                                <ListItem
+                                                    button
                                                     className={classes.nestednested}
                                                     onClick={this.props.onFormulaSelection(key, i)}>
-                                                    <Checkbox 
+                                                    <Checkbox
                                                         checked={vs && vs.indexOf(i) !== -1}
                                                         className={classes.listCheckbox}
                                                         tabIndex={-1}
                                                         disableRipple
                                                     />
-                                                    <ListItemText primary={(s.label.length > maxNameLength-2) ? 
+                                                    <ListItemText primary={(s.label.length > maxNameLength-2) ?
                                                             s.label.slice(0, maxNameLength-4)+"..." : s.label}/>
                                                 </ListItem>
                                                 </Tooltip>
@@ -197,19 +197,19 @@ class SidebarList extends Component {
                                     </List>
                                 </Collapse>
                                 : null;
-                            return (<div 
+                            return (<div
                                 key={'sidebar-formula-'+key} >
-                                <Tooltip 
+                                <Tooltip
                                     title={
                                         <FormulaRenderer tex={formula.tex} />
                                     }
                                     placement="right"
                                     classes={{tooltip: classes.tooltip}}>
-                                <ListItem 
-                                    button 
+                                <ListItem
+                                    button
                                     className={classes.nested}
                                     onClick={this.props.onFormulaSelection(key)}>
-                                    <Checkbox 
+                                    <Checkbox
                                         checked={visibleFormulas.indexOf(key) !== -1}
                                         className={classes.listCheckbox}
                                         tabIndex={-1}
@@ -226,16 +226,16 @@ class SidebarList extends Component {
         return (
             <div>
                 <List component="nav">
-                    {(!this.props.settings.focusOnSelection && 
-                    !this.props.settings.displayAtomicsWithFormulas) && 
+                    {(!this.props.settings.focusOnSelection &&
+                    !this.props.settings.displayAtomicsWithFormulas) &&
                         (<ListItem  button >
                             <ListItemIcon>
                                 <AtomicIcon />
                             </ListItemIcon>
                             <ListItemText primary="Atomics"/>
                             {(atomicKeys.length > 0) &&
-                                (this.state.atomicsOpen ? 
-                                <ExpandLessIcon onClick={this.handleToggleAtomicsOpen} color="primary"/> : 
+                                (this.state.atomicsOpen ?
+                                <ExpandLessIcon onClick={this.handleToggleAtomicsOpen} color="primary"/> :
                                 <ExpandMoreIcon onClick={this.handleToggleAtomicsOpen} color="primary"/>)}
                         </ListItem>)}
                     {atomicsList}
@@ -244,23 +244,23 @@ class SidebarList extends Component {
                             <FormulaIcon />
                         </ListItemIcon>
                         <ListItemText primary="Formulas"/>
-                        {formulaKeys.length > 0 && (this.state.formulasOpen ? 
-                            <ExpandLessIcon onClick={this.handleToggleFormulasOpen} color="primary"/> : 
+                        {formulaKeys.length > 0 && (this.state.formulasOpen ?
+                            <ExpandLessIcon onClick={this.handleToggleFormulasOpen} color="primary"/> :
                             <ExpandMoreIcon onClick={this.handleToggleFormulasOpen} color="primary"/>)}
                     </ListItem>
                     {formulaList}
                 </List>
-                {/* TODO: implement import, export and help 
+                {/* TODO: implement import, export and help
                 <Divider />
                 <List>
-                    <ListItem 
+                    <ListItem
                         button  >
                         <ListItemIcon>
                             <ImportIcon />
                         </ListItemIcon>
                         <ListItemText primary="Import" />
                     </ListItem>
-                    <ListItem 
+                    <ListItem
                         button  >
                         <ListItemIcon>
                             <ExportIcon />
