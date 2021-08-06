@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -69,7 +69,8 @@ class AppMainContent extends React.Component {
 AppMainContent.propTypes = {
   content: PropTypes.string.isRequired,
   selectedProject: PropTypes.string.isRequired,
-  existingProjectNames: PropTypes.array.isRequired
+  existingProjectNames: PropTypes.array.isRequired,
+  requirements: PropTypes.array.isRequired
 }
 
 export default AppMainContent;

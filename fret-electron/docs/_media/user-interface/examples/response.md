@@ -2,7 +2,7 @@
 
 Specifies the response that the component must provide to fulfill the requirement.
 The current version of FRET supports the form:
-**satisfy** BEXP (Boolean Expression, see the help for the Conditions field).
+**satisfy** BEXP (Boolean Expression, see the help for the Conditions field). 
 
 Examples:
 

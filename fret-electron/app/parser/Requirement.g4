@@ -38,7 +38,7 @@ reqts   :    reqt +
 reqt    :    'requirement' (DIGITS | ID | REQT_ID) ':' reqt_body
     ;
 
-reqt_body : (nasa | freeform) ('.')?
+reqt_body : (nasa | freeform) ('.')? 
           ;
 
 freeform :
@@ -52,7 +52,7 @@ nasa
         ;
 
 //unhandled: "Not unless !tank_empty shall the pump satisfy pump_on"
-//note: Can't have "when/if/unless scope_condition" because when/if/unless
+//note: Can't have "when/if/unless scope_condition" because when/if/unless 
 //also introduce a precondition (see qualifier_word, qualified_condition1).
 scope : (
 (ONLY ( ((DURING | ((WHEN | IF)? IN)) scope_mode) |

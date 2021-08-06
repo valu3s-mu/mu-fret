@@ -40,9 +40,9 @@ import CardContent from '@material-ui/core/CardContent';
 import Button from '@material-ui/core/Button';
 import IconButton from '@material-ui/core/IconButton';
 import Typography from '@material-ui/core/Typography';
+import Tooltip from '@material-ui/core/Tooltip';
 import EditIcon from '@material-ui/icons/Edit';
 import DeleteIcon from '@material-ui/icons/Delete';
-import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { withStyles } from '@material-ui/core/styles';
 
 import FormulaDialog from './FormulaDialog';
@@ -117,20 +117,26 @@ class FormulaDetails extends Component {
             <div className={classes.root}>
                 <Card>
                     <div className={classes.details}>
-                        <CardContent className={classes.content}>
+                        <CardContent className={classes.content}>   
                             <FormulaRenderer tex={model.formulas.values[fkey].tex} />
                         </CardContent>
                         {actions && <div className={classes.actions}>
-                            <IconButton onClick={this.handleFormulaDialogOpen}>
-                                <EditIcon />
-                            </IconButton>
-                            <IconButton onClick={this.handleFormulaDelete(fkey)}>
-                                <DeleteIcon />
-                            </IconButton>
+                            <Tooltip title="Edit formula">
+                                <IconButton 
+                                    onClick={this.handleFormulaDialogOpen}>
+                                    <EditIcon />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete formula">
+                                <IconButton 
+                                onClick={this.handleFormulaDelete(fkey)}>
+                                    <DeleteIcon color="error" />
+                                </IconButton>
+                            </Tooltip>
                         </div>}
                     </div>
                 </Card>
-                {actions && <FormulaDialog
+                {actions && <FormulaDialog 
                     open={this.state.formulaDialogOpen}
                     create={false}
                     fkey={fkey}

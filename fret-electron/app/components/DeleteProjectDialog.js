@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -65,8 +65,19 @@ class DeleteProjectDialog extends React.Component {
        project: this.state.project,
      }
    }).then(function (deleteReqsList){
-     dbSupport.removeReqsInBulk(deleteReqsList.docs);
-     modelDbSupport.removeVariablesInBulk(deleteReqsList.docs);
+
+    /*
+      // if requirements is 2 arrays (regulars and modes), concatenate
+      const requirements = deleteReqsList.docs.map(r => {
+        if(r.semantics && typeof r.semantics.variables === "object") {
+          r.semantics.variables = r.semantics.variables.modes.concat(r.semantics.variables.regular);
+        }
+        return r;
+      })
+      */
+
+      dbSupport.removeReqsInBulk(deleteReqsList.docs);
+      modelDbSupport.removeVariablesInBulk(deleteReqsList.docs);
    })
 
    db.get('FRET_PROJECTS').then((doc) => {

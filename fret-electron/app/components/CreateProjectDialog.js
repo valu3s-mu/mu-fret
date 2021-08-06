@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -46,8 +46,8 @@ const db = require('electron').remote.getGlobal('sharedObj').db;
 
 const styles = theme => ({
   textField: {
-    marginLeft: theme.spacing.unit,
-    marginRight: theme.spacing.unit,
+    marginLeft: theme.spacing(),
+    marginRight: theme.spacing(),
     width: 300,
   },
 })

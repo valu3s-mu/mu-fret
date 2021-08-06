@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -35,8 +35,8 @@ import { withStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
 import Typography from '@material-ui/core/Typography';
 
-import GridList from '@material-ui/core/GridList';
-import GridListTile from '@material-ui/core/GridListTile';
+import ImageList from '@material-ui/core/ImageList';
+import ImageListItem from '@material-ui/core/ImageListItem';
 import Divider from '@material-ui/core/Divider';
 
 import Dialog from '@material-ui/core/Dialog';

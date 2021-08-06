@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -148,7 +148,8 @@ class Feeds extends React.Component {
 
 Feeds.propTypes = {
   classes: PropTypes.object.isRequired,
-  selectedProject: PropTypes.string.isRequired
+  selectedProject: PropTypes.string.isRequired,
+  requirements: PropTypes.array.isRequired
 };
 
 export default withStyles(styles)(Feeds);

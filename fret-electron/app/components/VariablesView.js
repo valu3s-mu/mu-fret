@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -67,7 +67,7 @@ import Select from '@material-ui/core/Select';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 
-
+const checkDbFormat = require('../../support/fretDbSupport/checkDBFormat.js');
 const sharedObj = require('electron').remote.getGlobal('sharedObj');
 const constants = require('../parser/Constants');
 const db = sharedObj.db;
@@ -480,7 +480,6 @@ class VariablesView extends React.Component {
       modesData: [],
       components: []
     };
-
     result.docs.forEach(function(req){
       if (typeof req.semantics !== 'undefined'){
         if (typeof req.semantics.ft !== 'undefined'){
@@ -488,17 +487,17 @@ class VariablesView extends React.Component {
             && req.semantics.ft !== constants.undefined_semantics
             && req.semantics.ft !== constants.unhandled_semantics){
             if (typeof req.semantics.variables !== 'undefined') {
-                const variables = req.semantics.variables;
-                  variables.forEach(function(variable){
-                  if (!data.variablesData.includes(req.project + req.semantics.component_name + variable)){
-                    if (!(req.semantics.component_name in data.cocospecData)){
-                      data.cocospecData[req.semantics.component_name] = [];
-                      data.components.push(req.semantics.component_name);
-                    }
-                    data.cocospecData[req.semantics.component_name].push(createData(variable, req.semantics.component_name, req.project, ''));
-                    data.variablesData.push(req.project + req.semantics.component_name + variable);
+                const variables = checkDbFormat.checkVariableFormat(req.semantics.variables);
+                variables.forEach(function(variable){
+                if (!data.variablesData.includes(req.project + req.semantics.component_name + variable)){
+                  if (!(req.semantics.component_name in data.cocospecData)){
+                    data.cocospecData[req.semantics.component_name] = [];
+                    data.components.push(req.semantics.component_name);
                   }
-                })
+                  data.cocospecData[req.semantics.component_name].push(createData(variable, req.semantics.component_name, req.project, ''));
+                  data.variablesData.push(req.project + req.semantics.component_name + variable);
+                }
+              })
             }
           }
         }

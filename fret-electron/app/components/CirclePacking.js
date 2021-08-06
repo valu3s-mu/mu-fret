@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -362,6 +362,7 @@ class CirclePacking extends React.Component {
 
 CirclePacking.propTypes = {
   selectedProject: PropTypes.string.isRequired,
-  projects: PropTypes.array.isRequired
+  projects: PropTypes.array.isRequired,
+  requirements: PropTypes.array.isRequired
 }
 export default CirclePacking

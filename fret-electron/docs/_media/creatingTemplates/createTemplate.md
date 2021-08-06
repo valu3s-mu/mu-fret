@@ -24,7 +24,7 @@ After a user has created a new template type, they must execute in a terminal un
 to create an updated `templates.json` file that is given as input to FRET.
 
 The following screenshot shows how the **Change State** template is
-displayed in FRET. Note the options for the condition field.
+displayed in FRET. Note the options for the condition field. 
 
 ***
 <img src="../screen_shots/TemplateExampleAfterEditor.png">

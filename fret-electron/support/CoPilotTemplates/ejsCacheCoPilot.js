@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -30,7 +30,7 @@
 // ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 // AGREEMENT.
 // *****************************************************************************
-const component = require('ejs-compiled-loader!./component.ejs'),
+const component = require('ejs-compiled-loader!./Component.ejs'),
       internalVariables = require('ejs-compiled-loader!./InternalVariables.ejs'),
       otherVariables = require('ejs-compiled-loader!./OtherVariables.ejs'),
       functions = require('ejs-compiled-loader!./Functions.ejs'),

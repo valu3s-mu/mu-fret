@@ -12,6 +12,8 @@ FRET is a framework for the elicitation, specification, formalization and unders
 * [Installing FRET](./installingFRET/installationInstructions.md)
 * [FRET interface](./user-interface/tutorial.md)
 * [Writing requirements](./user-interface/writingReqs.md)
+* [Importing requirements](./user-interface/export&import/import.md)
+* [Exporting requirements](./user-interface/export&import/export.md)
 * [Semantics](./semantics/semanticsOverview.md)
 * [Using the simulator](./usingTheSimulator/ltlsim.md)
 * [Exporting for analysis](./ExportingForAnalysis/analysis.md)
@@ -20,7 +22,7 @@ FRET is a framework for the elicitation, specification, formalization and unders
 
 #### FRET Example Requirements
 
-We provide a set of example requirements that can be directly [imported](./user-interface/export&import/import.md) in FRET  in [FRETDemo.json](../../../FRETDemo.json)
+We provide a set of example requirements that can be directly [imported](./user-interface/export&import/import.md) in FRET  in [FRETDemo.json](../../../tutorialExamples/FRETDemo.json)
 
 ## FRET Team
 
@@ -29,6 +31,6 @@ We provide a set of example requirements that can be directly [imported](./user-
 [Anastasia Mavridou](http://amavridou.com/),
 [Tom Pressburger](https://ti.arc.nasa.gov/profile/ttp/),
 [Johann Schumann](https://ti.arc.nasa.gov/profile/schumann/),
-[Khanh Trinh]().
+[Khanh Trinh](https://www.researchgate.net/profile/Khanh-Trinh-3).
 
 *Alumni and Interns*: David Bushnell, Tanja de Jong, George (Yorgo) Karamanolis, David Kooi, Julian Rhein, Nija Shi.

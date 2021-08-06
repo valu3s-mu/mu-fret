@@ -1,8 +1,8 @@
 // *****************************************************************************
 // Notices:
 //
-// Copyright � 2019 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration.  All Rights Reserved.
+// Copyright ©2019, 2021 United States Government as represented by the Administrator
+// of the National Aeronautics and Space Administration. All Rights Reserved.
 //
 // Disclaimers
 //
@@ -40,8 +40,8 @@ import { isKeyHotkey } from 'is-hotkey'
 import Typography from '@material-ui/core/Typography'
 import Button from '@material-ui/core/Button';
 import { withStyles } from '@material-ui/core/styles';
-import GridList from '@material-ui/core/GridList';
-import GridListTile from '@material-ui/core/GridListTile';
+import ImageList from '@material-ui/core/ImageList';
+import ImageListItem from '@material-ui/core/ImageListItem';
 
 import IconButton from '@material-ui/core/IconButton';
 import HelpIcon from '@material-ui/icons/HelpOutline';
@@ -152,9 +152,9 @@ class SlateEditor2 extends React.Component {
 
   componentDidMount() {
     this.mounted = true
-    var path = `file://${process.resourcesPath}/docs/_media/rrd/index.html`
+    var path = `file://${process.resourcesPath}/docs/_media/fretishGrammar/index.html`
     if (isDev)
-      path = `file://${__dirname}/../docs/_media/rrd/index.html`
+      path = `file://${__dirname}/../docs/_media/fretishGrammar/index.html`
     this.setState({
       grammarUrl: path
     })
@@ -895,17 +895,17 @@ class SlateEditor2 extends React.Component {
           {menu}
         </Slate>
       </div>
-      <GridList cols={3} cellHeight='auto' spacing={0}>
-        <GridListTile cols={2}>
-        </GridListTile>
-        <GridListTile>
+      <ImageList cols={3} rowHeight='auto' gap={0}>
+        <ImageListItem cols={2}>
+        </ImageListItem>
+        <ImageListItem>
           <div style={{textAlign:'right'}}>
             <Button onClick={this.showSemantics} size='small' color='secondary' disabled={false}>
               semantics
             </Button>
           </div>
-        </GridListTile>
-      </GridList>
+        </ImageListItem>
+      </ImageList>
     </div>
     )
   }

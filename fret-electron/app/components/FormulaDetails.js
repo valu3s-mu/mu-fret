@@ -117,7 +117,7 @@ class FormulaDetails extends Component {
             <div className={classes.root}>
                 <Card>
                     <div className={classes.details}>
-                        <CardContent className={classes.content}>
+                        <CardContent className={classes.content}>   
                             <FormulaRenderer tex={model.formulas.values[fkey].tex} />
                         </CardContent>
                         {actions && <div className={classes.actions}>
@@ -130,7 +130,7 @@ class FormulaDetails extends Component {
                         </div>}
                     </div>
                 </Card>
-                {actions && <FormulaDialog
+                {actions && <FormulaDialog 
                     open={this.state.formulaDialogOpen}
                     create={false}
                     fkey={fkey}
