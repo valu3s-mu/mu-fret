@@ -477,6 +477,7 @@ class VariablesSortableTable extends React.Component {
                d._id = uuidv1();
                d.project = selectedProject;
                d.fretComponent = selectedComponent;
+               d.modeldoc = true;
              })
              return modeldb.bulkDocs(data).catch((err) => {console.log('error', err);});
            });
