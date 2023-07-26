@@ -59,7 +59,7 @@ body {
 }
 
 .label {
-  font: .75em "Roboto", monospace;
+  font: .875rem "Roboto", monospace;
   text-anchor: middle;
   cursor: default;
 }

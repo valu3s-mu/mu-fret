@@ -213,6 +213,30 @@ class CirclePacking extends React.Component {
           if (focus !== d)
             zoom(d), d3.event.stopPropagation();
         })
+    
+    // making a constrasting background for the labels
+    var defs = svg.append("defs");
+
+    var filter = defs.append("filter")
+      .attr("id", "dropshadow")
+
+    filter.append("feColorMatrix")
+      .attr("result", "matrixOut")
+      .attr("in", "dropshadow")
+      .attr("type", "matrix")
+      .attr("values", "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1")  
+
+    filter.append("feGaussianBlur")
+      .attr("in", "matrixOut")
+      .attr("stdDeviation", 10)
+      .attr("result", "blur");
+
+    var feMerge = filter.append("feMerge");
+
+    feMerge.append("feMergeNode")
+      .attr("in", "blur")
+    feMerge.append("feMergeNode")
+      .attr("in", "SourceGraphic");      
 
     var text = g.selectAll("text")
       .data(nodes)
@@ -222,6 +246,8 @@ class CirclePacking extends React.Component {
         .attr("class", "label")
         .style("fill-opacity", function(d) { return d.parent === global ? 1 : 0; })
         .style("display", function(d) { return d.parent === global ? "inline" : "none"; })
+        .attr("filter", "url(#dropshadow)")
+        .style("font-weight", "bold")
         .text(function(d) { return d.data.name; })
         .on("mouseover", function(d) {
           if (d.data.doc) {
