@@ -40,6 +40,8 @@ Our team have given several presentations about both FRET and Mu-FRET as part of
 
 * [_Classical Formal Verification Driven by Formal Requirements_](mu-fret-docs/posters/NUIM-Classical_Formal_Verification_Driven_by_Formal_Requirements.pdf) (poster PDF): a poster from the VALU3S project that describes how our work combines FRET with several verification methods.
 * [_Modular Formal Requirements-Driven Verification_](mu-fret-docs/posters/NUIM-Modular_Formal_Requirements-Driven_Verification.pdf) (poster PDF): a poster from the VALU3S project that describes Mu-FRET, explaining how we have improved FRET to enable it to perform refactoring.
+* [_Refactoring Requirements and MU-FRET's Place in the VeRFoR Toolchain_](mu-fret-docs/posters/Refactoring_Requirements_and_MU-FRETs_Place_in_the_VeRFoR_Toolchain.pdf) (poster PDF): a poster from the VALU3S Summer School in 2023 which describes the purpose of refactoring in MU-FRET and locates it in toolchains used in VALU3S.
+* [_Using Mu-FRET for Parent-Child Relationship, and comparisons with EARS_](mu-fret-docs/posters/Using_Mu-FRET_for_Parent-Child_Relationships_and_Comparisons_with_EARS.pdf) (poster PDF): a poster from the VALU3S Summer School in 2023 which showcases the MU-FRET user interface and contrasts FRET with a competing structured natural language for requirements elicitation, EARS.
 
 ## Papers
 
@@ -105,20 +107,23 @@ Aborting batch mode
 
 As FRET and Mu-FRET are still very much in-development, there are a few issues that crop up with some regularity during installation. All commands listed here should be run from `/mu-fret/fret-electron` unless stated otherwise.
 
-`Error: Cannot find module 'babel-register'`  
-This error is common, and is an issue with the FRET's dependencies. To fix this, uninstall the module to remove it from the dependencies, and install some replacements:  
-- ` npm uninstall babel-register --save-dev`  
-- ` npm install @babel/core @babel/register --save-dev`
+1. `Error: Cannot find module 'babel-register'`  
+    This error is common, and is an issue with the FRET's dependencies. To fix this, uninstall the module to remove it from the dependencies, and install some replacements:  
+    - ` npm uninstall babel-register --save-dev`  
+    - ` npm install @babel/core @babel/register --save-dev`
 
-You may encounter some errors regarding missing typefaces; specifically, the most common ones are `typeface-gloria-hallelujah`, `typeface-roboto` and `typeface-indie-flower`. To get around this, navigate to the /app folder and install them manually:
-- `cd app`
-- `npm install typeface-gloria-hallelujah`  
-  (If you had errors for other typeface packages, install those the same way)
-- `cd ..` (to go back to fret-electron)
+2. You may encounter some errors regarding missing typefaces; specifically, the most common ones are `typeface-gloria-hallelujah`, `typeface-roboto` and `typeface-indie-flower`. To get around this, navigate to the /app folder and install them manually:
+    - `cd app`
+    - `npm install typeface-gloria-hallelujah`  
+    (If you had errors for other typeface packages, install those the same way)
+    - `cd ..` (to go back to fret-electron)
 
-`npm ERR! Could not install from “node_modules\ejs-compiled-loader\ejs@git+https:\github.com\nemanjan00\ejs.git” as it does not contain a package.json file.`  
-This is a similar problem to the typeface errors, in that Node is just failing to install this package for some reason. Again, the solution is to install the package manually before attempting the Mu-FRET installation again:
-- `npm install ejs-compiled-loader`
+3. `npm ERR! Could not install from “node_modules\ejs-compiled-loader\ejs@git+https:\github.com\nemanjan00\ejs.git” as it does not contain a package.json file.`  
+    This is a similar problem to the typeface errors, in that Node is just failing to install this package for some reason. Again, the solution is to install the package manually before attempting the Mu-FRET installation again:
+    - `npm install ejs-compiled-loader`
+
+4. `ValueError: invalid mode: 'rU' while trying to load binding.gyp`
+    This is a problem with the version of Python being used. After trying to fix the problem by running `npm config set python python2.7.18` and installing [pyenv](https://github.com/pyenv/pyenv), we found that each was overridden by the version specified in the system's PATH variable and so it was necessary to add Python 2.7.18 there, above Python 3.x.
 
 
 ## Usage
