@@ -214,7 +214,7 @@ class CirclePacking extends React.Component {
             zoom(d), d3.event.stopPropagation();
         })
     
-    // making a constrasting background for the labels
+    //Cathal: making a constrasting background for the labels
     var defs = svg.append("defs");
 
     var filter = defs.append("filter")

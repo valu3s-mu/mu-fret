@@ -14,3 +14,19 @@ This is a list of changes made in MU-FRET to the original FRET code, for the pur
 	
 4. [Commit be62f37](https://github.com/valu3s-mu/mu-fret/commit/be62f37ab5d680f7092bc91116d54cd466e58093)
     Add legend to hierarchical diagram to explain the colours
+
+
+### Oisín's changes
+
+1. [Commit 4d5e3e5](https://github.com/valu3s-mu/mu-fret/commit/4d5e3e5e7868b77945c5247a1c189d9934400135)
+    Edited DisplayRequirementDialog.js to fix the title bar and buttons geting duplicated and/or cut off
+    This is likely to cause a merge conflict since I think the main repo has also changed this, but when I pulled
+    in their solution it didn't work.
+
+2. [Commit 58a66e3](https://github.com/valu3s-mu/mu-fret/commit/58a66e35879107859bcb9069197873892bb0dac9)
+    Edited DisplayRequirementDialog.js and SortableTable.js to add a refactoring button to the dialogue.
+    This is mainly just changing our code but I thought I should include it in here.
+
+3. [Commit 9308101](https://github.com/valu3s-mu/mu-fret/commit/930810147189a851b5a999496aaf00ac087bc753)
+    Edited RequirementDialogs.js so we can refactor from the front page via the Cluster Diagram.
+    Just adding new code.

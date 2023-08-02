@@ -136,6 +136,8 @@ class Dashboard extends React.Component {
             </List>
             <Divider />
             <CirclePacking selectedProject={selectedProject} projects={projects} requirements={requirements}/>
+            {//Legend for the colours for the circle diagram, done by Cathal
+            }
             <ListSubheader style={{padding:"0px"}}>
               <span style={{"font-weight":"bold"}}>Legend:</span>
               <span class="req-leaf" style={{padding:"5px", margin:"5px", color:"black"}}>Passing Requirement,</span> 
