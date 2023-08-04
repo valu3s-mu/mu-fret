@@ -262,14 +262,11 @@ function getFragmentReqs(fragmentNames, allRequirements)
  * @param {int} len 
  * @returns 
  */
+
 function preamble(variables, len) {
     return `MODULE main
 VAR
-  t : 0 .. ` + len + `;
-  m : boolean;
-  pre : boolean;
-  stop : boolean;
-  post : boolean;\n`
+  t : 0 .. ` + len + `;\n`
   + variables +
   `
 ASSIGN
@@ -279,7 +276,6 @@ DEFINE
   LAST := (t = ` + (len - 1) + `);
 `;
 }
-
 
 
 /**
