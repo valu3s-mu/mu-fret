@@ -30,3 +30,6 @@ This is a list of changes made in MU-FRET to the original FRET code, for the pur
 3. [Commit 9308101](https://github.com/valu3s-mu/mu-fret/commit/930810147189a851b5a999496aaf00ac087bc753)
     Edited RequirementDialogs.js so we can refactor from the front page via the Cluster Diagram.
     Just adding new code.
+
+4. []()
+    Created RenameProjectDialog.js. Edited MainView.js to add Rename Project buttons to the project selection menu. Added the import for RenameProjectDialog, two state variables ('renameProjectDialogOpen' and 'projectTobeRenamed'), three functions ('Handle', 'Open' and 'Close' for the rename dialog) and added rename buttons to the project selection dropdown.

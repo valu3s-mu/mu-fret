@@ -71,6 +71,7 @@ import KeyboardArrowDownIcon from "@material-ui/icons/KeyboardArrowDown";
 import NotesIcon from "@material-ui/icons/Notes";
 import DeleteIcon from '@material-ui/icons/Delete';
 import Tooltip from '@material-ui/core/Tooltip';
+import EditIcon from '@material-ui/icons/Edit';
 
 import css from './MainView.css';
 import CreateRequirementDialog from './CreateRequirementDialog';
@@ -81,6 +82,7 @@ import RequirementImportDialogs from './RequirementImportDialogs';
 import MissingExternalImportDialog from './MissingExternalImportDialog';
 import ExportRequirementsDialog from './ExportRequirementsDialog';
 import VersionDialog from './VersionDialog';
+import RenameProjectDialog from './RenameProjectDialog';
 
 const app = require('electron').remote.app
 const dialog = require('electron').remote.dialog
@@ -216,6 +218,8 @@ class MainView extends React.Component {
     exportRequirementsDialogOpen: false,
     requirementImportDialogOpen: false,
     versionDialogOpen: false,
+    renameProjectDialogOpen: false,
+    projectTobeRenamed: '',
     csvFields: [],
     importedReqs: [],
     requirements: [],
@@ -479,6 +483,26 @@ class MainView extends React.Component {
     })
   }
 
+  handleRenameProject = (name) => {
+    this.openRenameProjectDialog(name)
+  }
+
+  openRenameProjectDialog = (name) => {
+    this.setState({
+      renameProjectDialogOpen: true,
+      projectTobeRenamed: name,
+      anchorEl: null
+    })
+  }
+
+  closeRenameProjectDialog = () => {
+    this.setState({
+      renameProjectDialogOpen: false,
+      projectTobeRenamed: '',
+      anchorEl: null
+    })
+  }
+
   openVersionDialog = () => {
     console.log("Open Version Dialog pressed")
     this.setState({
@@ -698,6 +722,12 @@ class MainView extends React.Component {
                                     key={name}
                                     dense>
                                     <ListItemText id={"qa_proj_select_"+name.replace(/\s+/g, '_')} primary = {name} onClick={() => this.handleSetProject(name)}/>
+                                    <//Oisín: added rename buttons for projects, copied button from DisplayRequirementDialog
+                                     IconButton id={"qa_proj_rename_"+name.replace(/\s+/g, '_')} onClick={() => this.handleRenameProject(name)} size="small" color="secondary" aria-label="rename" >
+                                      <Tooltip id="project-tooltip-icon-rename" title="Rename Project">
+                                      <EditIcon />
+                                      </Tooltip>
+                                    </IconButton>
                                     <IconButton id={"qa_proj_del_"+name.replace(/\s+/g, '_')} onClick={() => this.handleDeleteProject(name)} size="small" aria-label="delete" >
                                       <Tooltip id="project-tooltip-icon-delete" title="Delete Project">
                                       <DeleteIcon color='error'/>
@@ -826,6 +856,13 @@ class MainView extends React.Component {
             open={this.state.deleteProjectDialogOpen}
             projectTobeDeleted={this.state.projectTobeDeleted}
             handleDialogClose={this.closeDeleteProjectDialog}
+            selectedProject={this.state.selectedProject}
+            initializeSelectedProject={this.initializeSelectedProject}
+          />
+          <RenameProjectDialog
+            open={this.state.renameProjectDialogOpen}
+            projectTobeRenamed={this.state.projectTobeRenamed}
+            handleDialogClose={this.closeRenameProjectDialog}
             selectedProject={this.state.selectedProject}
             initializeSelectedProject={this.initializeSelectedProject}
           />
