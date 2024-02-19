@@ -35,6 +35,12 @@ const ed = require(fretTemplatesPath + 'templateEditor')
 var fs = require('fs');
 const sm = require(fretTemplatesPath + 'state_machine')
 
+//=========== New For DL Templates ====
+
+const dlTemplates = require(fretTemplatesPath + 'dlTemplates')
+
+// ====================================
+
 var all_templates = []
 
 //============ CHANGE STATE ============
@@ -193,6 +199,9 @@ all_templates.push(template_format)
 //============ ADD TEMPLATES HERE ============
 
 all_templates = all_templates.concat(sm.make_state_machine_templates())
+
+// New for DL
+all_templates = all_templates.concat(dlTemplates.makeTemplates())
 
 //============ Creating JSON template file ============
 // finally create json file with semantics
