@@ -749,5 +749,976 @@
         "same_state": "defrost"
       }
     ]
+  },
+  {
+    "_id": "template-dl-threshold1",
+    "title": "Threshold at sample time",
+    "description": "Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \tthe RL agent chooses and action that ensures that the worst case reaction o the overall system, \twithin one sample time still maintains the safety threshold.",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "cRL"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "tS"
+      },
+      {
+        "text": ") & ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " <= "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": ") RLAgent shall immediately statisfy chooseAction & ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " + wcrection("
+      },
+      {
+        "field": "state"
+      },
+      {
+        "text": ", "
+      },
+      {
+        "field": "action"
+      },
+      {
+        "text": ", "
+      },
+      {
+        "field": "ts"
+      },
+      {
+        "text": ") ) <= "
+      },
+      {
+        "field": "threshold"
+      }
+    ],
+    "fields": {
+      "cRL": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "tS": {
+        "options": [],
+        "description": "The sample time."
+      },
+      "var": {
+        "options": [
+          {
+            "suggestion": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "Replace with the controlled variable's threshold.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable's threshold."
+      },
+      "state": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The state for the worst-case reaction function."
+      },
+      "action": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The action for the worst-case reaction function"
+      },
+      "ts": {
+        "options": [
+          {
+            "suggestion": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    "examples": [
+      {
+        "cRL": "cRL",
+        "tS": "tS",
+        "var": "T",
+        "threshold": "TMAX",
+        "state": "hMax",
+        "action": "c",
+        "ts": "ts"
+      }
+    ]
+  },
+  {
+    "_id": "template-dl-threshold2",
+    "title": "Threshold not at sample time",
+    "description": "whenever the sample time is not reached (cRL < tS) the RL agent does not change the action",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "cRL"
+      },
+      {
+        "text": " < "
+      },
+      {
+        "field": "tS"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy maintainAction"
+      }
+    ],
+    "fields": {
+      "cRL": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "tS": {
+        "options": [],
+        "description": "The sample time."
+      }
+    },
+    "examples": []
+  },
+  {
+    "_id": "template-dl-threshold3",
+    "title": "Maintain Threshold",
+    "description": "System should always kepe the controlled variable below the threshold",
+    "structure": [
+      {
+        "text": "System shall always satisfy "
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " <= "
+      },
+      {
+        "field": "threshold"
+      }
+    ],
+    "fields": {
+      "var": {
+        "options": [
+          {
+            "suggestion": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "Replace with the controlled variable's threshold.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable's threshold."
+      }
+    },
+    "examples": [
+      {
+        "var": "T",
+        "threshold": "TMAX"
+      }
+    ]
+  },
+  {
+    "_id": "template-dl-rcovery1",
+    "title": "Recovery not at threshold",
+    "description": "? If the system has breached the threshold for a variable, choose and action to do something...",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "cRL"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "tS"
+      },
+      {
+        "text": ") & !("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "~"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy chooseAction & ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": "+wcreaction("
+      },
+      {
+        "field": "state"
+      },
+      {
+        "text": ","
+      },
+      {
+        "field": "action"
+      },
+      {
+        "text": ","
+      },
+      {
+        "field": "tR"
+      },
+      {
+        "text": ") "
+      },
+      {
+        "field": "~"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": ")"
+      }
+    ],
+    "fields": {
+      "cRL": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "tS": {
+        "options": [],
+        "description": "The sample time."
+      },
+      "var": {
+        "options": [
+          {
+            "suggestion": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
+      "~": {
+        "options": [
+          {
+            "suggestion": "<",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<=",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">=",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "An inequality operator (<, >, <=, >=)"
+      },
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "Replace with the controlled variable's threshold.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable's threshold."
+      },
+      "state": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The state for the worst-case reaction function."
+      },
+      "action": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The action for the worst-case reaction function"
+      },
+      "tR": {
+        "options": [
+          {
+            "suggestion": "Replace with recovery time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Recovery Time"
+      }
+    },
+    "examples": []
+  },
+  {
+    "_id": "template-dl-recovery2",
+    "title": "Recovert at threshold",
+    "description": "? If the system has not breached the threshold for a variable, choose and action to do something...",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "cRL"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "tS"
+      },
+      {
+        "text": ") & ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "~"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy chooseAction & ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": "+wcreaction("
+      },
+      {
+        "field": "state"
+      },
+      {
+        "text": ","
+      },
+      {
+        "field": "action"
+      },
+      {
+        "text": ","
+      },
+      {
+        "field": "tR"
+      },
+      {
+        "text": ") "
+      },
+      {
+        "field": "~"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": ")"
+      }
+    ],
+    "fields": {
+      "cRL": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "tS": {
+        "options": [],
+        "description": "The sample time."
+      },
+      "var": {
+        "options": [
+          {
+            "suggestion": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
+      "~": {
+        "options": [
+          {
+            "suggestion": "<",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<=",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">=",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "An inequality operator (<, >, <=, >=)"
+      },
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "Replace with the controlled variable's threshold.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable's threshold."
+      },
+      "state": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The state for the worst-case reaction function."
+      },
+      "action": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The action for the worst-case reaction function"
+      },
+      "tR": {
+        "options": []
+      }
+    },
+    "examples": []
+  },
+  {
+    "_id": "template-dl-resilience1",
+    "title": "Resilience at threashold",
+    "description": "When the threashold is maintained, do something..",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "cRL"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "tS"
+      },
+      {
+        "text": ") &  ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "~"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": "+-"
+      },
+      {
+        "field": "deltaSuff"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy chooseAction & "
+      },
+      {
+        "field": "action"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "servDeg"
+      },
+      {
+        "text": " & ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": "+wcreaction("
+      },
+      {
+        "field": "state"
+      },
+      {
+        "text": ","
+      },
+      {
+        "field": "action"
+      },
+      {
+        "text": ","
+      },
+      {
+        "field": "tS"
+      },
+      {
+        "text": ") "
+      },
+      {
+        "field": "~"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": ")"
+      }
+    ],
+    "fields": {
+      "cRL": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "tS": {
+        "options": [],
+        "description": "The sample time."
+      },
+      "var": {
+        "options": [
+          {
+            "suggestion": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
+      "~": {
+        "options": [
+          {
+            "suggestion": "<",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<=",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">=",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "An inequality operator (<, >, <=, >=)"
+      },
+      "threshold": {
+        "options": []
+      },
+      "deltaSuff": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "?"
+      },
+      "action": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The action for the worst-case reaction function"
+      },
+      "servDeg": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Least degraded service?"
+      },
+      "state": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The state for the worst-case reaction function."
+      }
+    },
+    "examples": []
+  },
+  {
+    "_id": "template-dl-resilience2",
+    "description": "When the threshold is not maintained, do something...",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "cRL"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "tS"
+      },
+      {
+        "text": ") & !("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "~"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": "+-"
+      },
+      {
+        "field": "deltaSuff"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy chooseAction & "
+      },
+      {
+        "field": "action"
+      },
+      {
+        "text": " =   "
+      },
+      {
+        "field": "servDeg"
+      }
+    ],
+    "fields": {
+      "cRL": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "tS": {
+        "options": [],
+        "description": "The sample time."
+      },
+      "var": {
+        "options": [
+          {
+            "suggestion": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
+      "~": {
+        "options": [
+          {
+            "suggestion": "<",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<=",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">=",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "An inequality operator (<, >, <=, >=)"
+      },
+      "threshold": {
+        "options": []
+      },
+      "deltaSuff": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "?"
+      },
+      "action": {
+        "options": []
+      },
+      "servDeg": {
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Least degraded service?"
+      }
+    },
+    "examples": []
   }
 ]

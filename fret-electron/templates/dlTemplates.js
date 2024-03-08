@@ -37,70 +37,211 @@ const ed = require(fretTemplatesPath + 'templateEditor')
 function makeTemplates() {
 
 let dlTemplates = []
-// R1
-ed.newTemplate("template-dl-threshold1", "Threshold 1");
+// =========================== R1
+ed.newTemplate("template-dl-threshold1", "Threshold at sample time");
 ed.templateSummary("Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \
 	the RL agent chooses and action that ensures that the worst case reaction o the overall system, \
 	within one sample time still maintains the safety threshold.");
-ed.templateStructure("whenever ([cRL] >= [tS]) & ([var] <= [threshold]) RLAgent shall immediately statisfy chooseAction & ([var] + wcrection([state], [action], [ts]) ) <= threshold");
+ed.templateStructure("whenever ([cRL] >= [tS]) & ([var] <= [threshold]) RLAgent shall immediately statisfy chooseAction & ([var] + wcrection([state], [action], [ts]) ) <= [threshold]");
 
-ed.fieldDescription("cRL", "Something about the sample time?");
-ed.addOption("cRL", "cRL", "Replace with variable name");
+ed.fieldDescription("cRL", "The clock's time.");
+ed.addOption("cRL", "cRL", "Replace with clock variable name.");
 
-ed.fieldDescription("tS", )
+ed.fieldDescription("tS", "The sample time.")
+ed.addOption("ts", "Replace with sample time variable name.")
+
+ed.fieldDescription("var", "The controlled variable.")
+ed.addOption("var", "replace with the controlled variable.")
+
+ed.fieldDescription("threshold","The controlled variable's threshold.")
+ed.addOption("threshold", "Replace with the controlled variable's threshold.")
+
+ed.fieldDescription("state", "The state for the worst-case reaction function.")
+ed.addOption("state", "Replace")
+
+ed.fieldDescription("action", "The action for the worst-case reaction function")
+ed.addOption("action", "Replace")
+
+ed.addExample("whenever ([cRL] >= [tS]) & ([T] <= [TMAX]) RLAgent shall immediately satisfy chooseAction & ([T]+([hMax]-[c])*[ts] <= [TMAX])")
 
 
-//============ STATE TRANSITION ============
-ed.newTemplate("template-state-transition","State Transition2");
-ed.templateSummary("This template describes a transition of a state-machine. \
-It describes the input state and the guard condition upon which the transition occurs.")
-ed.templateStructure('Upon ([input_state] & [condition]) [component] shall at the next timepoint satisfy [output_state]')
+dlTemplates.push(ed.createFinalTemplateObject())
 
-ed.fieldDescription('component', "Specifies the component of the system that the requirement applies to.")
-ed.addOption('component', 'component',"Replace the text by the name of the target component")
+//============================= R2
 
-ed.fieldDescription('input_state', "Specifies the value of the input state that may need to change.")
-ed.addOption('input_state', 'state = origin',"The origin state number")
-ed.addOption('input_state', 'state_proposition', "The origin proposition")
+ed.newTemplate("template-dl-threshold2", "Threshold not at sample time");
+ed.templateSummary("whenever the sample time is not reached (cRL < tS) the RL agent does not change the action")
+ed.templateStructure("whenever ([cRL] < [tS]) RLAgent shall immediately satisfy maintainAction")
 
-ed.fieldDescription('condition', "The guard condition upon which the transition is triggered.")
-ed.addOption('condition', 'boolexpr', "A Boolean expression")
+ed.fieldDescription("cRL", "The clock's time.");
+ed.addOption("cRL", "cRL", "Replace with clock variable name.");
 
-ed.fieldDescription('output_state', "Specifies the value of the output state, reflecting \
-the new value of the input state .")
-ed.addOption('output_state', 'state = destination',"The destination state number")
-ed.addOption('output_state', '! state_proposition',"The negation of the origin proposition")
+ed.fieldDescription("tS", "The sample time.")
+ed.addOption("ts", "Replace with sample time variable name.")
 
-ed.addExample("Upon [state = cruise_control_engaged] & [brake_applied] [cruise_control] shall at the next timepoint satisfy [state = cruise_control_paused]")
-ed.addExample("Upon [defrost] & [toggle_defrost] [vehicle] shall at the next timepoint satisfy [! defrost]")
+//ed.addExample()
 
-//state_machine_templates.push(ed.createFinalTemplateObject())
+dlTemplates.push(ed.createFinalTemplateObject())
 
-//============ STATE TRANSITION STAY PRE ============
-ed.newTemplate("template-state-transition-stay-pre","State Transition Stay Pre2");
-ed.templateSummary("This template describes for a state machine a transition of a state to itself. \
-It describes the input state and the negation of the disjunction of outgoing guard conditions.")
-ed.templateStructure('[component] shall always satisfy if preBool(false, [state] & !([outgoing_guard_disjunction])) then [same_state]')
 
-ed.fieldDescription('component', "Specifies the component of the system that the requirement applies to.")
-ed.addOption('component', 'component',"Replace the text by the name of the target component")
+// ============================= R3
 
-ed.fieldDescription('state', "Specifies the value of the state that it stays at.")
-ed.addOption('state', 'state = origin',"The origin state number")
-ed.addOption('state', 'state_proposition', "The origin state proposition")
+//??
+ed.newTemplate("template-dl-threshold3", "Maintain Threshold")
+ed.templateSummary("System should always kepe the controlled variable below the threshold")
+ed.templateStructure("System shall always satisfy [var] <= [threshold]")
 
-ed.fieldDescription('same_state', "Specifies the same state.")
-ed.addOption('same_state', 'state = origin',"The origin state number")
-ed.addOption('same_state', 'state_proposition', "The origin state proposition")
+ed.fieldDescription("var", "The controlled variable.")
+ed.addOption("var", "replace with the controlled variable.")
 
-ed.fieldDescription('outgoing_guard_disjunction', "The disjunction of the outgoing guard conditions from the state.")
-ed.addOption('outgoing_guard_disjunction', '(gc1 | gc2)', "The disjunction of the outgoing guard conditions")
-ed.addOption('outgoing_guard_disjunction', 'gc', "The guard condition of the outgoing transition if there is only one outgoing transition.")
+ed.fieldDescription("threshold","The controlled variable's threshold.")
+ed.addOption("threshold", "Replace with the controlled variable's threshold.")
 
-ed.addExample("The [cruise_control] shall always satisfy if preBool(false, [state = cruise_control_engaged] & ![(brake_applied | turn_off)] then [state = cruise_control_engaged]")
-ed.addExample("The [vehicle] shall always satisfy if preBool(false, [defrost] & !([toggle_defrost])) then [defrost]")
+ed.addExample("[T] [TMAX]")
 
-//state_machine_templates.push(ed.createFinalTemplateObject())
+dlTemplates.push(ed.createFinalTemplateObject())
+
+
+//=============================== R4
+
+ed.newTemplate("template-dl-rcovery1", "Recovery not at threshold")
+ed.templateSummary("? If the system has breached the threshold for a variable, choose and action to do something...")
+ed.templateStructure("whenever ([cRL] >= [tS]) & !([var] [~] [threshold]) RLAgent shall immediately satisfy chooseAction & ([var]+wcreaction([state],[action],[tR]) [~] [threshold])")
+
+ed.fieldDescription("cRL", "The clock's time.");
+ed.addOption("cRL", "cRL", "Replace with clock variable name.");
+
+ed.fieldDescription("tS", "The sample time.")
+ed.addOption("ts", "Replace with sample time variable name.")
+
+ed.fieldDescription("var", "The controlled variable.")
+ed.addOption("var", "replace with the controlled variable.")
+
+// We'll see if this works
+ed.fieldDescription("~", "An inequality operator (<, >, <=, >=)")
+ed.addOption("~", "<")
+ed.addOption("~", ">")
+ed.addOption("~", "<=")
+ed.addOption("~", ">=")
+
+ed.fieldDescription("threshold","The controlled variable's threshold.")
+ed.addOption("threshold", "Replace with the controlled variable's threshold.")
+
+ed.fieldDescription("state", "The state for the worst-case reaction function.")
+ed.addOption("state", "Replace")
+
+ed.fieldDescription("action", "The action for the worst-case reaction function")
+ed.addOption("action", "Replace")
+
+ed.fieldDescription("tR", "Recovery Time")
+ed.addOption("tR", "Replace with recovery time variable name.")
+
+
+dlTemplates.push(ed.createFinalTemplateObject())
+
+
+// =============================== R5
+
+ed.newTemplate("template-dl-recovery2", "Recovert at threshold")
+ed.templateSummary("? If the system has not breached the threshold for a variable, choose and action to do something...")
+ed.templateStructure("whenever ([cRL] >= [tS]) & ([var] [~] [threshold]) RLAgent shall immediately satisfy chooseAction & ([var]+wcreaction([state],[action],[tR]) [~] [threshold])")
+
+ed.fieldDescription("cRL", "The clock's time.");
+ed.addOption("cRL", "cRL", "Replace with clock variable name.");
+
+ed.fieldDescription("tS", "The sample time.")
+ed.addOption("ts", "Replace with sample time variable name.")
+
+ed.fieldDescription("var", "The controlled variable.")
+ed.addOption("var", "replace with the controlled variable.")
+
+// We'll see if this works
+ed.fieldDescription("~", "An inequality operator (<, >, <=, >=)")
+ed.addOption("~", "<")
+ed.addOption("~", ">")
+ed.addOption("~", "<=")
+ed.addOption("~", ">=")
+
+ed.fieldDescription("threshold","The controlled variable's threshold.")
+ed.addOption("threshold", "Replace with the controlled variable's threshold.")
+
+ed.fieldDescription("state", "The state for the worst-case reaction function.")
+ed.addOption("state", "Replace")
+
+ed.fieldDescription("action", "The action for the worst-case reaction function")
+ed.addOption("action", "Replace")
+
+
+dlTemplates.push(ed.createFinalTemplateObject())
+
+// =============================== R6
+
+ed.newTemplate("template-dl-resilience1", "Resilience at threashold")
+ed.templateSummary("When the threashold is maintained, do something..")
+ed.templateStructure("whenever ([cRL] >= [tS]) &  ([var] [~] [threshold]+-[deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] >= [servDeg] & ([var]+wcreaction([state],[action],[tS]) [~] [threshold])")
+
+ed.fieldDescription("cRL", "The clock's time.");
+ed.addOption("cRL", "cRL", "Replace with clock variable name.");
+
+ed.fieldDescription("tS", "The sample time.")
+ed.addOption("ts", "Replace with sample time variable name.")
+
+ed.fieldDescription("var", "The controlled variable.")
+ed.addOption("var", "replace with the controlled variable.")
+
+// We'll see if this works
+ed.fieldDescription("~", "An inequality operator (<, >, <=, >=)")
+ed.addOption("~", "<")
+ed.addOption("~", ">")
+ed.addOption("~", "<=")
+ed.addOption("~", ">=")
+
+ed.fieldDescription("state", "The state for the worst-case reaction function.")
+ed.addOption("state", "Replace")
+
+ed.fieldDescription("action", "The action for the worst-case reaction function")
+ed.addOption("action", "Replace")
+
+ed.fieldDescription("deltaSuff" , "?")
+ed.addOption("deltaSuff", "Replace")
+
+ed.fieldDescription("servDeg", "Least degraded service?")
+ed.addOption("servDeg", "Replace")
+
+dlTemplates.push(ed.createFinalTemplateObject())
+
+// =============================== R7
+
+ed.newTemplate("template-dl-resilience2")
+ed.templateSummary("When the threshold is not maintained, do something...")
+ed.templateStructure("whenever ([cRL] >= [tS]) & !([var] [~] [threshold]+-[deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] =   [servDeg]")
+
+ed.fieldDescription("cRL", "The clock's time.");
+ed.addOption("cRL", "cRL", "Replace with clock variable name.");
+
+ed.fieldDescription("tS", "The sample time.")
+ed.addOption("ts", "Replace with sample time variable name.")
+
+ed.fieldDescription("var", "The controlled variable.")
+ed.addOption("var", "replace with the controlled variable.")
+
+// We'll see if this works
+ed.fieldDescription("~", "An inequality operator (<, >, <=, >=)")
+ed.addOption("~", "<")
+ed.addOption("~", ">")
+ed.addOption("~", "<=")
+ed.addOption("~", ">=")
+
+
+ed.fieldDescription("deltaSuff" , "?")
+ed.addOption("deltaSuff", "Replace")
+
+ed.fieldDescription("servDeg", "Least degraded service?")
+ed.addOption("servDeg", "Replace")
+
+dlTemplates.push(ed.createFinalTemplateObject())
+
+
 
 return dlTemplates
 }

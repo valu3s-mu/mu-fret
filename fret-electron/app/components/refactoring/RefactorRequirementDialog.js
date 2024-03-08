@@ -196,6 +196,8 @@ handleInitialOK = () =>
         }
       }).then(function(result)
         {
+          console.log("result.docs");
+      console.log(result.docs);
           var variableTypeMap = new Map();
           for (let doc of result.docs)
           {
