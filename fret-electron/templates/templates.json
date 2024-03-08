@@ -752,7 +752,7 @@
   },
   {
     "_id": "template-dl-threshold1",
-    "title": "Threshold at sample time",
+    "title": "DL: Threshold at sample time",
     "description": "Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \tthe RL agent chooses and action that ensures that the worst case reaction o the overall system, \twithin one sample time still maintains the safety threshold.",
     "structure": [
       {
@@ -902,7 +902,7 @@
   },
   {
     "_id": "template-dl-threshold2",
-    "title": "Threshold not at sample time",
+    "title": "DL: Threshold not at sample time",
     "description": "whenever the sample time is not reached (cRL < tS) the RL agent does not change the action",
     "structure": [
       {
@@ -944,7 +944,7 @@
   },
   {
     "_id": "template-dl-threshold3",
-    "title": "Maintain Threshold",
+    "title": "DL: Maintain Threshold",
     "description": "System should always kepe the controlled variable below the threshold",
     "structure": [
       {
@@ -995,7 +995,7 @@
   },
   {
     "_id": "template-dl-rcovery1",
-    "title": "Recovery not at threshold",
+    "title": "DL: Recovery not at threshold",
     "description": "? If the system has breached the threshold for a variable, choose and action to do something...",
     "structure": [
       {
@@ -1184,7 +1184,7 @@
   },
   {
     "_id": "template-dl-recovery2",
-    "title": "Recovert at threshold",
+    "title": "DL: Recovery at threshold",
     "description": "? If the system has not breached the threshold for a variable, choose and action to do something...",
     "structure": [
       {
@@ -1364,7 +1364,7 @@
   },
   {
     "_id": "template-dl-resilience1",
-    "title": "Resilience at threashold",
+    "title": "DL: Resilience at threashold",
     "description": "When the threashold is maintained, do something..",
     "structure": [
       {
@@ -1574,6 +1574,7 @@
   },
   {
     "_id": "template-dl-resilience2",
+    "title": "DL: Resilience not at threshold",
     "description": "When the threshold is not maintained, do something...",
     "structure": [
       {
@@ -1689,7 +1690,16 @@
         "description": "An inequality operator (<, >, <=, >=)"
       },
       "threshold": {
-        "options": []
+        "options": [
+          {
+            "suggestion": "Replace with the controlled variable's threshold.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable's threshold."
       },
       "deltaSuff": {
         "options": [
@@ -1704,7 +1714,16 @@
         "description": "?"
       },
       "action": {
-        "options": []
+        "options": [
+          {
+            "suggestion": "Replace",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The action for the worst-case reaction function"
       },
       "servDeg": {
         "options": [

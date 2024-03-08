@@ -38,7 +38,7 @@ function makeTemplates() {
 
 let dlTemplates = []
 // =========================== R1
-ed.newTemplate("template-dl-threshold1", "Threshold at sample time");
+ed.newTemplate("template-dl-threshold1", "DL: Threshold at sample time");
 ed.templateSummary("Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \
 	the RL agent chooses and action that ensures that the worst case reaction o the overall system, \
 	within one sample time still maintains the safety threshold.");
@@ -67,9 +67,10 @@ ed.addExample("whenever ([cRL] >= [tS]) & ([T] <= [TMAX]) RLAgent shall immediat
 
 dlTemplates.push(ed.createFinalTemplateObject())
 
+
 //============================= R2
 
-ed.newTemplate("template-dl-threshold2", "Threshold not at sample time");
+ed.newTemplate("template-dl-threshold2", "DL: Threshold not at sample time");
 ed.templateSummary("whenever the sample time is not reached (cRL < tS) the RL agent does not change the action")
 ed.templateStructure("whenever ([cRL] < [tS]) RLAgent shall immediately satisfy maintainAction")
 
@@ -87,7 +88,7 @@ dlTemplates.push(ed.createFinalTemplateObject())
 // ============================= R3
 
 //??
-ed.newTemplate("template-dl-threshold3", "Maintain Threshold")
+ed.newTemplate("template-dl-threshold3", "DL: Maintain Threshold")
 ed.templateSummary("System should always kepe the controlled variable below the threshold")
 ed.templateStructure("System shall always satisfy [var] <= [threshold]")
 
@@ -104,7 +105,7 @@ dlTemplates.push(ed.createFinalTemplateObject())
 
 //=============================== R4
 
-ed.newTemplate("template-dl-rcovery1", "Recovery not at threshold")
+ed.newTemplate("template-dl-rcovery1", "DL: Recovery not at threshold")
 ed.templateSummary("? If the system has breached the threshold for a variable, choose and action to do something...")
 ed.templateStructure("whenever ([cRL] >= [tS]) & !([var] [~] [threshold]) RLAgent shall immediately satisfy chooseAction & ([var]+wcreaction([state],[action],[tR]) [~] [threshold])")
 
@@ -140,9 +141,12 @@ ed.addOption("tR", "Replace with recovery time variable name.")
 dlTemplates.push(ed.createFinalTemplateObject())
 
 
+
+
+
 // =============================== R5
 
-ed.newTemplate("template-dl-recovery2", "Recovert at threshold")
+ed.newTemplate("template-dl-recovery2", "DL: Recovery at threshold")
 ed.templateSummary("? If the system has not breached the threshold for a variable, choose and action to do something...")
 ed.templateStructure("whenever ([cRL] >= [tS]) & ([var] [~] [threshold]) RLAgent shall immediately satisfy chooseAction & ([var]+wcreaction([state],[action],[tR]) [~] [threshold])")
 
@@ -174,9 +178,13 @@ ed.addOption("action", "Replace")
 
 dlTemplates.push(ed.createFinalTemplateObject())
 
+
+
+
+
 // =============================== R6
 
-ed.newTemplate("template-dl-resilience1", "Resilience at threashold")
+ed.newTemplate("template-dl-resilience1", "DL: Resilience at threashold")
 ed.templateSummary("When the threashold is maintained, do something..")
 ed.templateStructure("whenever ([cRL] >= [tS]) &  ([var] [~] [threshold]+-[deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] >= [servDeg] & ([var]+wcreaction([state],[action],[tS]) [~] [threshold])")
 
@@ -210,9 +218,12 @@ ed.addOption("servDeg", "Replace")
 
 dlTemplates.push(ed.createFinalTemplateObject())
 
+
+
+
 // =============================== R7
 
-ed.newTemplate("template-dl-resilience2")
+ed.newTemplate("template-dl-resilience2", "DL: Resilience not at threshold")
 ed.templateSummary("When the threshold is not maintained, do something...")
 ed.templateStructure("whenever ([cRL] >= [tS]) & !([var] [~] [threshold]+-[deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] =   [servDeg]")
 
@@ -232,15 +243,21 @@ ed.addOption("~", ">")
 ed.addOption("~", "<=")
 ed.addOption("~", ">=")
 
+ed.fieldDescription("threshold","The controlled variable's threshold.")
+ed.addOption("threshold", "Replace with the controlled variable's threshold.")
+
 
 ed.fieldDescription("deltaSuff" , "?")
 ed.addOption("deltaSuff", "Replace")
+
+
+ed.fieldDescription("action", "The action for the worst-case reaction function")
+ed.addOption("action", "Replace")
 
 ed.fieldDescription("servDeg", "Least degraded service?")
 ed.addOption("servDeg", "Replace")
 
 dlTemplates.push(ed.createFinalTemplateObject())
-
 
 
 return dlTemplates
