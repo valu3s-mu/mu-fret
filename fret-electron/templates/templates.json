@@ -753,7 +753,7 @@
   {
     "_id": "template-dl-threshold1",
     "title": "DL: Threshold at sample time",
-    "description": "Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \tthe RL agent chooses and action that ensures that the worst case reaction o the overall system, \twithin one sample time still maintains the safety threshold.",
+    "description": "Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \tthe RL agent chooses and action that ensures that the worst case reaction of the overall system, \twithin one sample time still maintains the safety threshold.",
     "structure": [
       {
         "text": "when ("
@@ -786,25 +786,13 @@
         "field": "var"
       },
       {
-        "text": " + wcrection("
+        "text": " + "
       },
       {
-        "field": "state"
+        "field": "worst-case reaction"
       },
       {
-        "text": ", "
-      },
-      {
-        "field": "action"
-      },
-      {
-        "text": ", "
-      },
-      {
-        "field": "ts"
-      },
-      {
-        "text": ") ) <= "
+        "text": " ) <= "
       },
       {
         "field": "threshold"
@@ -854,43 +842,18 @@
         ],
         "description": "The controlled variable's threshold."
       },
-      "state": {
+      "worst-case reaction": {
         "options": [
           {
-            "suggestion": "state",
-            "description": "Replace with state.",
+            "suggestion": "worst-case reaction",
+            "description": "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the sample time.",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "The state for the worst-case reaction function."
-      },
-      "action": {
-        "options": [
-          {
-            "suggestion": "action",
-            "description": "Replace with action",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The action for the worst-case reaction function"
-      },
-      "ts": {
-        "options": [
-          {
-            "suggestion": "sampleTime",
-            "description": "Replace with sample time variable name.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ]
+        "description": "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the sample time."
       }
     },
     "examples": [
@@ -899,9 +862,7 @@
         "tS": "tS",
         "var": "T",
         "threshold": "TMAX",
-        "state": "hMax",
-        "action": "c",
-        "ts": "ts"
+        "worst-case reaction": "(hMax-c)*ts"
       }
     ]
   },
@@ -1009,34 +970,10 @@
         "text": "whenever ("
       },
       {
-        "field": "cRL"
-      },
-      {
-        "text": " "
-      },
-      {
-        "field": "op"
-      },
-      {
-        "text": " "
-      },
-      {
-        "field": "tS"
+        "field": "clockTrigger"
       },
       {
         "text": ") & !("
-      },
-      {
-        "field": "var"
-      },
-      {
-        "text": " "
-      },
-      {
-        "field": "op"
-      },
-      {
-        "text": " "
       },
       {
         "field": "threshold"
@@ -1048,93 +985,95 @@
         "field": "var"
       },
       {
-        "text": " + wcreaction("
+        "text": " + "
       },
       {
-        "field": "state"
-      },
-      {
-        "text": ","
-      },
-      {
-        "field": "action"
-      },
-      {
-        "text": ","
-      },
-      {
-        "field": "tR"
-      },
-      {
-        "text": ") "
-      },
-      {
-        "field": "op"
+        "field": "worst case reaction"
       },
       {
         "text": " "
       },
       {
-        "field": "threshold"
+        "field": "thresholdComparison"
       },
       {
         "text": ")"
       }
     ],
     "fields": {
-      "cRL": {
+      "clockTrigger": {
         "options": [
           {
-            "suggestion": "cRL",
-            "description": "Replace with clock variable name.",
+            "suggestion": "cRL < tS",
+            "description": "Clock time less than sampleTime",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "cRL <= tS",
+            "description": "Clock time less than or equal to sampleTime",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "cRL > ts",
+            "description": "Clock time greater than sampleTime",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "cRL >= tS",
+            "description": "Clock time greater than or equal to sampleTime",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "The clock's time."
+        "description": "cRL ~ tS"
       },
-      "op": {
+      "threshold": {
         "options": [
           {
-            "suggestion": "<",
-            "description": "Less than.",
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
             "selection": [
               0,
               0
             ]
           },
           {
-            "suggestion": ">",
-            "description": "Greater than.",
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
             "selection": [
               0,
               0
             ]
           },
           {
-            "suggestion": "<=",
-            "description": "Less than or equal to.",
+            "suggestion": "var > threshold",
+            "description": "var greater than threshold",
             "selection": [
               0,
               0
             ]
           },
           {
-            "suggestion": ">=",
-            "description": "Greater than or equal to.",
+            "suggestion": "var >= threshold",
+            "description": "var greater than or equal to threshold",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "An inequality operator (<, >, <=, >=)"
-      },
-      "tS": {
-        "options": [],
-        "description": "The sample time."
+        "description": "var ~ Threshold"
       },
       "var": {
         "options": [
@@ -1149,69 +1088,65 @@
         ],
         "description": "The controlled variable."
       },
-      "threshold": {
+      "worst case reaction": {
         "options": [
           {
-            "suggestion": "variableThreshold",
-            "description": "Replace with the controlled variable's threshold.",
+            "suggestion": "wcreaction",
+            "description": "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the recovery time.",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "The controlled variable's threshold."
+        "description": "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the recovery time."
       },
-      "state": {
+      "thresholdComparison": {
         "options": [
           {
-            "suggestion": "state",
-            "description": "Replace with state.",
+            "suggestion": "< threshold",
+            "description": "less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<= threshold",
+            "description": "less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "> threshold",
+            "description": "greater than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">= threshold",
+            "description": "greater than or equal to threshold",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "The state for the worst-case reaction function."
-      },
-      "action": {
-        "options": [
-          {
-            "suggestion": "action",
-            "description": "ReplaceRecovery with action",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The action for the worst-case reaction function"
-      },
-      "tR": {
-        "options": [
-          {
-            "suggestion": "recoveryTime",
-            "description": "Replace with recovery time variable name.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": " Time"
+        "description": "Comparison to the threshold variable."
       }
     },
     "examples": [
       {
-        "cRL": "cRL",
-        "op": "TMAX",
-        "tS": "tS",
-        "var": "(hMax - c)",
-        "threshold": "TMAX",
-        "state": "tDLast+tRMax",
-        "action": "t",
-        "tR": "<="
+        "clockTrigger": "cRL",
+        "threshold": ">=",
+        "var": "tS",
+        "worst case reaction": "bigT",
+        "thresholdComparison": ">",
+        "undefined": "TMAX"
       }
     ]
   },
@@ -1257,22 +1192,10 @@
         "field": "var"
       },
       {
-        "text": "+wcreaction("
+        "text": "+"
       },
       {
-        "field": "state"
-      },
-      {
-        "text": ","
-      },
-      {
-        "field": "action"
-      },
-      {
-        "text": ","
-      },
-      {
-        "field": "tR"
+        "field": "worst case reaction"
       },
       {
         "text": ") "
@@ -1359,45 +1282,9 @@
         "description": "An inequality operator (<, >, <=, >=)"
       },
       "threshold": {
-        "options": [
-          {
-            "suggestion": "variableThreshold",
-            "description": "Replace with the controlled variable's threshold.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The controlled variable's threshold."
+        "options": []
       },
-      "state": {
-        "options": [
-          {
-            "suggestion": "state",
-            "description": "Replace with state.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The state for the worst-case reaction function."
-      },
-      "action": {
-        "options": [
-          {
-            "suggestion": "action",
-            "description": "Replace with action",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The action for the worst-case reaction function"
-      },
-      "tR": {
+      "worst case reaction": {
         "options": []
       }
     },
@@ -1406,18 +1293,17 @@
         "cRL": "cRL",
         "tS": ">=",
         "var": "TMAX",
-        "~": "TMAX",
-        "threshold": "<=",
-        "state": "hMax",
-        "action": "c",
-        "tR": "tS"
+        "~": "c",
+        "threshold": "tS",
+        "worst case reaction": "hMax",
+        "undefined": "TMAX"
       }
     ]
   },
   {
     "_id": "template-dl-resilience1",
-    "title": "DL: Resilience at threashold",
-    "description": "When the threashold is maintained, do something..",
+    "title": "DL: Resilience at threshold",
+    "description": "When the threshold is maintained, do something..",
     "structure": [
       {
         "text": "whenever ("
@@ -1474,22 +1360,10 @@
         "field": "var"
       },
       {
-        "text": "+wcreaction("
+        "text": " + "
       },
       {
-        "field": "state"
-      },
-      {
-        "text": ","
-      },
-      {
-        "field": "action"
-      },
-      {
-        "text": ","
-      },
-      {
-        "field": "tS"
+        "field": "worst case reaction"
       },
       {
         "text": ") "
@@ -1592,17 +1466,7 @@
         "description": "?"
       },
       "action": {
-        "options": [
-          {
-            "suggestion": "action",
-            "description": "Replace with action",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The action for the worst-case reaction function"
+        "options": []
       },
       "servDeg": {
         "options": [
@@ -1617,18 +1481,8 @@
         ],
         "description": "Least degraded service?"
       },
-      "state": {
-        "options": [
-          {
-            "suggestion": "state",
-            "description": "Replace with state.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The state for the worst-case reaction function."
+      "worst case reaction": {
+        "options": []
       }
     },
     "examples": []

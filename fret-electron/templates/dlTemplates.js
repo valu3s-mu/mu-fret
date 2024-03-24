@@ -40,32 +40,37 @@ let dlTemplates = []
 // =========================== R1
 ed.newTemplate("template-dl-threshold1", "DL: Threshold at sample time");
 ed.templateSummary("Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \
-	the RL agent chooses and action that ensures that the worst case reaction o the overall system, \
+	the RL agent chooses and action that ensures that the worst case reaction of the overall system, \
 	within one sample time still maintains the safety threshold.");
-ed.templateStructure("when ([cRL] >= [tS]) & ([var] <= [threshold]) RLAgent shall immediately satisfy chooseAction & ([var] + wcrection([state], [action], [ts]) ) <= [threshold]");
+ed.templateStructure("when ([cRL] >= [tS]) & ([var] <= [threshold]) RLAgent shall immediately satisfy chooseAction & ([var] + [worst-case reaction] ) <= [threshold]");
 
 ed.fieldDescription("cRL", "The clock's time.");
 ed.addOption("cRL", "cRL", "Replace with clock variable name.");
 
-ed.fieldDescription("tS", "The sample time.")
-ed.addOption("ts", "sampleTime",  "Replace with sample time variable name.")
+ed.fieldDescription("tS", "The sample time.");
+ed.addOption("ts", "sampleTime",  "Replace with sample time variable name.");
 
-ed.fieldDescription("var", "The controlled variable.")
-ed.addOption("var", "controlledVariable", "replace with the controlled variable.")
+ed.fieldDescription("var", "The controlled variable.");
+ed.addOption("var", "controlledVariable", "replace with the controlled variable.");
 
-ed.fieldDescription("threshold","The controlled variable's threshold.")
-ed.addOption("threshold", "variableThreshold", "Replace with the controlled variable's threshold.")
+ed.fieldDescription("threshold","The controlled variable's threshold.");
+ed.addOption("threshold", "variableThreshold", "Replace with the controlled variable's threshold.");
 
-ed.fieldDescription("state", "The state for the worst-case reaction function.")
-ed.addOption("state", "state", "Replace with state.")
+// wcrection([state], [action], [ts])
 
-ed.fieldDescription("action", "The action for the worst-case reaction function")
-ed.addOption("action", "action","Replace with action")
+//ed.fieldDescription("state", "The state for the worst-case reaction function.")
+//ed.addOption("state", "state", "Replace with state.")
 
-ed.addExample("whenever ([cRL] >= [tS]) & ([T] <= [TMAX]) RLAgent shall immediately satisfy chooseAction & ([T]+([hMax]-[c])*[ts] <= [TMAX])")
+//ed.fieldDescription("action", "The action for the worst-case reaction function")
+//ed.addOption("action", "action","Replace with action")
+
+ed.fieldDescription("worst-case reaction", "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the sample time.");
+ed.addOption("worst-case reaction", "worst-case reaction", "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the sample time.");
+
+ed.addExample("whenever ([cRL] >= [tS]) & ([T] <= [TMAX]) RLAgent shall immediately satisfy chooseAction & ([T]+[(hMax-c)*ts] <= [TMAX])");
 
 
-dlTemplates.push(ed.createFinalTemplateObject())
+dlTemplates.push(ed.createFinalTemplateObject());
 
 
 //============================= R2
@@ -108,7 +113,7 @@ dlTemplates.push(ed.createFinalTemplateObject())
 
 ed.newTemplate("template-dl-rcovery1", "DL: Recovery not at threshold")
 ed.templateSummary("? If the system has breached the threshold for a variable, choose and action to do something...")
-ed.templateStructure("whenever ([cRL] [op] [tS]) & !([var] [op] [threshold]) RLAgent shall immediately satisfy chooseAction & ([var] + wcreaction([state],[action],[tR]) [op] [threshold])")
+ed.templateStructure("whenever ([clockTrigger]) & !([threshold]) RLAgent shall immediately satisfy chooseAction & ([var] + [worst case reaction] [thresholdComparison])")
 
 ed.fieldDescription("cRL", "The clock's time.");
 ed.addOption("cRL", "cRL", "Replace with clock variable name.");
@@ -116,28 +121,40 @@ ed.addOption("cRL", "cRL", "Replace with clock variable name.");
 ed.fieldDescription("tS", "The sample time.")
 ed.addOption("ts", "sampleTime",  "Replace with sample time variable name.")
 
+ed.fieldDescription("clockTrigger", "cRL ~ tS");
+ed.addOption("clockTrigger", "cRL < tS", "Clock time less than sampleTime");
+ed.addOption("clockTrigger", "cRL <= tS", "Clock time less than or equal to sampleTime");
+ed.addOption("clockTrigger", "cRL > ts", "Clock time greater than sampleTime");
+ed.addOption("clockTrigger", "cRL >= tS", "Clock time greater than or equal to sampleTime");
+
 ed.fieldDescription("var", "The controlled variable.")
 ed.addOption("var", "controlledVariable", "replace with the controlled variable.")
 
-// We'll see if this works
-ed.fieldDescription("op", "An inequality operator (<, >, <=, >=)")
-ed.addOption("op", "<", "Less than.")
-ed.addOption("op", ">", "Greater than.")
-ed.addOption("op", "<=", "Less than or equal to.")
-ed.addOption("op", ">=", "Greater than or equal to.")
-
-ed.fieldDescription("threshold","The controlled variable's threshold.")
-ed.addOption("threshold", "variableThreshold", "Replace with the controlled variable's threshold.")
+ed.fieldDescription("threshold", "var ~ Threshold");
+ed.addOption("threshold", "var < threshold", "var less than threshold");
+ed.addOption("threshold", "var <= threshold", "var less than or equal to threshold");
+ed.addOption("threshold", "var > threshold", "var greater than threshold");
+ed.addOption("threshold", "var >= threshold", "var greater than or equal to threshold");
 
 
-ed.fieldDescription("state", "The state for the worst-case reaction function.")
-ed.addOption("state", "state", "Replace with state.")
+ed.fieldDescription("thresholdComparison","Comparison to the threshold variable.")
+ed.addOption("thresholdComparison", "< threshold", "less than threshold");
+ed.addOption("thresholdComparison", "<= threshold", "less than or equal to threshold");
+ed.addOption("thresholdComparison", "> threshold", "greater than threshold");
+ed.addOption("thresholdComparison", ">= threshold", "greater than or equal to threshold");
 
-ed.fieldDescription("action", "The action for the worst-case reaction function")
-ed.addOption("action", "action","ReplaceRecovery with action")
+ed.fieldDescription("worst case reaction", "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the recovery time.")
+ed.addOption("worst case reaction", "wcreaction", "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the recovery time.")
 
-ed.fieldDescription("tR", " Time")
-ed.addOption("tR", "recoveryTime", "Replace with recovery time variable name.")
+
+//ed.fieldDescription("state", "The state for the worst-case reaction function.")
+//ed.addOption("state", "state", "Replace with state.")
+
+//ed.fieldDescription("action", "The action for the worst-case reaction function")
+//ed.addOption("action", "action","ReplaceRecovery with action")
+
+//ed.fieldDescription("tR", " Time")
+//ed.addOption("tR", "recoveryTime", "Replace with recovery time variable name.")
 
 ed.addExample("whenever ([cRL] [>=] [tS]) & ([bigT] [>] [TMAX]) RLAgent shall immediately satisfy chooseAction & [(hMax - c)]*(([tDLast+tRMax]) - [t]) [<=] [TMAX].")
 
@@ -151,7 +168,7 @@ dlTemplates.push(ed.createFinalTemplateObject())
 
 ed.newTemplate("template-dl-recovery2", "DL: Recovery at threshold")
 ed.templateSummary("? If the system has not breached the threshold for a variable, choose and action to do something...")
-ed.templateStructure("whenever ([cRL] >= [tS]) & ([var] [~] [threshold]) RLAgent shall immediately satisfy chooseAction & ([var]+wcreaction([state],[action],[tR]) [~] [threshold])")
+ed.templateStructure("whenever ([cRL] >= [tS]) & ([var] [~] [threshold]) RLAgent shall immediately satisfy chooseAction & ([var]+[worst case reaction]) [~] [threshold])")
 
 ed.fieldDescription("cRL", "The clock's time.");
 ed.addOption("cRL", "cRL", "Replace with clock variable name.");
@@ -169,16 +186,19 @@ ed.addOption("~", ">", "Greater than.")
 ed.addOption("~", "<=", "Less than or equal to.")
 ed.addOption("~", ">=", "Greater than or equal to.")
 
+ed.fieldDescription("worst-case reaction", "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the recovery time.")
+ed.addOption("worst-case reaction", "worst-case reaction", "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the recovery time.")
 
-ed.fieldDescription("threshold","The controlled variable's threshold.")
-ed.addOption("threshold", "variableThreshold", "Replace with the controlled variable's threshold.")
+
+//ed.fieldDescription("threshold","The controlled variable's threshold.")
+//ed.addOption("threshold", "variableThreshold", "Replace with the controlled variable's threshold.")
 
 
-ed.fieldDescription("state", "The state for the worst-case reaction function.")
-ed.addOption("state", "state", "Replace with state.")
+//ed.fieldDescription("state", "The state for the worst-case reaction function.")
+//ed.addOption("state", "state", "Replace with state.")
 
-ed.fieldDescription("action", "The action for the worst-case reaction function")
-ed.addOption("action", "action","Replace with action")
+//ed.fieldDescription("action", "The action for the worst-case reaction function")
+//ed.addOption("action", "action","Replace with action")
 
 ed.addExample("whenever ([cRL] [>=] [tS]) & ([bigT] [<=] [TMAX]) RLAgent shall immediately satisfy chooseAction & ([hMax] - [c]) *([tS]) <= [TMAX]")
 
@@ -191,9 +211,9 @@ dlTemplates.push(ed.createFinalTemplateObject())
 
 // =============================== R6
 
-ed.newTemplate("template-dl-resilience1", "DL: Resilience at threashold")
-ed.templateSummary("When the threashold is maintained, do something..")
-ed.templateStructure("whenever ([cRL] >= [tS]) &  ([var] [~] [threshold]+-[deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] >= [servDeg] & ([var]+wcreaction([state],[action],[tS]) [~] [threshold])")
+ed.newTemplate("template-dl-resilience1", "DL: Resilience at threshold")
+ed.templateSummary("When the threshold is maintained, do something..")
+ed.templateStructure("whenever ([cRL] >= [tS]) &  ([var] [~] [threshold]+-[deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] >= [servDeg] & ([var] + [worst case reaction]) [~] [threshold])")
 
 ed.fieldDescription("cRL", "The clock's time.");
 ed.addOption("cRL", "cRL", "Replace with clock variable name.");
@@ -211,12 +231,14 @@ ed.addOption("~", ">", "Greater than.")
 ed.addOption("~", "<=", "Less than or equal to.")
 ed.addOption("~", ">=", "Greater than or equal to.")
 
+ed.fieldDescription("worst-case reaction", "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the sample time.")
+ed.addOption("worst-case reaction", "worst-case reaction", "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the sample time.")
 
-ed.fieldDescription("state", "The state for the worst-case reaction function.")
-ed.addOption("state", "state", "Replace with state.")
+//ed.fieldDescription("state", "The state for the worst-case reaction function.")
+//ed.addOption("state", "state", "Replace with state.")
 
-ed.fieldDescription("action", "The action for the worst-case reaction function")
-ed.addOption("action", "action","Replace with action")
+//ed.fieldDescription("action", "The action for the worst-case reaction function")
+//ed.addOption("action", "action","Replace with action")
 
 ed.fieldDescription("deltaSuff" , "?")
 ed.addOption("deltaSuff", "deltaSuff", "Replace")
