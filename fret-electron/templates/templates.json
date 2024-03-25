@@ -759,221 +759,16 @@
         "text": "when ("
       },
       {
-        "field": "cRL"
+        "field": "clockTime"
       },
       {
         "text": " >= "
       },
       {
-        "field": "tS"
+        "field": "sampleTime"
       },
       {
         "text": ") & ("
-      },
-      {
-        "field": "var"
-      },
-      {
-        "text": " <= "
-      },
-      {
-        "field": "threshold"
-      },
-      {
-        "text": ") RLAgent shall immediately satisfy chooseAction & ("
-      },
-      {
-        "field": "var"
-      },
-      {
-        "text": " + "
-      },
-      {
-        "field": "worst-case reaction"
-      },
-      {
-        "text": " ) <= "
-      },
-      {
-        "field": "threshold"
-      }
-    ],
-    "fields": {
-      "cRL": {
-        "options": [
-          {
-            "suggestion": "cRL",
-            "description": "Replace with clock variable name.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The clock's time."
-      },
-      "tS": {
-        "options": [],
-        "description": "The sample time."
-      },
-      "var": {
-        "options": [
-          {
-            "suggestion": "controlledVariable",
-            "description": "replace with the controlled variable.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The controlled variable."
-      },
-      "threshold": {
-        "options": [
-          {
-            "suggestion": "variableThreshold",
-            "description": "Replace with the controlled variable's threshold.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The controlled variable's threshold."
-      },
-      "worst-case reaction": {
-        "options": [
-          {
-            "suggestion": "worst-case reaction",
-            "description": "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the sample time.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the sample time."
-      }
-    },
-    "examples": [
-      {
-        "cRL": "cRL",
-        "tS": "tS",
-        "var": "T",
-        "threshold": "TMAX",
-        "worst-case reaction": "(hMax-c)*ts"
-      }
-    ]
-  },
-  {
-    "_id": "template-dl-threshold2",
-    "title": "DL: Threshold not at sample time",
-    "description": "whenever the sample time is not reached (cRL < tS) the RL agent does not change the action",
-    "structure": [
-      {
-        "text": "whenever ("
-      },
-      {
-        "field": "cRL"
-      },
-      {
-        "text": " < "
-      },
-      {
-        "field": "tS"
-      },
-      {
-        "text": ") RLAgent shall immediately satisfy maintainAction"
-      }
-    ],
-    "fields": {
-      "cRL": {
-        "options": [
-          {
-            "suggestion": "cRL",
-            "description": "Replace with clock variable name.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The clock's time."
-      },
-      "tS": {
-        "options": [],
-        "description": "The sample time."
-      }
-    },
-    "examples": []
-  },
-  {
-    "_id": "template-dl-threshold3",
-    "title": "DL: Maintain Threshold",
-    "description": "System should always kepe the controlled variable below the threshold",
-    "structure": [
-      {
-        "text": "System shall always satisfy "
-      },
-      {
-        "field": "var"
-      },
-      {
-        "text": " <= "
-      },
-      {
-        "field": "threshold"
-      }
-    ],
-    "fields": {
-      "var": {
-        "options": [
-          {
-            "suggestion": "controlledVariable",
-            "description": "replace with the controlled variable.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The controlled variable."
-      },
-      "threshold": {
-        "options": [
-          {
-            "suggestion": "variableThreshold",
-            "description": "Replace with the controlled variable's threshold.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The controlled variable's threshold."
-      }
-    },
-    "examples": [
-      {
-        "var": "T",
-        "threshold": "TMAX"
-      }
-    ]
-  },
-  {
-    "_id": "template-dl-rcovery1",
-    "title": "DL: Recovery not at threshold",
-    "description": "? If the system has breached the threshold for a variable, choose and action to do something...",
-    "structure": [
-      {
-        "text": "whenever ("
-      },
-      {
-        "field": "clockTrigger"
-      },
-      {
-        "text": ") & !("
       },
       {
         "field": "threshold"
@@ -991,52 +786,38 @@
         "field": "worst case reaction"
       },
       {
-        "text": " "
+        "text": " ) "
       },
       {
         "field": "thresholdComparison"
-      },
-      {
-        "text": ")"
       }
     ],
     "fields": {
-      "clockTrigger": {
+      "clockTime": {
         "options": [
           {
-            "suggestion": "cRL < tS",
-            "description": "Clock time less than sampleTime",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "cRL <= tS",
-            "description": "Clock time less than or equal to sampleTime",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "cRL > ts",
-            "description": "Clock time greater than sampleTime",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "cRL >= tS",
-            "description": "Clock time greater than or equal to sampleTime",
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "cRL ~ tS"
+        "description": "The clock's time."
+      },
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The sample time."
       },
       "threshold": {
         "options": [
@@ -1055,41 +836,23 @@
               0,
               0
             ]
-          },
-          {
-            "suggestion": "var > threshold",
-            "description": "var greater than threshold",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "var >= threshold",
-            "description": "var greater than or equal to threshold",
-            "selection": [
-              0,
-              0
-            ]
           }
         ],
         "description": "var ~ Threshold"
       },
       "var": {
+        "options": []
+      },
+      "worst case reaction": {
         "options": [
           {
-            "suggestion": "controlledVariable",
-            "description": "replace with the controlled variable.",
+            "suggestion": "(state - action) * sampleTime",
+            "description": "Usual worst case reaction relationship.",
             "selection": [
               0,
               0
             ]
-          }
-        ],
-        "description": "The controlled variable."
-      },
-      "worst case reaction": {
-        "options": [
+          },
           {
             "suggestion": "wcreaction",
             "description": "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the recovery time.",
@@ -1141,12 +904,279 @@
     },
     "examples": [
       {
-        "clockTrigger": "cRL",
-        "threshold": ">=",
-        "var": "tS",
-        "worst case reaction": "bigT",
-        "thresholdComparison": ">",
-        "undefined": "TMAX"
+        "clockTime": "cRL",
+        "sampleTime": "tS",
+        "threshold": "T <= TMAX",
+        "var": "T",
+        "worst case reaction": "(hMax-c)*ts",
+        "thresholdComparison": "<= TMAX"
+      }
+    ]
+  },
+  {
+    "_id": "template-dl-threshold2",
+    "title": "DL: Threshold not at sample time",
+    "description": "whenever the sample time is not reached (cRL < tS) the RL agent does not change the action",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "clockTime"
+      },
+      {
+        "text": " < "
+      },
+      {
+        "field": "sampleTime"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy maintainAction"
+      }
+    ],
+    "fields": {
+      "clockTime": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The sample time."
+      }
+    },
+    "examples": []
+  },
+  {
+    "_id": "template-dl-threshold3",
+    "title": "DL: Maintain Threshold",
+    "description": "System should always keep the controlled variable below the threshold",
+    "structure": [
+      {
+        "text": "System shall always satisfy "
+      },
+      {
+        "field": "threshold"
+      }
+    ],
+    "fields": {
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "var ~ threshold"
+      }
+    },
+    "examples": [
+      {
+        "threshold": "T <= TMAX"
+      }
+    ]
+  },
+  {
+    "_id": "template-dl-rcovery1",
+    "title": "DL: Recovery not at threshold",
+    "description": "? If the system has breached the threshold for a variable, choose and action to do something...",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "clockTime"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "sampleTime"
+      },
+      {
+        "text": ") & !("
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy chooseAction & ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " + "
+      },
+      {
+        "field": "worst case reaction"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "thresholdComparison"
+      },
+      {
+        "text": ")"
+      }
+    ],
+    "fields": {
+      "clockTime": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The sample time."
+      },
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "var ~ Threshold"
+      },
+      "var": {
+        "options": [
+          {
+            "suggestion": "controlledVariable",
+            "description": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
+      "worst case reaction": {
+        "options": [
+          {
+            "suggestion": "(state - action) * sampleTime",
+            "description": "Usual worst case reaction relationship.",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "wcreaction",
+            "description": "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the recovery time.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the recovery time."
+      },
+      "thresholdComparison": {
+        "options": [
+          {
+            "suggestion": "< threshold",
+            "description": "less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<= threshold",
+            "description": "less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "> threshold",
+            "description": "greater than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">= threshold",
+            "description": "greater than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Comparison to the threshold variable."
+      }
+    },
+    "examples": [
+      {
+        "clockTime": "cRL",
+        "sampleTime": "tS",
+        "threshold": "bigT > TMAX",
+        "var": "(hMax - c*((tDLast+tRMax) - t",
+        "worst case reaction": "<= TMAX"
       }
     ]
   },
@@ -1159,28 +1189,16 @@
         "text": "whenever ("
       },
       {
-        "field": "cRL"
+        "field": "clockTime"
       },
       {
         "text": " >= "
       },
       {
-        "field": "tS"
+        "field": "sampleTime"
       },
       {
         "text": ") & ("
-      },
-      {
-        "field": "var"
-      },
-      {
-        "text": " "
-      },
-      {
-        "field": "~"
-      },
-      {
-        "text": " "
       },
       {
         "field": "threshold"
@@ -1201,20 +1219,14 @@
         "text": ") "
       },
       {
-        "field": "~"
-      },
-      {
-        "text": " "
-      },
-      {
-        "field": "threshold"
+        "field": "thresholdComparison"
       },
       {
         "text": ")"
       }
     ],
     "fields": {
-      "cRL": {
+      "clockTime": {
         "options": [
           {
             "suggestion": "cRL",
@@ -1227,9 +1239,39 @@
         ],
         "description": "The clock's time."
       },
-      "tS": {
-        "options": [],
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
         "description": "The sample time."
+      },
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "var ~ Threshold"
       },
       "var": {
         "options": [
@@ -1244,59 +1286,71 @@
         ],
         "description": "The controlled variable."
       },
-      "~": {
+      "worst case reaction": {
         "options": [
           {
-            "suggestion": "<",
-            "description": "Less than.",
+            "suggestion": "(state - action) * sampleTime",
+            "description": "Usual worst case reaction relationship.",
             "selection": [
               0,
               0
             ]
           },
           {
-            "suggestion": ">",
-            "description": "Greater than.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "<=",
-            "description": "Less than or equal to.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": ">=",
-            "description": "Greater than or equal to.",
+            "suggestion": "wcreaction",
+            "description": "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the recovery time.",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "An inequality operator (<, >, <=, >=)"
+        "description": "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the recovery time."
       },
-      "threshold": {
-        "options": []
-      },
-      "worst case reaction": {
-        "options": []
+      "thresholdComparison": {
+        "options": [
+          {
+            "suggestion": "< threshold",
+            "description": "less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<= threshold",
+            "description": "less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "> threshold",
+            "description": "greater than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">= threshold",
+            "description": "greater than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Comparison to the threshold variable."
       }
     },
     "examples": [
       {
-        "cRL": "cRL",
-        "tS": ">=",
-        "var": "TMAX",
-        "~": "c",
-        "threshold": "tS",
-        "worst case reaction": "hMax",
-        "undefined": "TMAX"
+        "clockTime": "cRL >= tS",
+        "sampleTime": "bigT <= TMAX",
+        "threshold": "(hMax - c) *tS)",
+        "var": "<= TMAX"
       }
     ]
   },
@@ -1309,28 +1363,16 @@
         "text": "whenever ("
       },
       {
-        "field": "cRL"
+        "field": "clockTime"
       },
       {
         "text": " >= "
       },
       {
-        "field": "tS"
+        "field": "sampleTime"
       },
       {
         "text": ") &  ("
-      },
-      {
-        "field": "var"
-      },
-      {
-        "text": " "
-      },
-      {
-        "field": "~"
-      },
-      {
-        "text": " "
       },
       {
         "field": "threshold"
@@ -1369,20 +1411,14 @@
         "text": ") "
       },
       {
-        "field": "~"
-      },
-      {
-        "text": " "
-      },
-      {
-        "field": "threshold"
+        "field": "thresholdComparison"
       },
       {
         "text": ")"
       }
     ],
     "fields": {
-      "cRL": {
+      "clockTime": {
         "options": [
           {
             "suggestion": "cRL",
@@ -1395,62 +1431,39 @@
         ],
         "description": "The clock's time."
       },
-      "tS": {
-        "options": [],
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
         "description": "The sample time."
       },
-      "var": {
-        "options": [
-          {
-            "suggestion": "controlledVariable",
-            "description": "replace with the controlled variable.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The controlled variable."
-      },
-      "~": {
-        "options": [
-          {
-            "suggestion": "<",
-            "description": "Less than.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": ">",
-            "description": "Greater than.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "<=",
-            "description": "Less than or equal to.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": ">=",
-            "description": "Greater than or equal to.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "An inequality operator (<, >, <=, >=)"
-      },
       "threshold": {
-        "options": []
+        "options": [
+          {
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "var ~ Threshold"
       },
       "deltaSuff": {
         "options": [
@@ -1481,8 +1494,76 @@
         ],
         "description": "Least degraded service?"
       },
+      "var": {
+        "options": [
+          {
+            "suggestion": "controlledVariable",
+            "description": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
       "worst case reaction": {
-        "options": []
+        "options": [
+          {
+            "suggestion": "(state - action) * sampleTime",
+            "description": "Usual worst case reaction relationship.",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "wcreaction",
+            "description": "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the recovery time.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the recovery time."
+      },
+      "thresholdComparison": {
+        "options": [
+          {
+            "suggestion": "< threshold",
+            "description": "less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<= threshold",
+            "description": "less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "> threshold",
+            "description": "greater than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">= threshold",
+            "description": "greater than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Comparison to the threshold variable."
       }
     },
     "examples": []
@@ -1496,28 +1577,16 @@
         "text": "whenever ("
       },
       {
-        "field": "cRL"
+        "field": "clockTime"
       },
       {
         "text": " >= "
       },
       {
-        "field": "tS"
+        "field": "sampleTime"
       },
       {
         "text": ") & !("
-      },
-      {
-        "field": "var"
-      },
-      {
-        "text": " "
-      },
-      {
-        "field": "~"
-      },
-      {
-        "text": " "
       },
       {
         "field": "threshold"
@@ -1535,14 +1604,14 @@
         "field": "action"
       },
       {
-        "text": " =   "
+        "text": " = "
       },
       {
         "field": "servDeg"
       }
     ],
     "fields": {
-      "cRL": {
+      "clockTime": {
         "options": [
           {
             "suggestion": "cRL",
@@ -1555,62 +1624,37 @@
         ],
         "description": "The clock's time."
       },
-      "tS": {
-        "options": [],
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
         "description": "The sample time."
-      },
-      "var": {
-        "options": [
-          {
-            "suggestion": "controlledVariable",
-            "description": "replace with the controlled variable.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The controlled variable."
-      },
-      "~": {
-        "options": [
-          {
-            "suggestion": "<",
-            "description": "Less than.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": ">",
-            "description": "Greater than.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "<=",
-            "description": "Less than or equal to.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": ">=",
-            "description": "Greater than or equal to.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "An inequality operator (<, >, <=, >=)"
       },
       "threshold": {
         "options": [
+          {
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
           {
             "suggestion": "variableThreshold",
             "description": "Replace with the controlled variable's threshold.",
