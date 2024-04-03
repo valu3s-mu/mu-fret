@@ -341,7 +341,8 @@ class CreateRequirementDialog extends React.Component {
           fulltext : fulltext,
           semantics : semantics,
           template : template,
-          input : input
+          input : input,
+          fragments: []
         }, (err, responses) => {
           if (err) {
             self.state.dialogCloseListener(false);

@@ -51,6 +51,8 @@ import Snackbar from '@material-ui/core/Snackbar';
 import Button from '@material-ui/core/Button';
 import Input from '@material-ui/core/Input';
 import InputAdornment from '@material-ui/core/InputAdornment';
+import Menu from '@material-ui/core/Menu';
+import ListItemText from '@material-ui/core/ListItemText';
 
 import CloseIcon from '@material-ui/icons/Close';
 import DeleteIcon from '@material-ui/icons/Delete';
@@ -73,6 +75,10 @@ import DeleteRequirementDialog from './DeleteRequirementDialog';
 
 import RefactorRequirementDialog from './refactoring/RefactorRequirementDialog';
 import BuildIcon from '@material-ui/icons/Build';
+
+import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
+const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
+//^ FOR DEBUGGING, DELETE BEFORE COMMITTING
 
 import SearchSortableTableDialog from './SearchSortableTableDialog';
 
@@ -392,12 +398,15 @@ class SortableTable extends React.Component {
     bulkChangeMode: false,
     deleteUsingCheckBoxes: false,
     refactorDialogOpen: false,
+    inlineDialogOpen: false,
     searchId: [],
     searchSummary: [],      // array of string
     searchStatus: [],      // array of string
     searchHasWords: [],
     searchInputString: '',
     searchTableDialogOpen: false,
+    refactorAnchorEl: null,
+    refactorMenuCurrentN: null,
   };
 
   constructor(props){
@@ -577,6 +586,9 @@ class SortableTable extends React.Component {
       });
     }
 
+    //Oisín: Closes the dropdown menu
+    this.setState({refactorAnchorEl: null, refactorMenuCurrentN: null})
+
     // this.setState({
     //  refactorDialogOpen: true,
     //  selectedRequirement: selectedReqId,
@@ -597,6 +609,32 @@ class SortableTable extends React.Component {
   handleRefactorDialogClose = () => {
     this.setState({
       refactorDialogOpen: false
+    });
+  }
+
+  handleInlineRequirement = (row) => event => {
+    event.stopPropagation();
+
+    if (row.dbkey) {
+      db.get(row.dbkey).then((doc) => {
+        doc.dbkey = row.dbkey;
+        doc.rev = row.rev;
+        this.setState({
+          selectedRequirement: doc,
+          inlineDialogOpen: true,
+        });
+      }).catch((err) => {
+        console.log(err);
+      });
+    }
+
+    //Oisín: Closes the dropdown menu
+    this.setState({refactorAnchorEl: null, refactorMenuCurrentN: null})
+  }
+
+  handleInlineDialogClose = () => {
+    this.setState({
+      inlineDialogOpen: false
     });
   }
 
@@ -800,11 +838,56 @@ class SortableTable extends React.Component {
     this.setState({searchId, searchStatus, searchSummary, searchHasWords})
   }
 
+  handleRefactorMenuClick = (row) => event => {
+    this.setState({ refactorAnchorEl: event.currentTarget, refactorMenuCurrentN: row });
+
+    db.allDocs({
+      include_docs: true,
+    }).then((result) => {
+      console.log("Full DB:");
+      result.rows.map(r => {
+        console.log(r.doc ? (r.doc.reqid || r.doc._id) : r.id);
+        console.log(r);
+      })
+    });
+    
+    db.get('FRET_PROJECTS').then((doc) => {
+      console.log("Project list object:");
+      console.log(doc);
+    });
+    
+    db.get('FRET_PROPS').then((doc) => {
+      console.log("FRET_PROPS object:");
+      console.log(doc);
+    });
+
+    db.get('REAL_TIME_CONFIG').then((doc) => {
+      console.log("REAL_TIME_CONFIG object:");
+      console.log(doc);
+    });
+    
+    modeldb.allDocs({
+      include_docs: true,
+    }).then((result => {
+      console.log("All Variable names:");
+      result.rows.map(r => {
+        console.log(r.id);
+        console.log(r);
+      })
+      console.log("End of variables list");
+    }));
+
+  };
+
+  handleRefactorMenuClose = () => {
+    this.setState({ refactorAnchorEl: null, refactorMenuCurrentN: null });
+  };
+
   render() {
     const { classes, selectedProject, existingProjectNames } = this.props;
     const { data, order, orderBy, selected, rowsPerPage, page, bulkChangeMode,
        snackBarDisplayInfo, selectionBulkChange, selectedRequirement,
-       deleteUsingCheckBoxes, searchHasWords, searchId, searchStatus, searchSummary,searchInputString } = this.state;
+       deleteUsingCheckBoxes, searchHasWords, searchId, searchStatus, searchSummary,searchInputString, refactorAnchorEl, refactorMenuCurrentN } = this.state;
     const emptyRows = rowsPerPage - Math.min(rowsPerPage, data.length - page * rowsPerPage);
     const title = 'Requirements: ' + selectedProject
     const selectionForDeletion = deleteUsingCheckBoxes ? selectionBulkChange : [selectedRequirement]
@@ -966,6 +1049,20 @@ class SortableTable extends React.Component {
                               <BuildIcon />
                               </IconButton>
                             </Tooltip>
+
+                            <Tooltip id="tooltip-icon-refactor-menu" title="Refactor Requirement">
+                              <IconButton
+                                onClick={this.handleRefactorMenuClick(n)}
+                                size="small"
+                                color="default"
+                                aria-label="refactor menu button"
+                                aria-owns={refactorAnchorEl ? 'refactor-menu' : null}
+                                aria-haspopup="true"
+
+                              >
+                              <BuildIcon />
+                              </IconButton>
+                            </Tooltip>
                           </TableCell>
                         <TableCell id={"qa_tbl_tc_not_bulk_summary_"+label} >{n.summary}</TableCell>
                         <TableCell id={"qa_tbl_tc_not_bulk_project_"+label} >{projectLabel}</TableCell>
@@ -980,6 +1077,30 @@ class SortableTable extends React.Component {
                 </TableRow>
               )}
             </TableBody>
+
+            <//Oisín: Menu to select refactoring method to be applied
+             Menu
+              id="refactor-menu"
+              anchorEl={refactorAnchorEl}
+              open={Boolean(refactorAnchorEl)}
+              onClose={this.handleRefactorMenuClose}
+            >
+              <MenuItem
+                onClick={this.handleRefactorRequirement(refactorMenuCurrentN)}
+                dense
+                >
+                <ListItemText primary = "Extract Requirement" />
+              </MenuItem>
+
+              <MenuItem
+                onClick={this.handleInlineRequirement(refactorMenuCurrentN)}
+                dense
+                >
+                <ListItemText primary = "Inline Requirement" />
+              </MenuItem>
+
+            </Menu>
+
           </Table>
         </div>
         <TablePagination
@@ -1003,6 +1124,13 @@ class SortableTable extends React.Component {
         selectedRequirement={this.state.selectedRequirement}
         open={this.state.refactorDialogOpen}
         handleDialogClose={this.handleRefactorDialogClose}
+        requirements={this.props.requirements}
+      />
+
+      <InlineRequirementDialog
+        selectedRequirement={this.state.selectedRequirement}
+        open={this.state.inlineDialogOpen}
+        handleDialogClose={this.handleInlineDialogClose}
         requirements={this.props.requirements}
       />
 
