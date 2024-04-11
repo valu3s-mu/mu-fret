@@ -229,7 +229,7 @@ dlTemplates.push(ed.createFinalTemplateObject())
 
 ed.newTemplate("template-dl-resilience1", "DL: Resilience at threshold")
 ed.templateSummary("When the threshold is maintained, do something..")
-ed.templateStructure("whenever ([clockTime] >= [sampleTime]) &  ([threshold]+-[deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] >= [servDeg] & ([var] + [worst case reaction]) [thresholdComparison])")
+ed.templateStructure("whenever ([clockTime] >= [sampleTime]) &  ([threshold] + [deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] >= [servDeg] & ([var] + [worst case reaction]) [thresholdComparison])")
 
 
 ed.fieldDescription("clockTime", "The clock's time.");
@@ -265,13 +265,13 @@ ed.addOption("thresholdComparison", "> threshold", "greater than threshold");
 ed.addOption("thresholdComparison", ">= threshold", "greater than or equal to threshold");
 
 
-ed.fieldDescription("deltaSuff" , "?")
+ed.fieldDescription("deltaSuff" , "A buffer to ensure a higher service level can be provided and a minimum safety level can be maintained.")
 ed.addOption("deltaSuff", "deltaSuff", "Replace")
 
 ed.fieldDescription("servDeg", "Least degraded service?")
 ed.addOption("servDeg", "servDeg", "Replace")
 
-ed.addExample("whenever ([cRL] >= [tS]) &  (l >  lMin+deltaSuff) RLAgent shall immediately satisfy chooseAction & [s] >= [sDeg] & ([l]+[0*r-s)*(tS)] > [lMin]");
+ed.addExample("whenever ([cRL] >= [tS]) &  ([l] >  [lMin+deltaSuff]) RLAgent shall immediately satisfy chooseAction & [s] >= [sDeg] & ([l]+[0*r-s)*(tS)] > [lMin]");
 
 dlTemplates.push(ed.createFinalTemplateObject())
 
@@ -282,7 +282,7 @@ dlTemplates.push(ed.createFinalTemplateObject())
 
 ed.newTemplate("template-dl-resilience2", "DL: Resilience not at threshold")
 ed.templateSummary("When the threshold is not maintained, do something...")
-ed.templateStructure("whenever ([clockTime] >= [sampleTime]) & !([threshold]+-[deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] = [servDeg]")
+ed.templateStructure("whenever ([clockTime] >= [sampleTime]) & !([threshold] + [deltaSuff]) RLAgent shall immediately satisfy chooseAction & [action] = [servDeg]")
 
 ed.fieldDescription("clockTime", "The clock's time.");
 ed.addOption("clockTime", "cRL", "Replace with clock variable name.");
@@ -304,7 +304,7 @@ ed.fieldDescription("threshold","The controlled variable's threshold.")
 ed.addOption("threshold", "variableThreshold", "Replace with the controlled variable's threshold.")
 
 
-ed.fieldDescription("deltaSuff" , "?")
+ed.fieldDescription("deltaSuff" , "A buffer to ensure a higher service level can be provided and a minimum safety level can be maintained.")
 ed.addOption("deltaSuff", "deltaSuff", "Replace")
 
 ed.fieldDescription("servDeg", "Least degraded service?")
