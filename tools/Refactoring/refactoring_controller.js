@@ -391,8 +391,11 @@ return requirement
 * Handles one request to inline a requirement, including the knock-on effects to
 * other requirements that reference the requirement being inlined.
 * @todo Implement
+* 
+* @param {Object} source the requirement that is being inlined from
+* @param {Array<Object>} destinationReqs a list of the requirements that are being inlined into
 */
-function InlineRequirement()
+function InlineRequirement(source, destinationReqs)
 {
 
 // Ramos
@@ -401,5 +404,40 @@ function InlineRequirement()
 // 3. Remove references to the inlined requirement.
 // 4. Remove the inlined requirement.
 
-}
+	for (let i = 0; i < destinationReqs.length; i++){
 
+		let currentDestination = destinationReqs[i].doc;
+
+		let destinationText = currentDestination.fulltext;
+
+    let semantics = source.semantics; //We pull from the source requirement's semantics
+    let sourceResponse = semantics.post_condition_SMV_pt; //The text to be replaced
+    let sourceCondition = semantics.pre_condition; //The text to be inlined
+
+    let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
+
+    currentDestination.fulltext = inlineResult;
+
+    //Recompile the requirement's semantics based on the new text
+    newSemantics = fretSemantics.compile(inlineResult);
+		currentDestination.semantics = newSemantics.collectedSemantics;
+
+		//Remove reference to the source fragment from the destination's list of fragments
+		if(currentDestination.fragments){
+			let fragIndex = currentDestination.fragments.indexOf(source.reqid);
+			if(fragIndex > -1){
+				currentDestination.fragments.splice(fragIndex, 1);
+			}
+			
+		}
+
+		//Add to the database
+    model.AddRequirementToDB(currentDestination);
+
+	}
+
+
+	return true;
+
+}
+exports.InlineRequirement = InlineRequirement;

@@ -89,16 +89,18 @@ class InlineRequirementDialog extends React.Component
     requirements: [],
     refactoringCheckresult: null,
     variableDocs : {},
-    //New variables for invalid fragments
-    fragmentNotFoundinSelected: false,
-    fragmentNotFoundInAll: false,
     //String with the IDs of any requirements to be refactored
     applicableRequirementsNames: "",
     //Testing out putting this in the state instead of a variable
     requirementsWithResponse: [],
     //Funny placeholders
     inlinedRequirementPlaceholder: "",
-    inlinedName: ""
+    inlinedName: "",
+    //Used for error messages on the Types screen
+    allVarsDefined: true,
+    variableErrorMessages: [],
+    //List of destination requirements to be inlined into
+    destinationReqs: [],
   };
 
   componentWillReceiveProps = (props) => {
@@ -119,7 +121,7 @@ class InlineRequirementDialog extends React.Component
   }
 
   /**
-   * Closes the refactor requirements dialogue
+   * Closes the inline requirements dialogue
    */
   handleClose = () => {
     // Reset the state
@@ -131,10 +133,11 @@ class InlineRequirementDialog extends React.Component
       refactoringCheckresult: null,
       applyToAll: false, refactoringType: '',
       refactoringContent: '',
-      fragmentNotFoundinSelected: false,
-      fragmentNotFoundinAll: false,
       applicableRequirementsNames: "",
       requirementsWithResponse: [],
+      allVarsDefined: true,
+      variableErrorMessages: [],
+      destinationReqs: [],
     });
     this.state.dialogCloseListener();
   };
@@ -142,8 +145,8 @@ class InlineRequirementDialog extends React.Component
   /**
    * Callback, used by SortableTable.js (I think)
    */
-  handleRefactorDialogClose = () => {
-    this.setState({ refactorDialogOpen: false });
+  handleInlineDialogClose = () => {
+    this.setState({ inlineDialogOpen: false });
 
   };
 
@@ -243,16 +246,103 @@ class InlineRequirementDialog extends React.Component
 
     let semantics = this.state.selectedRequirement.semantics;
     let sourceResponse = semantics.post_condition_SMV_pt;
-    let sourceCondition = semantics.regular_condition_SMV_ft
+    //let sourceCondition = semantics.regular_condition_SMV_ft;
+    let sourceCondition = semantics.pre_condition; //Oisín: This one is better, other ones add extra brackets
 
     let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
+
+    this.createVariableMap(req);
 
     this.setState({
       dialogState : STATE.TYPES,
       inlinedRequirementPlaceholder: inlineResult,
       inlinedName: req.doc.reqid,
+      destinationReqs: [req],
     });
   }
+
+  /*
+   * Oisín: Calls RefactoringUtils.getVariableNames to get the variables we need and creates the type map
+   * for the TYPES dialog state. Essentially refactoring out that functionality from handleInitialOK()
+   * in the Extract dialog because I might want to use it in multiple places here
+  */
+  createVariableMap = (destination) => {
+
+    let varList = RefactoringUtils.getVariableNames(destination.doc);
+
+      var variableTypeMap = new Map();
+      for(let variable of varList)
+      {
+        variableTypeMap.set(variable, "undefined");
+      }
+
+      var self = this;
+
+      modeldb.find({
+        selector: {
+          project : destination.doc.project,
+          variable_name : {$in:varList}
+        }
+      }).then(function(result)
+        {
+          var variableTypeMap = new Map();
+          for (let doc of result.docs)
+          {
+            let varName = doc.variable_name;
+            let varType = doc.dataType;
+
+            if(varType == "")
+            {
+              varType = "undefined"; // If the variable has no type in the database, set it to "undefined"
+            }
+
+            variableTypeMap.set(varName, varType); //Put the variable name and type into the map
+
+          }
+
+          self.setState({variableDocs: result.docs, variables : variableTypeMap}); // Add the map to the state
+        }
+        ).catch((err) => {console.log(err); })
+  }
+
+
+  handleTypesOK = () => {
+
+    let varTypeMap = this.state.variables;
+
+    let allVarsDefined = true; // we assume, but...
+    let undefinedVars = [];
+    let variableErrorMessages = [];
+    //Check for unsupported variables
+    for (let variable of varTypeMap)
+    {
+      if (unsupported_types.indexOf(variable[1]) >= 0)
+      // If the variable's type is one we don't support
+      {
+        allVarsDefined = false;
+        undefinedVars.push(variable)
+
+        //Create an error message and add it to the list, to be displayed at the bottom of the dialog.
+        console.log("Error - " + variable[0] + " is undefined. Please update its type and try again.");
+        variableErrorMessages.push("Error - " + variable[0] + " is undefined. Please update its type and try again.");
+      }
+
+    }
+
+    this.setState({allVarsDefined : allVarsDefined, variableErrorMessages: variableErrorMessages});
+
+    let result;
+    if(allVarsDefined){
+      RefactoringController.updateVariableTypes(this.state.variableDocs, this.state.variables);
+
+      result = RefactoringController.InlineRequirement(this.state.selectedRequirement, this.state.destinationReqs)
+    }
+
+    this.handleClose();
+
+  }
+
+
 
   render() 
   {
@@ -262,10 +352,9 @@ class InlineRequirementDialog extends React.Component
 
     var isFragment = (this.state.selectedRequirement.isFragment | (rationale && rationale.includes("EXTRACT REQUIREMENT: ") ))
     var requirementsWithResponse = this.state.requirementsWithResponse;
-    console.log(requirementsWithResponse);
 
     var dialog_state = this.state.dialogState;
-    console.log("New Inline Dialog State = " + dialog_state);
+    console.log("Inline Dialog State = " + dialog_state);
 
     //Funny placeholders
     var {inlinedRequirementPlaceholder, inlinedName} = this.state;
@@ -385,6 +474,19 @@ class InlineRequirementDialog extends React.Component
 
       case STATE.TYPES:
 
+        let reqVariables = []
+        this.state.variables.forEach (function(value, key) {
+        reqVariables.push(key);
+        })
+
+        let {allVarsDefined, variableErrorMessages} = this.state;
+        console.log("Error prints:");
+        console.log(allVarsDefined);
+        console.log(variableErrorMessages);
+
+
+        var self = this;
+
         return(
 
         <div>
@@ -408,7 +510,7 @@ class InlineRequirementDialog extends React.Component
               <Grid container spacing={2} direction="row">
 
                 <Grid style={{ textAlign: 'right' }} item xs={3}>
-                  Definition:
+                  {reqid}:
                 </Grid>
 
                 <Grid item xs={9}>
@@ -434,6 +536,53 @@ class InlineRequirementDialog extends React.Component
               />
 
 
+              <ul>
+              {
+              reqVariables.map(varName =>
+                    (
+                      <li key={varName}>
+                          {varName} :
+                        <Select
+                              labelId={varName}
+                              id={varName}
+                              name = {varName}
+                              onChange={self.handleTypeChange(varName)}
+                              value = {self.getType(varName)}
+                              autoWidth
+                              renderValue={(value) => {
+                               if (unsupported_types.indexOf(value) >= 0) {
+                                      return <div style={{color:'red'}}>{value} <WarningIcon  fontSize="small" /></div> ;
+                                }
+                                else if (value == "unsigned integer") {
+                                  return <div style={{color:'orange'}}>{value} <ErrorOutlineIcon  fontSize="small" /></div> ;
+                                }
+                                else{
+                                  return <div>{value}</div>;
+                                }
+                              }}
+                        >
+                          <MenuItem value={"boolean"}>Boolean</MenuItem>
+                          <MenuItem value={"integer"}>Integer</MenuItem>
+                          <MenuItem value={"undefined"}>Unknown</MenuItem>
+                        </Select>
+                      </li>
+                    )
+                  ,
+                  <Divider variant="inset" component="li" />
+                )
+
+            }
+            </ul>
+
+            <ul>
+            {variableErrorMessages.map(message => (
+                <li key = {message}>
+                <p style={{ color: "red" }}>{message}</p>
+                </li>
+              ))
+            }
+            </ul>
+
             </DialogContent>
 
             <DialogActions>
@@ -442,7 +591,7 @@ class InlineRequirementDialog extends React.Component
                 Cancel
               </Button>
               <Button
-                onClick={this.handleClose}
+                onClick={this.handleTypesOK}
                 color="secondary"
               >
                 Ok
