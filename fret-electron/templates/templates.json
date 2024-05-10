@@ -751,8 +751,161 @@
     ]
   },
   {
-    "_id": "template-dl-threshold1",
-    "title": "DL: Threshold at sample time",
+    "_id": "template-rl-noChange",
+    "title": "RL: No Change",
+    "description": "whenever the sample time is not reached (cRL < tS) the RL agent does not change the action",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "clockTime"
+      },
+      {
+        "text": " < "
+      },
+      {
+        "field": "sampleTime"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy maintainAction"
+      }
+    ],
+    "fields": {
+      "clockTime": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The sample time."
+      }
+    },
+    "examples": [
+      {
+        "clockTime": "cRL",
+        "sampleTime": "tS"
+      }
+    ]
+  },
+  {
+    "_id": "template-rl-chooseAction",
+    "title": "RL: Choose Action",
+    "description": "Whenever the sample time is reacheed (cRL >= tS) \tthe RL agent chooses and action that ensures that the worst case reaction of the overall system, \twithin one sample time still maintains the safety threshold.",
+    "structure": [
+      {
+        "text": "when ("
+      },
+      {
+        "field": "clockTime"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "sampleTime"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy chooseAction"
+      }
+    ],
+    "fields": {
+      "clockTime": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The sample time."
+      }
+    },
+    "examples": [
+      {
+        "clockTime": "cRL",
+        "sampleTime": "tS"
+      }
+    ]
+  },
+  {
+    "_id": "template-rl-systemThreshold",
+    "title": "RL: System Threshold",
+    "description": "The system should always satisfy the given threashold.",
+    "structure": [
+      {
+        "text": "System shall always satisfy "
+      },
+      {
+        "field": "threshold"
+      }
+    ],
+    "fields": {
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "var ~ threshold"
+      }
+    },
+    "examples": [
+      {
+        "threshold": "T <= TMAX"
+      }
+    ]
+  },
+  {
+    "_id": "template-rl-contractThreshold",
+    "title": "RL: Contract Threshold",
     "description": "Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \tthe RL agent chooses and action that ensures that the worst case reaction of the overall system, \twithin one sample time still maintains the safety threshold.",
     "structure": [
       {
@@ -768,13 +921,13 @@
         "field": "sampleTime"
       },
       {
-        "text": ") & ("
+        "text": ") RLAgent shall immediately satisfy ("
       },
       {
         "field": "threshold"
       },
       {
-        "text": ") RLAgent shall immediately satisfy chooseAction & ("
+        "text": ") => ("
       },
       {
         "field": "var"
@@ -838,7 +991,7 @@
             ]
           }
         ],
-        "description": "var ~ Threshold"
+        "description": "var ~ threshold"
       },
       "var": {
         "options": [
@@ -924,74 +1077,56 @@
     ]
   },
   {
-    "_id": "template-dl-threshold2",
-    "title": "DL: Threshold not at sample time",
-    "description": "whenever the sample time is not reached (cRL < tS) the RL agent does not change the action",
-    "structure": [
-      {
-        "text": "whenever ("
-      },
-      {
-        "field": "clockTime"
-      },
-      {
-        "text": " < "
-      },
-      {
-        "field": "sampleTime"
-      },
-      {
-        "text": ") RLAgent shall immediately satisfy maintainAction"
-      }
-    ],
-    "fields": {
-      "clockTime": {
-        "options": [
-          {
-            "suggestion": "cRL",
-            "description": "Replace with clock variable name.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The clock's time."
-      },
-      "sampleTime": {
-        "options": [
-          {
-            "suggestion": "sampleTime",
-            "description": "Replace with sample time variable name.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The sample time."
-      }
-    },
-    "examples": [
-      {
-        "clockTime": "cRL",
-        "sampleTime": "tS"
-      }
-    ]
-  },
-  {
-    "_id": "template-dl-threshold3",
-    "title": "DL: Maintain Threshold",
-    "description": "System should always keep the controlled variable below the threshold",
+    "_id": "template-rl-systemRecovery",
+    "title": "RL: System Recovery",
+    "description": "After some disruption, the system should recover. ",
     "structure": [
       {
         "text": "System shall always satisfy "
+      },
+      {
+        "field": "time since disruption"
+      },
+      {
+        "text": " > "
+      },
+      {
+        "field": "maxRecoveryTime"
+      },
+      {
+        "text": " => "
       },
       {
         "field": "threshold"
       }
     ],
     "fields": {
+      "time since disruption": {
+        "options": [
+          {
+            "suggestion": "t",
+            "description": "Replace with variable representing the time since the disruption.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "t"
+      },
+      "maxRecoveryTime": {
+        "options": [
+          {
+            "suggestion": "maxT",
+            "description": "Replace with variable representing the maxRecoveryTime.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "maxT"
+      },
       "threshold": {
         "options": [
           {
@@ -1016,14 +1151,14 @@
     },
     "examples": [
       {
-        "threshold": "T <= TMAX"
+        "time since disruption": "T <= TMAX"
       }
     ]
   },
   {
-    "_id": "template-dl-rcovery1",
-    "title": "DL: Recovery not at threshold",
-    "description": "? If the system has breached the threshold for a variable, choose and action to do something...",
+    "_id": "template-rl-contractRecovery1",
+    "title": "RL: Contract Recovery 1",
+    "description": "If the threashold is breached, then??",
     "structure": [
       {
         "text": "whenever ("
@@ -1038,13 +1173,13 @@
         "field": "sampleTime"
       },
       {
-        "text": ") & !("
+        "text": ") RLAgent shall immediately satisfy & !("
       },
       {
         "field": "threshold"
       },
       {
-        "text": ") RLAgent shall immediately satisfy chooseAction & ("
+        "text": ") => ("
       },
       {
         "field": "var"
@@ -1196,9 +1331,9 @@
     ]
   },
   {
-    "_id": "template-dl-recovery2",
-    "title": "DL: Recovery at threshold",
-    "description": "? If the system has not breached the threshold for a variable, choose and action to do something...",
+    "_id": "template-rl-contractRecovery2",
+    "title": "RL: Contract Recovery 2",
+    "description": "If the threashold is not breached, then...?",
     "structure": [
       {
         "text": "whenever ("
@@ -1213,13 +1348,13 @@
         "field": "sampleTime"
       },
       {
-        "text": ") & ("
+        "text": ") RLAgent shall immediately satisfy ("
       },
       {
         "field": "threshold"
       },
       {
-        "text": ") RLAgent shall immediately satisfy chooseAction & ("
+        "text": ") => ("
       },
       {
         "field": "var"
@@ -1370,8 +1505,89 @@
     ]
   },
   {
-    "_id": "template-dl-resilience1",
-    "title": "DL: Resilience at threshold",
+    "_id": "template-rl-systemResiliance",
+    "title": "RL: System Resiliance",
+    "description": "After some disruption, the system should recover. ",
+    "structure": [
+      {
+        "text": "System shall always satisfy "
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": " & "
+      },
+      {
+        "field": "action"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "degradedService"
+      }
+    ],
+    "fields": {
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "var ~ threshold"
+      },
+      "action": {
+        "options": [
+          {
+            "suggestion": "worstCaseAction",
+            "description": "Replace with the action for the worst-case reaction function",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The action for the worst-case reaction function"
+      },
+      "degradedService": {
+        "options": [
+          {
+            "suggestion": "degradedService",
+            "description": "Replace with variable representing the degraded service.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "degradedService"
+      }
+    },
+    "examples": [
+      {
+        "threshold": "T <= TMAX",
+        "action": "action",
+        "degradedService": "degradedService"
+      }
+    ]
+  },
+  {
+    "_id": "template-rl-resilience1",
+    "title": "RL: Contract Resilience 1",
     "description": "When the threshold is maintained, do something..",
     "structure": [
       {
@@ -1387,7 +1603,7 @@
         "field": "sampleTime"
       },
       {
-        "text": ") &  ("
+        "text": ") RLAgent shall immediately \tsatisfy ("
       },
       {
         "field": "threshold"
@@ -1399,7 +1615,7 @@
         "field": "deltaSuff"
       },
       {
-        "text": ") RLAgent shall immediately satisfy chooseAction & "
+        "text": ") => "
       },
       {
         "field": "action"
@@ -1408,7 +1624,7 @@
         "text": " >= "
       },
       {
-        "field": "servDeg"
+        "field": "degradedService"
       },
       {
         "text": " & ("
@@ -1506,18 +1722,18 @@
         ],
         "description": "The action for the worst-case reaction function"
       },
-      "servDeg": {
+      "degradedService": {
         "options": [
           {
-            "suggestion": "servDeg",
-            "description": "Replace",
+            "suggestion": "degradedService",
+            "description": "Replace with variable representing the degraded service.",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "Least degraded service?"
+        "description": "degradedService"
       },
       "var": {
         "options": [
@@ -1598,7 +1814,7 @@
         "threshold": "l",
         "deltaSuff": "lMin+deltaSuff",
         "action": "s",
-        "servDeg": "sDeg",
+        "degradedService": "sDeg",
         "var": "l",
         "worst case reaction": "0*r-s)*(tS)",
         "thresholdComparison": "lMin"
@@ -1606,9 +1822,9 @@
     ]
   },
   {
-    "_id": "template-dl-resilience2",
-    "title": "DL: Resilience not at threshold",
-    "description": "When the threshold is not maintained, do something...",
+    "_id": "template-rl-contractResilience2",
+    "title": "RL: Contract Resilience 2",
+    "description": "When the threshold is not maintained, do something...?",
     "structure": [
       {
         "text": "whenever ("
@@ -1623,7 +1839,7 @@
         "field": "sampleTime"
       },
       {
-        "text": ") & !("
+        "text": ") & RLAgent shall immediately satisfy !("
       },
       {
         "field": "threshold"
@@ -1635,7 +1851,7 @@
         "field": "deltaSuff"
       },
       {
-        "text": ") RLAgent shall immediately satisfy chooseAction & "
+        "text": ") => "
       },
       {
         "field": "action"
@@ -1644,7 +1860,7 @@
         "text": " = "
       },
       {
-        "field": "servDeg"
+        "field": "degradedService"
       }
     ],
     "fields": {
@@ -1729,18 +1945,18 @@
         ],
         "description": "The action for the worst-case reaction function"
       },
-      "servDeg": {
+      "degradedService": {
         "options": [
           {
-            "suggestion": "servDeg",
-            "description": "Replace",
+            "suggestion": "degradedService",
+            "description": "Replace with variable representing the degraded service.",
             "selection": [
               0,
               0
             ]
           }
         ],
-        "description": "Least degraded service?"
+        "description": "degradedService"
       }
     },
     "examples": [
@@ -1750,7 +1966,7 @@
         "threshold": "l",
         "deltaSuff": "lMin+deltaSuff",
         "action": "s",
-        "servDeg": "sDeg"
+        "degradedService": "sDeg"
       }
     ]
   }
