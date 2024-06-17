@@ -752,7 +752,7 @@
   },
   {
     "_id": "template-rl-noChange",
-    "title": "RL: No Change",
+    "title": "RL No Change",
     "description": "whenever the sample time is not reached (cRL < tS) the RL agent does not change the action",
     "structure": [
       {
@@ -808,11 +808,11 @@
   },
   {
     "_id": "template-rl-chooseAction",
-    "title": "RL: Choose Action",
+    "title": "RL Choose Action",
     "description": "Whenever the sample time is reacheed (cRL >= tS) \tthe RL agent chooses and action that ensures that the worst case reaction of the overall system, \twithin one sample time still maintains the safety threshold.",
     "structure": [
       {
-        "text": "when ("
+        "text": "whenever ("
       },
       {
         "field": "clockTime"
@@ -864,22 +864,41 @@
   },
   {
     "_id": "template-rl-systemThreshold",
-    "title": "RL: System Threshold",
-    "description": "The system should always satisfy the given threashold.",
+    "title": "System Threshold",
+    "description": "Under a given precondition, the system should always satisfy the given threashold.",
     "structure": [
       {
-        "text": "System shall always satisfy "
+        "text": "if "
+      },
+      {
+        "field": "precondition"
+      },
+      {
+        "text": " System shall always satisfy "
       },
       {
         "field": "threshold"
       }
     ],
     "fields": {
+      "precondition": {
+        "options": [
+          {
+            "suggestion": "precondition",
+            "description": "Replace with the precondition.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Precondition for the threshold."
+      },
       "threshold": {
         "options": [
           {
             "suggestion": "var < threshold",
-            "description": "var less than threshold",
+            "description": "var less than threshold.",
             "selection": [
               0,
               0
@@ -887,7 +906,7 @@
           },
           {
             "suggestion": "var <= threshold",
-            "description": "var less than or equal to threshold",
+            "description": "var less than or equal to threshold.",
             "selection": [
               0,
               0
@@ -899,17 +918,18 @@
     },
     "examples": [
       {
+        "precondition": "T <= TMAX",
         "threshold": "T <= TMAX"
       }
     ]
   },
   {
     "_id": "template-rl-contractThreshold",
-    "title": "RL: Contract Threshold",
-    "description": "Whenever the sample time is reacheed (cRL >= tS) and the threshold is maintained, \tthe RL agent chooses and action that ensures that the worst case reaction of the overall system, \twithin one sample time still maintains the safety threshold.",
+    "title": "Hybrid Contract Threshold",
+    "description": "Whenever the sample time is reacheed (cRL >= tS), if the safety critical variable [var] is already within the threshold it should, \treamin within the threshold, event under the [worst case reaction].",
     "structure": [
       {
-        "text": "when ("
+        "text": "whenever ("
       },
       {
         "field": "clockTime"
@@ -939,10 +959,13 @@
         "field": "worst case reaction"
       },
       {
-        "text": " ) "
+        "text": " "
       },
       {
         "field": "thresholdComparison"
+      },
+      {
+        "text": ")"
       }
     ],
     "fields": {
@@ -1078,11 +1101,17 @@
   },
   {
     "_id": "template-rl-systemRecovery",
-    "title": "RL: System Recovery",
-    "description": "After some disruption, the system should recover. ",
+    "title": "System Recovery",
+    "description": "After some disruption, the system should recover the threshold within the maxRecoveryTime. ",
     "structure": [
       {
-        "text": "System shall always satisfy "
+        "text": "if "
+      },
+      {
+        "field": "precondition"
+      },
+      {
+        "text": " System shall always satisfy "
       },
       {
         "field": "time since disruption"
@@ -1101,6 +1130,19 @@
       }
     ],
     "fields": {
+      "precondition": {
+        "options": [
+          {
+            "suggestion": "precondition",
+            "description": "Replace with the precondition.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Precondition for the threshold."
+      },
       "time since disruption": {
         "options": [
           {
@@ -1151,14 +1193,17 @@
     },
     "examples": [
       {
-        "time since disruption": "T <= TMAX"
+        "precondition": "T <= TMAX",
+        "time since disruption": "10",
+        "maxRecoveryTime": "recoveryMax",
+        "threshold": "T <= TMAX"
       }
     ]
   },
   {
     "_id": "template-rl-contractRecovery1",
-    "title": "RL: Contract Recovery 1",
-    "description": "If the threashold is breached, then??",
+    "title": "Hybrid Contract Recovery 1",
+    "description": "If the threshold is violated (![threshold]), the RL agent recovers the variable to within safe limits under the worst-case reaction within the recovery time, which can be specified in [worst case recovery]",
     "structure": [
       {
         "text": "whenever ("
@@ -1173,7 +1218,165 @@
         "field": "sampleTime"
       },
       {
-        "text": ") RLAgent shall immediately satisfy & !("
+        "text": ") RLAgent shall immediately satisfy & (!"
+      },
+      {
+        "field": "threshold"
+      },
+      {
+        "text": ") => ("
+      },
+      {
+        "field": "var"
+      },
+      {
+        "text": " + "
+      },
+      {
+        "field": "worst case recovery"
+      },
+      {
+        "text": " "
+      },
+      {
+        "field": "thresholdComparison"
+      },
+      {
+        "text": ")"
+      }
+    ],
+    "fields": {
+      "clockTime": {
+        "options": [
+          {
+            "suggestion": "cRL",
+            "description": "Replace with clock variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The clock's time."
+      },
+      "sampleTime": {
+        "options": [
+          {
+            "suggestion": "sampleTime",
+            "description": "Replace with sample time variable name.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The sample time."
+      },
+      "threshold": {
+        "options": [
+          {
+            "suggestion": "var < threshold",
+            "description": "var less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "var <= threshold",
+            "description": "var less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "var ~ Threshold"
+      },
+      "var": {
+        "options": [
+          {
+            "suggestion": "controlledVariable",
+            "description": "replace with the controlled variable.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "The controlled variable."
+      },
+      "worst case recovery": {
+        "options": []
+      },
+      "thresholdComparison": {
+        "options": [
+          {
+            "suggestion": "< threshold",
+            "description": "less than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "<= threshold",
+            "description": "less than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": "> threshold",
+            "description": "greater than threshold",
+            "selection": [
+              0,
+              0
+            ]
+          },
+          {
+            "suggestion": ">= threshold",
+            "description": "greater than or equal to threshold",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Comparison to the threshold variable."
+      }
+    },
+    "examples": [
+      {
+        "clockTime": "cRL",
+        "sampleTime": "tS",
+        "threshold": "temp > TMAX",
+        "var": "temp",
+        "worst case recovery": "worstCoolingtemp",
+        "thresholdComparison": "<= TMAX"
+      }
+    ]
+  },
+  {
+    "_id": "template-rl-contractRecovery2",
+    "title": "Hybrid Contract Recovery 2",
+    "description": "If the variable has not been violated, the safety critical variable remains within the threshold.",
+    "structure": [
+      {
+        "text": "whenever ("
+      },
+      {
+        "field": "clockTime"
+      },
+      {
+        "text": " >= "
+      },
+      {
+        "field": "sampleTime"
+      },
+      {
+        "text": ") RLAgent shall immediately satisfy ("
       },
       {
         "field": "threshold"
@@ -1322,195 +1525,27 @@
     },
     "examples": [
       {
-        "clockTime": "cRL",
-        "sampleTime": "tS",
-        "threshold": "bigT > TMAX",
-        "var": "(hMax - c*((tDLast+tRMax) - t",
+        "clockTime": "cRL >= tS",
+        "sampleTime": "t <= TMAX",
+        "threshold": "t",
+        "var": "(hMax - c) *tS)",
         "worst case reaction": "<= TMAX"
       }
     ]
   },
   {
-    "_id": "template-rl-contractRecovery2",
-    "title": "RL: Contract Recovery 2",
-    "description": "If the threashold is not breached, then...?",
-    "structure": [
-      {
-        "text": "whenever ("
-      },
-      {
-        "field": "clockTime"
-      },
-      {
-        "text": " >= "
-      },
-      {
-        "field": "sampleTime"
-      },
-      {
-        "text": ") RLAgent shall immediately satisfy ("
-      },
-      {
-        "field": "threshold"
-      },
-      {
-        "text": ") => ("
-      },
-      {
-        "field": "var"
-      },
-      {
-        "text": " + "
-      },
-      {
-        "field": "worst case reaction"
-      },
-      {
-        "text": ") "
-      },
-      {
-        "field": "thresholdComparison"
-      },
-      {
-        "text": ")"
-      }
-    ],
-    "fields": {
-      "clockTime": {
-        "options": [
-          {
-            "suggestion": "cRL",
-            "description": "Replace with clock variable name.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The clock's time."
-      },
-      "sampleTime": {
-        "options": [
-          {
-            "suggestion": "sampleTime",
-            "description": "Replace with sample time variable name.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The sample time."
-      },
-      "threshold": {
-        "options": [
-          {
-            "suggestion": "var < threshold",
-            "description": "var less than threshold",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "var <= threshold",
-            "description": "var less than or equal to threshold",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "var ~ Threshold"
-      },
-      "var": {
-        "options": [
-          {
-            "suggestion": "controlledVariable",
-            "description": "replace with the controlled variable.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The controlled variable."
-      },
-      "worst case reaction": {
-        "options": [
-          {
-            "suggestion": "(state - action) * sampleTime",
-            "description": "Usual worst case reaction relationship.",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "wcreaction",
-            "description": "Replace with worst-case reaction function.  Usually this is defined as the realtion between the state, and action, and the recovery time.",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "The worst-case reaction function. Usually this is defined as the realtion between the state, and action, and the recovery time."
-      },
-      "thresholdComparison": {
-        "options": [
-          {
-            "suggestion": "< threshold",
-            "description": "less than threshold",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "<= threshold",
-            "description": "less than or equal to threshold",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": "> threshold",
-            "description": "greater than threshold",
-            "selection": [
-              0,
-              0
-            ]
-          },
-          {
-            "suggestion": ">= threshold",
-            "description": "greater than or equal to threshold",
-            "selection": [
-              0,
-              0
-            ]
-          }
-        ],
-        "description": "Comparison to the threshold variable."
-      }
-    },
-    "examples": [
-      {
-        "clockTime": "cRL >= tS",
-        "sampleTime": "bigT <= TMAX",
-        "threshold": "(hMax - c) *tS)",
-        "var": "<= TMAX"
-      }
-    ]
-  },
-  {
     "_id": "template-rl-systemResiliance",
-    "title": "RL: System Resiliance",
-    "description": "After some disruption, the system should recover. ",
+    "title": "System Resiliance",
+    "description": "The syste, should provide a degraded service, while maintaining the threshold. ",
     "structure": [
       {
-        "text": "System shall always satisfy "
+        "text": "if "
+      },
+      {
+        "field": "precondition"
+      },
+      {
+        "text": " System shall always satisfy "
       },
       {
         "field": "threshold"
@@ -1529,6 +1564,19 @@
       }
     ],
     "fields": {
+      "precondition": {
+        "options": [
+          {
+            "suggestion": "precondition",
+            "description": "Replace with the precondition.",
+            "selection": [
+              0,
+              0
+            ]
+          }
+        ],
+        "description": "Precondition for the threshold."
+      },
       "threshold": {
         "options": [
           {
@@ -1579,6 +1627,7 @@
     },
     "examples": [
       {
+        "precondition": "T <= TMAX",
         "threshold": "T <= TMAX",
         "action": "action",
         "degradedService": "degradedService"
@@ -1587,8 +1636,8 @@
   },
   {
     "_id": "template-rl-resilience1",
-    "title": "RL: Contract Resilience 1",
-    "description": "When the threshold is maintained, do something..",
+    "title": "Hybrid Contract Resilience 1",
+    "description": "If the safety critical variable is more than a sufficient margin ([Delta suff]) within the threshold, facilitating a higher service level action, then an [action] greater or equal to [degradedService] may be selected, ensuring the threshold’s maintenance even under the worst-case reaction.",
     "structure": [
       {
         "text": "whenever ("
@@ -1639,7 +1688,7 @@
         "field": "worst case reaction"
       },
       {
-        "text": ") "
+        "text": " "
       },
       {
         "field": "thresholdComparison"
@@ -1823,8 +1872,8 @@
   },
   {
     "_id": "template-rl-contractResilience2",
-    "title": "RL: Contract Resilience 2",
-    "description": "When the threshold is not maintained, do something...?",
+    "title": "Hybrid Contract Resilience 2",
+    "description": "If the safety critical variable is not a sufficient margin ([Delta suff]) within the threshold, then the RL agent defaults to a degraded service action ([action]=[degradedService]).",
     "structure": [
       {
         "text": "whenever ("
@@ -1839,7 +1888,7 @@
         "field": "sampleTime"
       },
       {
-        "text": ") & RLAgent shall immediately satisfy !("
+        "text": ") & RLAgent shall immediately satisfy (!"
       },
       {
         "field": "threshold"
