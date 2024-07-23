@@ -75,18 +75,18 @@ import {withReact} from "slate-react";
 import {createEditor, Node, Range, Text, Transforms} from "slate";
 import withFields from "../utils/withFields";
 
-const db = require('electron').remote.getGlobal('sharedObj').db;
-const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
+import { createOrUpdateRequirement } from '../reducers/allActionsSlice';
+import { connect } from "react-redux";
 const constants = require('../parser/Constants');
-const uuidv1 = require('uuid/v1');
-const checkDbFormat = require('../../support/fretDbSupport/checkDBFormat.js');
+const app =require('@electron/remote').app
+
+var uuid = require('uuid');
+import { v1 as uuidv1 } from 'uuid';
+
 const {ipcRenderer} = require('electron');
-const ext_exp_json_file = require('electron').remote.getGlobal('sharedObj').ext_exp_json;
-const ext_exp_json_file_exists = require('electron').remote.getGlobal('sharedObj').exp_exp_json_exists;
-
-const app = require('electron').remote.app;
 const fs = require('fs');
-
+const path = require('path');
+import { saveAs } from 'file-saver';
 
 const formStyles = theme => ({
   accordion: {
@@ -153,7 +153,7 @@ class CreateRequirementDialog extends React.Component {
 
 
   componentDidUpdate(prevProps, prevState, snapshot) {
-    if (prevProps.open !== this.props.open) {
+    if (prevProps.open !== this.props.open && this.props.open) {
       const editor = withFields(withReact(createEditor()));
       this.setState({ editor })
     }
@@ -162,7 +162,7 @@ class CreateRequirementDialog extends React.Component {
 
   componentDidMount = () => {
     if(process.env.EXTERNAL_TOOL=='1'){
-      console.log('componentDidMount env EXTERNAL_TOOL',process.env.EXTERNAL_TOOL);
+      // console.log('componentDidMount env EXTERNAL_TOOL',process.env.EXTERNAL_TOOL);
     }
   }
 
@@ -207,72 +207,7 @@ class CreateRequirementDialog extends React.Component {
     this.setState({ tabValue });
   };
 
-  createOrUpdateVariables = (variables, componentName, projectName, dbid) => {
-    variables.map(function (variableName) {
-      var modeldbid = projectName + componentName + variableName;
-      modeldb.get(modeldbid).then(function (v) {
-        if(!v.reqs.includes(dbid)) {
-          modeldb.put({
-            ...v,
-            reqs: v.reqs.concat(dbid),
-          })
-        }
-      }).catch(function (err) {
-        if(err && err.name === 'not_found') {
-          modeldb.find({
-            selector: {project: projectName, component_name: componentName},
-            fields: ['modelComponent']
-          }).then(function(result){
-            modeldb.put({
-              _id: modeldbid,
-              project: projectName,
-              component_name: componentName,
-              variable_name: variableName,
-              reqs: [dbid],
-              dataType: '',
-              idType: '',
-              description: '',
-              assignment: '',
-              modeRequirement: '',
-              modeldoc: false,
-              modelComponent: result.docs?(result.docs[0]?result.docs[0].modelComponent:''):'',
-              model_id: ''
-            });
-          }).catch(function (err) {
-            console.log(err);
-        });
-        }
-      })
-    })
-  }
-
-  removeVariables = (oldVariables, newVariables, projectName, componentName, dbid, oldComponent, oldProject) => {
-    const oldvars = checkDbFormat.checkVariableFormat(oldVariables);
-    oldvars.map(function(variableName){
-      var modeldbidOld = oldProject + oldComponent + variableName;
-      if (oldComponent !== componentName || projectName !== oldProject || !newVariables.includes(variableName)){
-        modeldb.get(modeldbidOld).then(function(v) {
-          if (v.reqs && v.reqs.length > 1) {
-            var index = v.reqs.indexOf(dbid);
-            if (index > -1){
-              const newReqs = [...v.reqs];
-              newReqs.splice(index, 1)
-              modeldb.put({
-                ...v,
-                reqs: newReqs,
-              })
-            }
-          } else {
-            modeldb.remove(v);
-          }
-        })
-      }
-    })
-  }
-
-
-
-  handleCreate = () => {
+  handleCreate = async ()  => {
     if (! this.state.createDialogOpen){return;}
     this.setState({
       createDialogOpen: false
@@ -286,29 +221,62 @@ class CreateRequirementDialog extends React.Component {
     var dbid = edittingRequirement && Object.keys(edittingRequirement).length > 0 ? edittingRequirement._id : uuidv1()
     var dbrev = edittingRequirement && Object.keys(edittingRequirement).length > 0 ? edittingRequirement._rev : undefined
     var oldVariables = [];
-    var oldModes = [];
+    var edittedFields = this.state;
+    var reqEditFields ={};
 
-    if (dbrev != undefined){
-      db.get(dbid).then(function(req){
-        if (req.semantics && req.semantics.variables){
-            oldVariables = req.semantics.variables;
-        }
-        self.removeVariables(oldVariables, semantics.variables ? semantics.variables : [], project,
-          semantics.component_name, dbid, req.semantics.component_name, req.project)
-      })
-    }
-    if (semantics && semantics.variables){
-      self.createOrUpdateVariables(semantics.variables,semantics.component_name, project, dbid);
-    }
+    reqEditFields.reqid = edittedFields.reqid;
+    reqEditFields.parent_reqid = edittedFields.parent_reqid;
+    reqEditFields.project = edittedFields.project;
+    reqEditFields.rationale = edittedFields.rationale;
+    reqEditFields.comments = edittedFields.comments;
+    reqEditFields.status = edittedFields.status;
+    reqEditFields.fulltext = edittedFields.fulltext;
+    reqEditFields.semantics = edittedFields.semantics;
+    reqEditFields.template = edittedFields.template;
+    reqEditFields.input = edittedFields.input;
+    var args = [dbid, dbrev, reqEditFields, requirementFields,semantics,project]
+    // what if process.env.EXTERNAL_TOOL=='1'
+    // context isolation
 
     if(process.env.EXTERNAL_TOOL=='1'){
-      var filepath = ext_exp_json_file;
-      console.log('export json file name: ', filepath)
+
+      var userDocumentsFolder = app.getPath('documents');
+      var ext_exp_json_file = '';
+      var ext_exp_json_file_exists =  false;
+
+      if (typeof process.env.EXTERNAL_EXP_JSON === "undefined"){
+        ext_exp_json_file = path.join(userDocumentsFolder,'requirement.json');
+      } else {
+        ext_exp_json_file = process.env.EXTERNAL_EXP_JSON+'.json';
+      }
+
+      // TBD replace fs.existSync with web based method
+      if (fs.existsSync(ext_exp_json_file)) {
+        // path exists, use same file name
+        ext_exp_json_file_exists =  true;
+      } else {
+        var dirName = path.dirname(ext_exp_json_file)
+        if (fs.existsSync(dirName)) {
+          // if directory exists then use env assignment
+        } else {
+          // directory doesn't exist, use default name
+          ext_exp_json_file = path.join(userDocumentsFolder, 'requirement.json')
+        }
+      }
+
+      // check again since ext_exp_json_file may be redefined
+      if (fs.existsSync(ext_exp_json_file)) {
+        // path exists, use same file name
+        ext_exp_json_file_exists =  true;
+        console.log('ext_exp_json_file_exists: ', ext_exp_json_file_exists)
+      }
 
       if(ext_exp_json_file_exists){
         // pop up warning
         console.log('Overwriting existing external export file: ', ext_exp_json_file);
       }
+
+      var filepath = ext_exp_json_file;
 
       let doc = ({"requirement": {"reqid" :this.state.reqid,
                   "parent_reqid": this.state.parent_reqid,
@@ -328,34 +296,42 @@ class CreateRequirementDialog extends React.Component {
           ipcRenderer.send('closeFRET');
       })
     } else{
-      // create req
-      db.put({
-          _id : dbid,
-          _rev : dbrev,
-          reqid : this.state.reqid,
-          parent_reqid : this.state.parent_reqid,
-          project : this.state.project,
-          rationale : this.state.rationale,
-          comments : this.state.comments,
-          status: this.state.status,
-          fulltext : fulltext,
-          semantics : semantics,
-          template : template,
-          input : input,
-          fragments: []
-        }, (err, responses) => {
-          if (err) {
-            self.state.dialogCloseListener(false);
-            return console.log(err);
-          }
-          console.log(responses);
+
+
+      //////// ***
+      // console.log('CreateRequirementDialog ipcRenderer createOrUpdateRequirement', args);
+      ipcRenderer.invoke('createOrUpdateRequirement',args).then((result) => {
+        // console.log('payload2 CreateRequirementDialog createOrUpdateRequirement in : ',result)
+        // console.log('result.reqCreated CreateRequirementDialog createOrUpdateRequirement in : ',result.reqCreated)
+        // console.log('result.requirements CreateRequirementDialog createOrUpdateRequirement in : ',result.requirements)
+        if (result.reqCreated) {
           self.state.dialogCloseListener(true, newReqId);
+        } else {
+          self.state.dialogCloseListener(false);
         }
-      )
+        this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
+                                                requirements: result.requirements,
+                                                // analysis
+                                                components : result.components,
+                                                completedComponents : result.completedComponents,
+                                                cocospecData : result.cocospecData,
+                                                cocospecModes : result.cocospecModes,
+                                                // variables
+                                                variable_data : result.variable_data,
+                                                modelComponent : result.modelComponent,
+                                                modelVariables : result.modelVariables,
+                                                selectedVariable : result.selectedVariable,
+                                                importedComponents : result.importedComponents,
+                                                })
+
+      }).catch((err) => {
+        console.log(err);
+      })
+
+      this.setState({ projectName: '' });
+  //////// ***
     }
-
-
-};
+  };
 
   handleUpdateInstruction = (field) => {
     this.setState ({
@@ -429,8 +405,8 @@ class CreateRequirementDialog extends React.Component {
             }
           );
       } else {
-        const { selectedProject, existingProjectNames } = props
-        const defaultProject = existingProjectNames.includes(selectedProject) ? selectedProject : existingProjectNames[0]
+        const { selectedProject } = props
+        const defaultProject = selectedProject === 'All Projects' ? 'Default' : selectedProject
         this.setState({
           project: defaultProject,
           reqid: '',
@@ -466,7 +442,7 @@ class CreateRequirementDialog extends React.Component {
 
   render() {
     const { edittingRequirement, selectedTemplate, tabValue} = this.state;
-    const { classes, existingProjectNames, addChildRequirementToParent } = this.props;
+    const { classes, listOfProjects, addChildRequirementToParent } = this.props;
     const isRequirementUpdate = !addChildRequirementToParent && (edittingRequirement && Object.keys(edittingRequirement).length > 0)
     const actionLabel = isRequirementUpdate ? 'Update' : 'Create'
     const dialogTitle = actionLabel + ' Requirement'
@@ -572,7 +548,7 @@ class CreateRequirementDialog extends React.Component {
                             }}
                           >
                             {
-                              existingProjectNames.map(name => {
+                              this.props.listOfProjects.map(name => {
                                 return(
                                   <MenuItem id={"qa_crt_select_project_"+name} value={name} key={name}>{name}</MenuItem>
                                 )
@@ -658,12 +634,27 @@ CreateRequirementDialog.propTypes = {
   open: PropTypes.bool.isRequired,
   handleCreateDialogClose: PropTypes.func.isRequired,
   editRequirement: PropTypes.object,
-  editVariables: PropTypes.object,
   addChildRequirementToParent: PropTypes.object,
-  selectedProject: PropTypes.string.isRequired,
-  existingProjectNames: PropTypes.array.isRequired,
-  requirements: PropTypes.array,
   classes: PropTypes.object.isRequired,
 }
 
-export default withStyles(formStyles)(CreateRequirementDialog);
+
+function mapStateToProps(state) {
+  const requirements = state.actionsSlice.requirements;
+  const listOfProjects = state.actionsSlice.listOfProjects;
+  const selectedProject = state.actionsSlice.selectedProject;
+  return {
+    requirements,
+    listOfProjects,
+    selectedProject,
+  };
+}
+
+
+const mapDispatchToProps = {
+  createOrUpdateRequirement
+};
+
+
+export default withStyles(formStyles)
+  (connect(mapStateToProps,mapDispatchToProps)(CreateRequirementDialog));

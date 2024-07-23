@@ -78,25 +78,10 @@ const styles = theme => ({
 });
 
 class DisplayRequirementDialog extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      open: false,
-      selectedRequirement: {}
-    };
-  }
-
-
-  static getDerivedStateFromProps(props, state) {
-    return {
-      selectedRequirement: props.selectedRequirement,
-      open: props.open,
-      dialogCloseListener: props.handleDialogClose,
-      openCreateDialog: props.handleCreateDialogOpen,
-      openDeleteDialog: props.handleDeleteDialogOpen,
-      openRefactorDialog: props.handleRefactorDialogOpen
-    };
-  }
+  state = {
+    open: false,
+    selectedRequirement: {}
+  };
 
   handleClose = () => {
     this.setState({ open: false });
@@ -126,6 +111,18 @@ class DisplayRequirementDialog extends React.Component {
     this.state.openDeleteDialog();
   }
 
+  componentWillReceiveProps = (props) => {
+    // console.log('DisplayRequirementDialog.componentWillReceiveProps selectedRequirement', props.selectedRequirement)
+    this.setState({
+      selectedRequirement: props.selectedRequirement,
+      open: props.open,
+      dialogCloseListener : props.handleDialogClose,
+      openCreateDialog: props.handleCreateDialogOpen,
+      openDeleteDialog: props.handleDeleteDialogOpen,
+      openRefactorDialog: props.handleRefactorDialogOpen,
+    })
+  }
+
   renderFormula(ltlFormula, ltlDescription, ltlFormulaPt, diagramVariables, path) {
     const { classes } = this.props;
     if (ltlFormula || ltlFormulaPt)
@@ -135,31 +132,30 @@ class DisplayRequirementDialog extends React.Component {
         Semantic Description
         </Typography>
         <br />
-        <div id="qa_disReq_div_semDesc" color='primary' variant='body1' 
+        <div id="qa_disReq_div_semDesc" color='primary' variant='body1'
         dangerouslySetInnerHTML={{ __html: ltlDescription}} />
         <br />
         <Typography variant='button'>
         Semantic Diagram
-
         </Typography>
         <div className={classes.imgWrap}>
         <img id="qa_disReq_div_semImg" src= {path}/>
         </div>
-        <div id="qa_disReq_div_semDiagram" className={classes.variableDescription} 
+        <div id="qa_disReq_div_semDiagram" className={classes.variableDescription}
         dangerouslySetInnerHTML={{ __html: diagramVariables}} />
         <br />
         <Typography variant='button' color='primary'>
         Future Time Formula
         </Typography>
         <br />
-        <div id="qa_disReq_div_futureTime" className={classes.formula} 
+        <div id="qa_disReq_div_futureTime" className={classes.formula}
         dangerouslySetInnerHTML={{ __html: ltlFormula}} />
         <Typography variant='button' color='primary'>
         <br />
         Past Time Formula
         </Typography>
         <br />
-        <div id="qa_disReq_div_pastTime" className={classes.formula} 
+        <div id="qa_disReq_div_pastTime" className={classes.formula}
         dangerouslySetInnerHTML={{ __html: ltlFormulaPt}} />
         <br />
       </div>)
@@ -173,12 +169,14 @@ class DisplayRequirementDialog extends React.Component {
   }
 
   render() {
-    const { classes } = this.props;
-    var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext } = this.state.selectedRequirement
+    const {classes} = this.props;
+    // console.log('DisplayRequirementDialog.render state selectedRequirement', this.state.selectedRequirement)
+    // console.log('DisplayRequirementDialog.render props selectedRequirement', this.props.selectedRequirement)
+    var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext } = this.props.selectedRequirement
     const reqidLabel = (reqid ? reqid : "None")
     const projectLabel = project ? project : "None"
-    var ltlFormula = ltl ? ltl : (semantics ? semantics.ft : undefined);
-    var ltlFormulaPt = (semantics ? semantics.pt : undefined);
+    var ltlFormula = ltl ? ltl : (semantics ? semantics.ftExpanded : undefined);
+    var ltlFormulaPt = (semantics ? semantics.ptExpanded : undefined);
     var diagramVariables = (semantics ? semantics.diagramVariables : undefined);
     var path = (semantics ? (`../docs/`+ semantics.diagram) : undefined);
     var ltlDescription = semantics ? (semantics.description ? semantics.description : "No description available.") : "No description available.";

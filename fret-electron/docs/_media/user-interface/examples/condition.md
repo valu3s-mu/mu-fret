@@ -1,17 +1,19 @@
-#### Condition (optional)
+### Condition (optional)
 
-specifies the trigger condition after which the requirement shall hold,
-taking into account scope. Trigger means the requirement holds **upon** a
-condition becoming true; i.e., at the point
+specifies the condition after which the response shall hold,
+taking into account scope and timing. A condition can be either:
+
+* a _trigger_ condition, meaning the requirement holds **_upon_** a condition becoming true; i.e., at the point
 where the condition becomes true after being false, or the
-condition is true at the beginning of a scope interval.
+condition is true at the beginning of a scope interval;
 
+* a _continual_ condition, meaning the response holds **_whenever_** the condition holds.
+
+A continual condition is introduced by the keyword **whenever**.
+A trigger condition is introduced by the keyword **upon** (or **when**,
+**where**, **if**).
 The condition can be a sequence of Boolean expressions, optionally connected
-by the keywords *and* and *or*. Individual Boolean Expressions can be
-qualified by keywords
-
-* **unless**
-* **upon**, **when**, **where**, **if** (these have identical meaning in FRETish)
+by the keywords *and* and *or*.
 
 Validity of each Boolean Expression _BEXP_ can be optionally stated by writing
 "_BEXP_ is **true**" (same as _BEXP_) or "_BEXP_ is **false**" (same as !
@@ -38,14 +40,25 @@ when exporting requirements for verification. Check the user manual under
 "Exporting for Analysis" for more details.
 
 Parentheses **(** **)** are used as usual. Please use parentheses as much as
-possible to avoid mistakes and misunderstandings.
+possible to avoid mistakes and misunderstandings.  
 
-> __Important Note:__ [Restrictions](../restrictions.md)
+#### EXAMPLES
 
-Examples:
+* **Upon** powered_on the component shall immediately satisfy bootup
+* **Whenever** intruder the alarm shall immediately satisfy sound
 
-* **upon** powered_on
-* **if** (limits & !standby & !apfail & supported)
-* **when** ((level(tank1) < 0.3) & (altitude > 1000)) **is false**
+The contrast between trigger and continual conditions is shown in the following two
+examples, in the case where at some point p holds forever:
 
+* Upon p the software shall eventually satisfy q
+* Whenever p the software shall eventually satisfy q
 
+In the first, q must be satisfied at least once.
+In the second, q must be satisfied infinitely often.
+
+#### RESTRICTIONS
+
+The list of reserved words that cannot be used as variables in
+Boolean and arithmetic expressions appears in the user manual in the section
+"Writing requirements". In particular, the following are not allowed:
+A, E, F, G, H, O, S, T, U, V, X, Y, Z, init.

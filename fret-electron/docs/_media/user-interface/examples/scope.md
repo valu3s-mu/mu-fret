@@ -14,7 +14,7 @@ The **only** modes mean that when the system is not in the specified relationshi
 (i.e., the system is not **in**/**after**/**before** the mode) the response
 must not occur.
 
-#### Examples:
+#### EXAMPLES
 
 * _(global)_ The system shall always satisfy count >= 0
 * **After** boot mode the system shall immediately satisfy prompt_for_password
@@ -35,3 +35,11 @@ examples:
 * **While** persisted(4,high_temperature) the monitor shall until shutoff satisfy alarm_on
 * **Before** taxiing & receivedClearance the plane shall always satisfy !takeoff
 * **After** landed & powerOff the doors shall within 3 seconds satisfy unlocked
+
+#### RESTRICTIONS
+
+The list of reserved words that cannot be used as variables in
+Boolean and arithmetic expressions appears in the user manual in the section
+"Writing requirements". In particular, the following are not allowed:
+A, E, F, G, H, O, S, T, U, V, X, Y, Z, init.
+

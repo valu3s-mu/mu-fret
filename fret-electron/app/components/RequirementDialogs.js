@@ -51,15 +51,16 @@ const styles = theme => ({
 });
 
 class RequirementDialogs extends React.Component {
-  constructor(props) {
+  state = {
+    createDialogOpen: false,
+    deleteDialogOpen: false,
+    snackbarOpen: false,
+    refactorDialogOpen: false,
+    snackBarDisplayInfo: {}
+  };
+
+  constructor(props){
     super(props);
-    this.state = {
-      createDialogOpen: false,
-      deleteDialogOpen: false,
-      snackbarOpen: false,
-      refactorDialogOpen: false,
-      snackBarDisplayInfo: {}
-    };
   }
 
   handleCreateDialogOpen = () => {
@@ -111,7 +112,7 @@ class RequirementDialogs extends React.Component {
 
   render() {
     const {
-      classes, selectedProject, existingProjectNames, selectedRequirement, handleDialogClose
+      classes, selectedProject, listOfProjects, selectedRequirement, handleDialogClose
     } = this.props;
     const { snackBarDisplayInfo } = this.state;
     return (
@@ -132,7 +133,7 @@ class RequirementDialogs extends React.Component {
           editRequirement={selectedRequirement}
         // TODO: Update eventually
           addChildRequirementToParent={null}
-          existingProjectNames={existingProjectNames}
+          listOfProjects={listOfProjects}
           requirements={this.props.requirements}
         />
         <DeleteRequirementDialog
@@ -182,7 +183,7 @@ RequirementDialogs.propTypes = {
   classes: PropTypes.object.isRequired,
   selectedProject: PropTypes.string.isRequired,
   selectedRequirement: PropTypes.object.isRequired,
-  existingProjectNames: PropTypes.array.isRequired,
+  listOfProjects: PropTypes.array.isRequired,
   displayRequirementOpen: PropTypes.bool.isRequired,
   handleDialogClose: PropTypes.func.isRequired,
   requirements: PropTypes.array.isRequired

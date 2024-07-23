@@ -51,6 +51,11 @@ const FretSemantics = require('../parser/FretSemantics');
 import SlateEditor2Styles from './SlateEditor2.css'
 import TemplateDropdownMenu from './TemplateDropdownMenu';
 import VariablesDropdownMenu from "./VariablesDropDownMenu";
+import { connect } from "react-redux";
+import { formalizeRequirement } from '../reducers/allActionsSlice';
+
+
+const isDev = require('electron-is-dev');
 
 const FIELDS = [
   {
@@ -96,7 +101,7 @@ const styles = theme => ({
   },
   checked: {
     color: theme.palette.secondary.main,
-  },  
+  },
   paper: {
     paddingBottom: 16,
     height: 106,
@@ -104,9 +109,7 @@ const styles = theme => ({
   },
 });
 
-const db = require('electron').remote.getGlobal('sharedObj').db;
-const isDev = require('electron-is-dev');
-var dbChangeListener = undefined;
+
 
 /**
  * Template editor constants
@@ -125,16 +128,16 @@ class SlateEditor2 extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      editorValue: [],
-      inputText: ' ',
-      fieldColors: {},
-      menuOptions: [],
-      menuIndex: 0,
-      selectedField: undefined,
-      search: '',
-      variables: [],
-      beforeRange: null,
-      position: null,
+      editorValue: [],     // The Dom of the Editable of this Slate class
+      inputText: ' ',      // all requirement texts
+      //fieldColors: {},
+      menuOptions: [],     // field template options (scope,conditions, components, timing, responses) buble drop down menu
+      menuIndex: 0,        // menu index for both field drop down and glossary menu
+      selectedField: undefined,    // selected field when in template mode
+      search: '',        // search string for glossary autofill
+      variables: [],     // filtered variables for glossary autofill
+      beforeRange: null,  // for tracking glossary autofill search string
+      position: null,    // position for dropdown menu in editable (template field or glossary)
     }
 
 
@@ -147,10 +150,9 @@ class SlateEditor2 extends React.Component {
   componentWillUnmount() {
     this.props.onRef(undefined);
     this.mounted = false
-    dbChangeListener.cancel()
   }
 
-  componentDidMount() {
+  componentDidMount () {
     this.mounted = true
     var path = `file://${process.resourcesPath}/docs/_media/fretishGrammar/index.html`
     if (isDev)
@@ -158,10 +160,7 @@ class SlateEditor2 extends React.Component {
     this.setState({
       grammarUrl: path
     })
-    db.get('FRET_PROPS').then((doc) => {
-      this.setState({
-        fieldColors: doc.fieldColors
-      })
+
       if (this.props.inputFields) {
         const inputFields = this.props.inputFields
         let editorValue = JSON.parse(JSON.stringify(initialValue))
@@ -179,28 +178,6 @@ class SlateEditor2 extends React.Component {
           editorValue: initialValue,
         })
       }
-    }).catch((err) => {
-      console.log(err)
-    })
-    dbChangeListener = db.changes({
-      since: 'now',
-      live: true,
-      include_docs: true
-    }).on('change', (change) => {
-      if (change.id == 'FRET_PROPS') {
-        const updatedValue = this.state.editorValue
-        if (this.mounted) {
-          this.setState({
-            fieldColors: change.doc.fieldColors,
-            editorValue: updatedValue
-          })
-        }
-      }
-    }).on('complete', function(info) {
-      console.log(info);
-    }).on('error', function (err) {
-      console.log(err);
-    });
 
     this.props.onRef(this)
     this.setState(
@@ -367,6 +344,7 @@ class SlateEditor2 extends React.Component {
   }
 
   handleDropdownSelection(index) {
+    // for both field drop down menu and variable drop down menu
     const {template} = this.props;
     const selection = this.props.editor.selection;
     const start = selection && Range.start(selection);
@@ -496,24 +474,49 @@ class SlateEditor2 extends React.Component {
         this.handleDropdownSelection();
       }
     } else if (isKeyHotkey('arrowup', event)) {
-      /* Arrow up is supressed */
-      event.preventDefault();
-      let newIndex = -1;
-      this.setState(prevState => {
-        const { menuIndex, menuOptions, variables } = prevState;
-        let newIndex;
-        if (menuOptions && menuOptions.length > 0) {
-          newIndex = menuIndex <= 0 ? menuOptions.length - 1 : menuIndex - 1;
-        } else if(variables.length > 0) {
-          newIndex = menuIndex <= 0 ? variables.length - 1 : menuIndex - 1;
-        }
-        return { menuIndex: newIndex }
 
-      }, () => {
-        if (newIndex >= 0) this.scrollToOption(newIndex)
-      })
+      const numLeaves = this.props.editor.children[0].children.length; // if numLeaves > 1, using template
+      if(numLeaves > 1){
+        event.preventDefault();
+        let newIndex = -1;
+        this.setState(prevState => {
+          const { menuIndex, menuOptions, variables } = prevState;
+          let newIndex;
+          if (menuOptions && menuOptions.length > 0) {
+            newIndex = menuIndex <= 0 ? menuOptions.length - 1 : menuIndex - 1;
+          } else if(variables.length > 0) {
+            newIndex = menuIndex <= 0 ? variables.length - 1 : menuIndex - 1;
+          }
+          return { menuIndex: newIndex }
+
+        }, () => {
+          if (newIndex >= 0) this.scrollToOption(newIndex)
+        })
+      } else {
+        // non templated, allow default behavior
+      }
+
     } else if (isKeyHotkey('arrowdown', event)) {
-      /* Arrow down is supressed */
+      const numLeaves = this.props.editor.children[0].children.length; // if numLeaves > 1, using template
+      if(numLeaves > 1){
+        event.preventDefault();
+        let newIndex = -1;
+        this.setState(prevState => {
+          const { menuIndex, menuOptions, variables } = prevState;
+          let newIndex;
+          if (menuOptions && menuOptions.length > 0) {
+            newIndex = menuIndex >= menuOptions.length - 1 ? 0 : menuIndex + 1;
+          } else if(variables.length > 0) {
+            newIndex = menuIndex <= 0 ? variables.length - 1 : menuIndex + 1;
+          }
+          return { menuIndex: newIndex }
+        }, () => {
+          if (newIndex >= 0) this.scrollToOption(newIndex)
+        })
+      } else {
+        // non templated, allow default behavior
+      }
+      /* Arrow down is supressed
       event.preventDefault();
       let newIndex = -1;
       this.setState(prevState => {
@@ -528,6 +531,17 @@ class SlateEditor2 extends React.Component {
       }, () => {
         if (newIndex >= 0) this.scrollToOption(newIndex)
       })
+*/
+    } else if (isKeyHotkey('shift+arrowup', event)) {
+      const numLeaves = this.props.editor.children[0].children.length; // if numLeaves > 1, using template
+      if(numLeaves > 1){
+        event.preventDefault();
+      }
+    } else if (isKeyHotkey('shift+arrowdown', event)) {
+      const numLeaves = this.props.editor.children[0].children.length; // if numLeaves > 1, using template
+      if(numLeaves > 1){
+        event.preventDefault();
+      }
     } else if (isKeyHotkey('arrowleft', event)) {
       /* Arrow left moves the cursor, this is working fine */
     } else if (isKeyHotkey('arrowright', event)) {
@@ -553,19 +567,349 @@ class SlateEditor2 extends React.Component {
        * current selection backwards by one word */
       event.preventDefault();
       const {anchor} = this.props.editor.selection;
-      const oldAnchor = JSON.parse(JSON.stringify(anchor));
       Transforms.move(this.props.editor, { distance: 1, unit: 'word', reverse: true})
       const {focus} = this.props.editor.selection;
-      Transforms.select(this.props.editor, {focus, anchor: oldAnchor});
+      Transforms.select(this.props.editor, {anchor: anchor, focus: focus, reverse: true});
     } else if (isKeyHotkey('mod+shift+arrowright', event)) {
       /* Ctrl/Cmd + shift + right moves the focus of the
        * current selection forward by one word */
       event.preventDefault();
       const {anchor} = this.props.editor.selection;
-      const oldAnchor = JSON.parse(JSON.stringify(anchor));
       Transforms.move(this.props.editor, { distance: 1, unit: 'word', reverse: false})
       const {focus} = this.props.editor.selection;
-      Transforms.select(this.props.editor, {focus, anchor: oldAnchor});
+      Transforms.select(this.props.editor, {anchor: anchor, focus: focus});
+    } else if (isKeyHotkey('shift+arrowright', event)) {
+
+    } else if (isKeyHotkey('shift+arrowleft', event)) {
+
+    } else if(isKeyHotkey('shift+home', event)) {
+      //console.log('hot key home or end: allowing defaultBehavior')
+
+////////
+
+      event.preventDefault();
+      const textLength = Editor.string(this.props.editor, []).length;
+      // get bottom of current selection.  If this bottom is equal to Editor bottom, then
+      // current selection focus is on last line
+      const numLeaves = this.props.editor.children[0].children.length; // if numLeaves > 1, using template
+      //console.log('numLeaves: ', numLeaves)
+      var origRange = this.props.editor.selection;
+      const {anchor} = this.props.editor.selection;
+      var origAnchor = anchor;
+      const origPath = origRange.focus.path;
+      const origOffset = origRange.focus.offset;
+      var origDomRange = ReactEditor.toDOMRange(this.props.editor, origRange);
+      var origRect = origDomRange.getBoundingClientRect();  // bottom right corner is focus bottom
+      const origTop = origRect.top;
+
+      var editorStartPoint = Editor.start(this.props.editor, [])
+      var editorEndPoint = Editor.end(this.props.editor, [])
+      var domRange = ReactEditor.toDOMRange(this.props.editor, {anchor: editorStartPoint, focus: editorEndPoint});
+      var editorRect = domRange.getBoundingClientRect();
+      const editorTop = editorRect.top;
+      const topDifference = 5.
+
+
+
+      if((origTop - editorTop) > topDifference ){
+        // not on top line
+        var finalEndPoint = editorStartPoint;
+        // current focus is not on first line, need to figure out start of current line
+        if(numLeaves > 1){
+          // Using a template.  Get first node on line then get first character
+          // 1. start with node where current focus is and walk up stream to determine first node
+          // 2. if origNode, start with orig offset, if not, start with 0 to determine first offset
+          var lastPathIndex2 = origPath[1]
+
+          // look for last path
+          for (let i = lastPathIndex2-1; i > 0; i--) {
+
+            var curNodeStart = Editor.start(this.props.editor, [0,i])
+            var curNodeEnd = Editor.end(this.props.editor, [0,i])
+            const curNodeRange = {anchor: curNodeStart, focus: curNodeEnd}
+            var curDomRange = ReactEditor.toDOMRange(this.props.editor, curNodeRange);
+            var curRect = curDomRange.getBoundingClientRect();
+            var curRectTop = curRect.top;
+/*
+            var newEndPoint = {path: [0,i], offset: 0};
+            const text = Editor.string(this.props.editor, [0,i])
+            console.log('text: ', text)
+            const varNewEndRange = {anchor: origRange.anchor, focus: newEndPoint}
+            var domRange = ReactEditor.toDOMRange(this.props.editor, varNewEndRange);
+            var newRect = domRange.getBoundingClientRect();
+            */
+            const nextLineCriterion = 10.
+            if((origTop - curRectTop)>nextLineCriterion){
+              break;
+            }
+            lastPathIndex2 = i;
+          }
+
+          finalEndPoint = {path: [0,lastPathIndex2], offset: 0};
+
+        } else {
+          // walk backward through each char, if current character top is higher than origTop, then use
+          // previous character
+          for (let i = 1; i < origOffset; i++) {
+
+            var newEndPoint = {path: origPath, offset: origOffset-i};
+            const varNewEndRange = {anchor: origRange.anchor, focus: newEndPoint}
+            var domRange = ReactEditor.toDOMRange(this.props.editor, varNewEndRange);
+            var newRect = domRange.getBoundingClientRect();
+            const newTop = newRect.top;
+            const diffForNextLine = 10.    // hard code need to remove
+            if((origTop - newTop)> diffForNextLine){
+              finalEndPoint = {path: origPath, offset: origOffset-i+1};
+              break;
+            }
+            finalEndPoint = newEndPoint;
+          }
+        }
+        Transforms.select(this.props.editor,  {anchor: origAnchor, focus: finalEndPoint, reverse: true})
+      } else {
+        // current focus on first line, set selection focus to editor startto end point
+        Transforms.select(this.props.editor,  {anchor: origAnchor, focus: editorStartPoint, reverse: true})
+      }
+
+
+///////////
+
+    } else if(isKeyHotkey('shift+end', event)) {
+      event.preventDefault();
+      const textLength = Editor.string(this.props.editor, []).length;
+      // get bottom of current selection.  If this bottom is equal to Editor bottom, then
+      // current selection focus is on last line
+      const numLeaves = this.props.editor.children[0].children.length; // if numLeaves > 1, using template
+      //console.log('numLeaves: ', numLeaves)
+      var origRange = this.props.editor.selection;
+      const {anchor} = this.props.editor.selection;
+      var origAnchor = anchor;
+      const origPath = origRange.focus.path;
+
+      const origOffset = origRange.focus.offset;
+      var origDomRange = ReactEditor.toDOMRange(this.props.editor, origRange);
+      var origRect = origDomRange.getBoundingClientRect();  // bottom right corner is focus bottom
+      const origBottom = origRect.bottom;
+
+      var editorStartPoint = Editor.start(this.props.editor, [])
+      var editorEndPoint = Editor.end(this.props.editor, [])
+      var domRange = ReactEditor.toDOMRange(this.props.editor, {anchor: editorStartPoint, focus: editorEndPoint});
+      var editorRect = domRange.getBoundingClientRect();
+      const editorBottom = editorRect.bottom;
+
+      if(editorBottom > origBottom ){
+        var finalEndPoint = origRange.focus;
+        // current focus is not on last line, need to figure out end of current line
+        if(numLeaves > 1){
+          // Using a template.  Get last node on line then get last character
+          // 1. start with node where current focus is and walk down stream to determine last node
+          // 2. if origNode, start with orig offset, if not, start with 0 to determine last offset
+          var lastPathIndex2 = origPath[1]
+
+          // look for last path
+          for (let i = lastPathIndex2; i < numLeaves; i++) {
+
+            var curNodeStart = Editor.start(this.props.editor, [0,i])
+            var curNodeEnd = Editor.end(this.props.editor, [0,i])
+            const curNodeRange = {anchor: curNodeStart, focus: curNodeEnd}
+            var curDomRange = ReactEditor.toDOMRange(this.props.editor, curNodeRange);
+            var curRect = curDomRange.getBoundingClientRect();
+
+            var newEndPoint = {path: [0,i], offset: 0};
+            const text = Editor.string(this.props.editor, [0,i])
+            console.log('text: ', text)
+            const varNewEndRange = {anchor: origRange.anchor, focus: newEndPoint}
+            var domRange = ReactEditor.toDOMRange(this.props.editor, varNewEndRange);
+            var newRect = domRange.getBoundingClientRect();
+            const newBottom = curRect.bottom;
+            const nextLineCriterion = 10.
+            if((newBottom - origBottom)>nextLineCriterion){
+              console.log('newBottom - origBottom: ', newBottom - origBottom)
+              break;
+            }
+            lastPathIndex2 = i;
+          }
+
+          // end location is block end minus a space
+          const lastNodetext = Editor.string(this.props.editor, [0,lastPathIndex2]);
+          const lastNodetextLen = lastNodetext.length
+          var numSpace = 1;   // if finalEndPoint is at last character, blinking cursor
+          // at the focus is not visible, this cursor is visible if we shift over 1 character
+          /*
+          if (lastNodetext.slice(-1)==' '){
+            numSpace = 1;
+          }
+          */
+          finalEndPoint = {path: [0,lastPathIndex2], offset: lastNodetextLen-numSpace};
+
+        } else {
+          // walk through each leaf, if last character of current leaf is below origBottom, then use character of
+          // previous leaf
+          for (let i = 1; i < textLength; i++) {
+
+            var newEndPoint = {path: origPath, offset: origOffset+i};
+            const varNewEndRange = {anchor: origRange.anchor, focus: newEndPoint}
+            var domRange = ReactEditor.toDOMRange(this.props.editor, varNewEndRange);
+            var newRect = domRange.getBoundingClientRect();
+            const newBottom = newRect.bottom;
+            const diffForNextLine = 10.    // hard code need to remove
+            if((newBottom - origBottom)> diffForNextLine){
+              finalEndPoint = {path: origPath, offset: origOffset+i-2};
+              break;
+            }
+            finalEndPoint = newEndPoint;
+          }
+        }
+        Transforms.select(this.props.editor,  {anchor: origAnchor, focus: finalEndPoint, reverse: false})
+      } else {
+        // current focus on last line, collapse selection to end point
+        Transforms.select(this.props.editor,  {anchor: origAnchor, focus: editorEndPoint, reverse: false})
+      }
+    } else if(isKeyHotkey('home', event)) {
+      //console.log('hot key home or end: allowing defaultBehavior')
+
+      const textLength = Editor.string(this.props.editor, []).length;
+      const numLeaves = this.props.editor.children[0].children.length; // if numLeaves > 1, using template
+      var origRange = this.props.editor.selection;
+      const {anchor} = this.props.editor.selection;
+      var origAnchor = anchor;
+      const origPath = origRange.focus.path;
+      const origOffset = origRange.focus.offset;
+      var origDomRange = ReactEditor.toDOMRange(this.props.editor, origRange);
+      var origRect = origDomRange.getBoundingClientRect();  // bottom right corner is focus bottom
+      const origTop = origRect.top;
+
+      var editorStartPoint = Editor.start(this.props.editor, [])
+      var editorEndPoint = Editor.end(this.props.editor, [])
+      var domRange = ReactEditor.toDOMRange(this.props.editor, {anchor: editorStartPoint, focus: editorEndPoint});
+      var editorRect = domRange.getBoundingClientRect();
+      const editorTop = editorRect.top;
+      const topDifference = 5.
+
+      if(numLeaves > 1){
+        // if not buble, allow defaultBehavior
+        var finalEndPoint = editorStartPoint;
+        if(this.state.selectedField){
+          if((origTop - editorTop) > topDifference ){
+            // not on top line
+            // current focus is not on first line, need to figure out start of current line
+            // Using a template.
+            // 1. start with node where current focus is and walk up stream to determine first node
+            // 2. if origNode, start with orig offset, if not, start with 0 to determine first offset
+            var lastPathIndex2 = origPath[1]
+            // look for last path
+            for (let i = lastPathIndex2-1; i > 0; i--) {
+              var curNodeStart = Editor.start(this.props.editor, [0,i])
+              var curNodeEnd = Editor.end(this.props.editor, [0,i])
+              const curNodeRange = {anchor: curNodeStart, focus: curNodeEnd}
+              var curDomRange = ReactEditor.toDOMRange(this.props.editor, curNodeRange);
+              var curRect = curDomRange.getBoundingClientRect();
+              var curRectTop = curRect.top;
+              const nextLineCriterion = 10.
+              if((origTop - curRectTop)>nextLineCriterion){
+                break;
+              }
+              lastPathIndex2 = i;
+            }
+            finalEndPoint = {path: [0,lastPathIndex2], offset: 0};
+          }
+          Transforms.select(this.props.editor,  {anchor: finalEndPoint, focus: finalEndPoint, reverse: false})
+        }
+      } else {
+        // allow defaultBehavior
+      }
+    } else if(isKeyHotkey('end', event)) {
+      //console.log('hot key home or end: allowing defaultBehavior')
+
+      event.preventDefault();
+      const textLength = Editor.string(this.props.editor, []).length;
+      // get bottom of current selection.  If this bottom is equal to Editor bottom, then
+      // current selection focus is on last line
+      const numLeaves = this.props.editor.children[0].children.length; // if numLeaves > 1, using template
+      //console.log('numLeaves: ', numLeaves)
+      var origRange = this.props.editor.selection;
+      const origPath = origRange.focus.path;
+
+      const origOffset = origRange.focus.offset;
+      var origDomRange = ReactEditor.toDOMRange(this.props.editor, origRange);
+      var origRect = origDomRange.getBoundingClientRect();  // bottom right corner is focus bottom
+      const origBottom = origRect.bottom;
+
+      var editorStartPoint = Editor.start(this.props.editor, [])
+      var editorEndPoint = Editor.end(this.props.editor, [])
+      var domRange = ReactEditor.toDOMRange(this.props.editor, {anchor: editorEndPoint, focus: editorEndPoint});
+      var editorRect = domRange.getBoundingClientRect();
+      const editorBottom = editorRect.bottom;
+
+      if(editorBottom > origBottom ){
+        var finalEndPoint = origRange.focus;
+        // current focus is not on last line, need to figure out end of current line
+        if(numLeaves > 1){
+          // Using a template.  Get last node on line then get last character
+          // 1. start with node where current focus is and walk down stream to determine last node
+          // 2. if origNode, start with orig offset, if not, start with 0 to determine last offset
+          var lastPathIndex2 = origPath[1]
+
+          // look for last path
+          for (let i = lastPathIndex2; i < numLeaves; i++) {
+
+            var curNodeStart = Editor.start(this.props.editor, [0,i])
+            var curNodeEnd = Editor.end(this.props.editor, [0,i])
+            const curNodeRange = {anchor: curNodeStart, focus: curNodeEnd}
+            var curDomRange = ReactEditor.toDOMRange(this.props.editor, curNodeRange);
+            var curRect = curDomRange.getBoundingClientRect();
+
+            var newEndPoint = {path: [0,i], offset: 0};
+            const text = Editor.string(this.props.editor, [0,i])
+            console.log('text: ', text)
+            const varNewEndRange = {anchor: origRange.anchor, focus: newEndPoint}
+            var domRange = ReactEditor.toDOMRange(this.props.editor, varNewEndRange);
+            var newRect = domRange.getBoundingClientRect();
+            const newBottom = curRect.bottom;
+            const nextLineCriterion = 10.
+            if((newBottom - origBottom)>nextLineCriterion){
+              console.log('newBottom - origBottom: ', newBottom - origBottom)
+              break;
+            }
+            lastPathIndex2 = i;
+          }
+
+          // end location is block end minus a space
+          const lastNodetext = Editor.string(this.props.editor, [0,lastPathIndex2]);
+          const lastNodetextLen = lastNodetext.length
+          var numSpace = 1;   // if finalEndPoint is at last character, blinking cursor
+          // at the focus is not visible, this cursor is visible if we shift over 1 character
+          /*
+          if (lastNodetext.slice(-1)==' '){
+            numSpace = 1;
+          }
+          */
+          finalEndPoint = {path: [0,lastPathIndex2], offset: lastNodetextLen-numSpace};
+
+        } else {
+          // walk through each leaf, if last character of current leaf is below origBottom, then use character of
+          // previous leaf
+          for (let i = 1; i < textLength; i++) {
+
+            var newEndPoint = {path: origPath, offset: origOffset+i};
+            const varNewEndRange = {anchor: origRange.anchor, focus: newEndPoint}
+            var domRange = ReactEditor.toDOMRange(this.props.editor, varNewEndRange);
+            var newRect = domRange.getBoundingClientRect();
+            const newBottom = newRect.bottom;
+            const diffForNextLine = 10.    // hard code need to remove
+            if((newBottom - origBottom)> diffForNextLine){
+              finalEndPoint = {path: origPath, offset: origOffset+i-2};
+              break;
+            }
+            finalEndPoint = newEndPoint;
+          }
+        }
+        Transforms.select(this.props.editor,  {anchor: finalEndPoint, focus: finalEndPoint, reverse: false})
+      } else {
+        // current focus on last line, collapse selection to end point
+        Transforms.select(this.props.editor,  {anchor: editorEndPoint, focus: editorEndPoint, reverse: false})
+      }
+
     } else {
       event.preventDefault();
     }
@@ -611,8 +955,8 @@ class SlateEditor2 extends React.Component {
    }
 
    enableSemantics = () => {
-     const result = FretSemantics.parse(this.getTextInEditor())
-     return (result.parseErrors && result.parseErrors.length > 0)
+     const result = FretSemantics.parseAndAnalyze(this.getTextInEditor())
+     return (result.parseErrors && result.parseErrors.length > 0);
    }
 
    extractSemantics = () => {
@@ -666,13 +1010,14 @@ class SlateEditor2 extends React.Component {
   }
 
   renderConsole = () => {
+    // error messages area under the slate
     const {inputText, errors } = this.state
     const message = (inputText || inputText.length > 0)
                       ? ((errors) ? 'Parse Errors: ' + errors : undefined)
                       : undefined
     return (
       <div style={{width: 600, height: 100}}>
-        <Typography variant='caption' color='error'>{message}</Typography>
+        <Typography variant='caption' color='error' id='qa_crt_typo_parse_err'>{message}</Typography>
       </div>
     )
   }
@@ -711,7 +1056,7 @@ class SlateEditor2 extends React.Component {
                 style={{
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: this.state.fieldColors[key],
+                  color: this.props.fieldColors[key],
                   fontSize: '10px',
                   margin: '0px'
                 }}
@@ -727,8 +1072,8 @@ class SlateEditor2 extends React.Component {
                 style={{
                   border: '2px solid',
                   backgroundColor: 'transparent',
-                  borderColor: this.state.fieldColors[key.toLowerCase()],
-                  color: this.state.fieldColors[key.toLowerCase()],
+                  borderColor: this.props.fieldColors[key.toLowerCase()],
+                  color: this.props.fieldColors[key.toLowerCase()],
                   borderRadius: '20px',
                   fontSize: '10px',
                   cursor: 'hand',
@@ -778,7 +1123,7 @@ class SlateEditor2 extends React.Component {
           decorations.push({
             anchor: {path, offset: startOffset},
             focus: {path, offset: endOffset},
-            color: this.state.fieldColors[k.replace("TextRange", "")],
+            color: this.props.fieldColors[k.replace("TextRange", "")],
             type: k
           })
         }
@@ -789,6 +1134,7 @@ class SlateEditor2 extends React.Component {
   }
 
   renderElement(props) {
+    // if field-element render text in buble
     switch(props.element.type) {
         case 'field-element':
           return (
@@ -806,13 +1152,16 @@ class SlateEditor2 extends React.Component {
               {props.children}
             </span>);
       default:
+        // default is normal text
         return <p {...props.attributes}>{props.children}</p>
     }
   }
 
   renderLeaf = props => {
+    // applies color for various fields according to
+    // leaf.isPlaceholder or leaf.type
     const { attributes, children, leaf } = props
-    const { fieldColors } = this.state
+    const { fieldColors } = this.props
     let style = {};
     if (leaf.isPlaceholder) {
       style = { color: 'gray' };
@@ -844,6 +1193,7 @@ class SlateEditor2 extends React.Component {
   }
 
   renderEditor = () => {
+    // process slate data then render slate editor
     const { template } = this.props;
     const { menuOptions, menuIndex, editorValue, variables, position } = this.state;
     const hasFields = Boolean(template);
@@ -865,7 +1215,7 @@ class SlateEditor2 extends React.Component {
      * The current options are stored the component state and set in
      * handleEditorValueChange, based on the current cursor position
      * (selection) in the editor */
-    let menu = undefined;
+    let menu = undefined;   //if shown, only one of field template or glossary dropdown menu
     if (hasFields && menuOptions && menuOptions.length > 0 && position) {
       menu = <TemplateDropdownMenu
         options={menuOptions}
@@ -942,6 +1292,7 @@ function isEqualPath(start, end) {
 
 
 function getFieldNode(editor) {
+  // field-element nodes are buble with text in Editable
   let parent = getParent(editor);
   return (isMany(editor) ? false : parent && parent.type === 'field-element') ? parent : undefined;
 }
@@ -1017,7 +1368,7 @@ SlateEditor2.propTypes = {
   classes: PropTypes.object.isRequired,
   updateInstruction: PropTypes.func.isRequired,
   updateSemantics: PropTypes.func.isRequired,
-  inputFields: PropTypes.object,
+  inputFields: PropTypes.object,  // requirement fullText
   grammarRule: PropTypes.string,
   template: PropTypes.object
 }
@@ -1025,4 +1376,16 @@ SlateEditor2.propTypes = {
  * Export.
  */
 
-export default withStyles(styles)(SlateEditor2);
+function mapStateToProps(state) {
+  const fieldColors = state.actionsSlice.fieldColors;
+  return {
+    fieldColors
+  };
+}
+
+const mapDispatchToProps = {
+  formalizeRequirement,
+};
+
+export default withStyles(styles)(connect(mapStateToProps,mapDispatchToProps)(SlateEditor2));
+

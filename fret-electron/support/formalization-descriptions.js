@@ -59,6 +59,7 @@ const NegateFormula =
 const sentenceTime = [
   ['-,-,immediately,-', 'REQUIRES: for every trigger, if trigger holds then RES also holds at the same time point.'],
   ['-,-,next,-', 'REQUIRES: for every trigger, RES must hold at the next time step.'],
+  ['-,-,finally,-', 'REQUIRES: for every trigger, if trigger holds then RES holds at the end of the interval.'],
   ['-,-,eventually,-', 'REQUIRES: for every trigger, RES must hold at some time point between (and including) the trigger and the end of the interval.'],
   ['-,-,never,-', 'REQUIRES: for every trigger, RES must be false at all time points between (and including) the trigger and the end of the interval.'],
   ['-,-,always,-', 'REQUIRES: for every trigger, RES must hold at all time points between (and including) the trigger and the end of the interval.'],
@@ -67,11 +68,12 @@ const sentenceTime = [
   ['-,-,for,-', 'REQUIRES: for every trigger, RES must hold at the trigger and remain true for $duration$ time points past the trigger (i.e., trigger, trigger+1, ..., and trigger+$duration$), or to the end of the interval if the interval ends sooner than trigger+$duration$.'],
   ['-,-,null,-', 'REQUIRES: for every trigger, RES must hold at some time point between (and including) the trigger and the end of the interval.'],
     ['-,-,until,-', 'REQUIRES: for every trigger, RES must remain true until (but not necessarily including) the point where the stop condition holds, or to the end of the interval. If the stop condition never occurs, RES must hold until the end of the scope, or forever.  If the stop condition holds at the trigger, the requirement is satisfied.'],
-    ['-,-,before,-', 'REQUIRES: for every trigger, RES must hold at least once strictly before the state where the stop condition holds. If the stop condition never occurs, RES does not need to hold. If the stop condition holds at the trigger, the requirement is not satisified.']
+    ['-,-,before,-', 'REQUIRES: for every trigger, RES must hold at least once strictly before the state where the stop condition holds. If the stop condition never occurs in the interval, RES does not need to hold. If the stop condition holds at the trigger, the requirement is not satisfied.']
     ]
 
 const sentenceNegatedTime = [
     ['-,-,immediately,-', 'REQUIRES: for every trigger, trigger and RES cannot hold at the same time point.'],
+    ['-,-,finally,-', 'REQUIRES: for every trigger, trigger and RES cannot hold at the last time point of the interval.'],
     ['-,-,next,-', 'REQUIRES: for every trigger, RES cannot hold at the next time point.'],
     ['-,-,eventually,-', 'REQUIRES: for every trigger, RES must be false at all time points between (and including) the trigger and the end of the interval.'],
     ['-,-,never,-', 'REQUIRES: for every trigger, RES must hold at some time point between (and including) the trigger and the end of the interval.'],
@@ -79,8 +81,8 @@ const sentenceNegatedTime = [
     ['-,-,within,-', 'REQUIRES: for every trigger, RES must be false at all time points with distance <=$duration$ from the trigger (i.e., at trigger, trigger+1, ..., and trigger+$duration$), or until the end of the interval.'],
     ['-,-,after,-', 'REQUIRES: for every trigger, RES must either hold at some point with distance <=$duration$ from the trigger (i.e., at trigger, trigger+1, ..., or trigger+$duration$), or RES must remain false for $duration$+1 time points starting at the trigger (i.e., at trigger, trigger+1, ..., and trigger+$duration$+1), or to the end of the interval if it ends sooner than trigger+$duration$+1.'],
     ['-,-,for,-', 'REQUIRES: for every trigger, RES must be false at some point with distance <=$duration$ from the trigger (i.e., at trigger, trigger+1, ..., or trigger+$duration$), except if the end of the interval occurs sooner.'],
-    ['-,-,until,-', 'REQUIRES: for every trigger, RES must be false at least once strictly before the state where the stop condition holds, or the end of the interval if the stop condition never holds.'],
-    ['-,-,before,-', 'REQUIRES: for every trigger, RES must be false until, but not necessarily including, the state where the stop condition holds. If the stop condition never occurs, RES can occur.'],
+    ['-,-,until,-', 'REQUIRES: for every trigger, RES must be false at least once strictly before the state where the stop condition holds. If the stop condition never holds in the interval, RES need not be false at least once.'],
+    ['-,-,before,-', 'REQUIRES: for every trigger, RES must be false until, but not necessarily including, the state where the stop condition holds. If the stop condition never occurs in the interval, RES cannot occur.'],
     ['-,-,null,-', 'REQUIRES: for every trigger, RES must be false at all time points between (and including) the trigger and the end of the interval.']]
 
 const sentenceResponse = [
@@ -90,7 +92,8 @@ const sentenceResponse = [
 
 const sentenceCondition = [
   ['-,regular,-,-','TRIGGER: first point in the interval if COND is true and any point in the interval where COND becomes true (from false).'],
-  ['-,null,-,-', 'TRIGGER: first point in the interval.']
+  ['-,null,-,-', 'TRIGGER: first point in the interval.'],
+  ['-,noTrigger,-,-','TRIGGER: every point in the interval where COND is true.']
 ]
 
 const sentenceScope = [

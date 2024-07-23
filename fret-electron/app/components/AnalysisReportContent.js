@@ -43,12 +43,10 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Select from '@material-ui/core/Select';
 import Checkbox from '@material-ui/core/Checkbox';
 import InputLabel from '@material-ui/core/InputLabel';
-import Divider from '@material-ui/core/Divider';
 import AppBar from '@material-ui/core/AppBar';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Fade from '@material-ui/core/Fade';
-import Paper from '@material-ui/core/Paper';
 import Accordion from '@material-ui/core/Accordion';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
 import AccordionDetails from '@material-ui/core/AccordionDetails';
@@ -78,13 +76,17 @@ const styles = theme => ({
 
 
 class AnalysisReportContent extends React.Component {
-	
-	state = {
-		selected: '',
-		ccSelected: '',
-		monolithic: false,
-		compositional: false
-	}
+
+  constructor(props){
+    super(props);
+    this.state = {
+      selected: '',
+      ccSelected: '',
+      monolithic: false,
+      compositional: false
+    }
+    this.loadNewReportInput = React.createRef();
+  }
 
 	componentDidUpdate(prevProps) {
 		if (this.props.importedReport !== prevProps.importedReport) {
@@ -92,27 +94,20 @@ class AnalysisReportContent extends React.Component {
 				selected: '',
 				ccSelected: '',
 				monolithic: false,
-				compositional: false							
+				compositional: false
 			})
 		}
 	}
 
 	handleChange = name => event => {
-	    // const {connectedComponents, projectReport} = this.state;
-	    // const {completedComponents} = this.props;
 	    if (name === 'selected') {
-	      // if (event.target.value === 'all') {
-	      //   this.setState({selected: 'all', monolithic : false, compositional : false});
-	      // } else {
 	      	let isDecomposable = event.target.value.compositional.connectedComponents.length > 1;
 	        this.setState({
 	        	selected: event.target.value,
 	        	ccSelected: isDecomposable ? 'cc0' : '',
 	        	monolithic: !isDecomposable,
 	        	compositional: isDecomposable
-	        });	                     
-	      // }
-
+	        });
 	    } else if (name === 'monolithic' && !this.state.monolithic) {
 	      this.setState({monolithic : !this.state.monolithic, compositional : false});
 	    } else if (name === 'compositional' && !this.state.compositional) {
@@ -125,7 +120,7 @@ class AnalysisReportContent extends React.Component {
 	};
 
 	render() {
-		const { classes, importedReport, handleLoadClick, optLog } = this.props;
+		const { classes, importedReport, handleLoadClick } = this.props;
 		const { selected, ccSelected, monolithic, compositional } = this.state;
 
 		let tabs = [];
@@ -136,7 +131,7 @@ class AnalysisReportContent extends React.Component {
 			if (compositional) {
 				for (const cc of selected.compositional.connectedComponents) {
 					tabs.push(
-						<Tab 
+						<Tab
 							key={cc.ccName}
 							value={cc.ccName}
 							label={
@@ -144,7 +139,7 @@ class AnalysisReportContent extends React.Component {
 									{cc.ccName}
 									&nbsp;
 									<ResultIcon reskey={cc.ccName} result ={cc.result} time={cc.time} error={cc.error}/>
-								</div>							
+								</div>
 							}
 						/>
 					)
@@ -155,7 +150,7 @@ class AnalysisReportContent extends React.Component {
 			diagStatus = monolithic ? selected.monolithic.diagnosisStatus : selected.compositional.connectedComponents[connectedComponentIndex].diagnosisStatus;
 			diagReport = monolithic ? selected.monolithic.diagnosisReport : selected.compositional.connectedComponents[connectedComponentIndex].diagnosisReport;
 		}
-		
+
 		return (
 			<div>
 				<Typography variant='h6'>
@@ -166,12 +161,12 @@ class AnalysisReportContent extends React.Component {
 					<Grid container alignItems="flex-end">
 						<FormControl className={classes.formControl}>
 							<InputLabel>System Component</InputLabel>
-							<Select value={selected} onChange={this.handleChange('selected')}>
+							<Select id="qa_analysisRptCont_sel_sysComp" value={selected} onChange={this.handleChange('selected')}>
 								{importedReport.systemComponents.map(sc => {
 									return(
 										<Tooltip key={sc.name} value={sc} title=''>
 											<span key={sc.name}>
-												<MenuItem key={sc.name}>
+												<MenuItem key={sc.name} id={"qa_rlzCont_mi_sysComp_"+sc.name}>
 													<div key={sc.name} style={{display : 'flex', alignItems : 'center'}}>
 														{sc.name}
 														&nbsp;
@@ -184,7 +179,7 @@ class AnalysisReportContent extends React.Component {
 								})}
 							</Select>
 						</FormControl>
-						<FormControlLabel 
+						<FormControlLabel
 							disabled={selected === '' || selected.compositional.connectedComponents.length <= 1}
 							control={
 								<Checkbox checked={compositional} onChange={this.handleChange('compositional')} color="primary"/>
@@ -200,10 +195,22 @@ class AnalysisReportContent extends React.Component {
 							style={{marginRight: '60%'}}
 						/>
 						<div>
-							<Button size="small" variant="contained" color="secondary" onClick={(event) => handleLoadClick(event)}>
+							<Button size="small" variant="contained" color="secondary" onClick={(event) =>
+                this.loadNewReportInput.current.click(event)}>
 								Load New Report
 							</Button>
-						</div>					
+              <input
+                id="qa_analysisRpt_input_newRpt"
+                ref={this.loadNewReportInput}
+                type="file"
+                onClick={(event)=> {
+                  event.target.value = null
+                }}
+                onChange={handleLoadClick}
+                style={{ display: 'none' }}
+                accept=".json"
+              />
+						</div>
 					</Grid>
 				</div>
 					{selected !== '' && selected !== 'all' &&
@@ -228,7 +235,7 @@ class AnalysisReportContent extends React.Component {
 				                  &nbsp;
 				                  &nbsp;
 				                </div>
-		                	}                  		
+		                	}
 		                  {compositional &&
 		                    <div>
 		                    <AppBar position="static" color="default">
@@ -257,13 +264,14 @@ class AnalysisReportContent extends React.Component {
 		                                &nbsp;
 		                              </div>
 		                            </Fade>) : <div/>
-		                          }                        
-		                          <DiagnosisRequirementsTable 
+		                          }
+		                          <DiagnosisRequirementsTable
+								  	rlzData={selected.requirements}
 		                            selectedProject={selectedProject}
 		                            selectedComponent={selected.name}
-		                            existingProjectNames={[selectedProject]}
+		                            listOfProjects={[selectedProject]}
 		                            connectedComponent={selected.compositional.connectedComponents[connectedComponentIndex]}
-		                            importedRequirements={selected.requirements}
+		                            importedRequirements={true}
 		                            selectedRequirements={selected.selectedReqs}
 		                          />
 		                        </div>
@@ -284,9 +292,10 @@ class AnalysisReportContent extends React.Component {
 		                          </Fade>) : <div/>
 		                        }
 		                        <DiagnosisRequirementsTable
+								  rlzData={selected.requirements}
 		                          selectedProject={selectedProject}
 		                          selectedComponent={selected.name}
-		                          existingProjectNames={[selectedProject]}
+		                          listOfProjects={[selectedProject]}
 		                          connectedComponent={{}}
 		                          importedRequirements={selected.requirements}
 		                          selectedRequirements={selected.selectedReqs}
@@ -299,13 +308,12 @@ class AnalysisReportContent extends React.Component {
 		            }
 			</div>
 		);
-	}	
+	}
 }
 
 AnalysisReportContent.propTypes = {
 	importedReport: PropTypes.object.isRequired,
 	handleLoadClick: PropTypes.func.isRequired,
-	optLog: PropTypes.func.isRequired
 };
 
 export default withStyles(styles)(AnalysisReportContent);

@@ -46,25 +46,14 @@ import Paper from '@material-ui/core/Paper';
 import Tooltip from '@material-ui/core/Tooltip';
 import Checkbox from '@material-ui/core/Checkbox';
 import { DiagnosisContext } from './DiagnosisProvider';
-import { SelectRequirementsContext } from './SelectRequirementsProvider';
 import Button from '@material-ui/core/Button';
-import IconButton from '@material-ui/core/IconButton';
-import ListIcon from '@material-ui/icons/List';
-import CloseIcon from '@material-ui/icons/Close';
 import { lighten } from '@material-ui/core/styles/colorManipulator';
 import Typography from '@material-ui/core/Typography';
-
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const constants = require('../parser/Constants');
-
-const db = sharedObj.db;
-const app = require('electron').remote.app;
-const system_dbkeys = sharedObj.system_dbkeys;
-let dbChangeListener = undefined;
+import { connect } from "react-redux";
+import { json } from 'd3';
 
 let counter = 0;
 
-function optLog(str) {if (constants.verboseRealizabilityTesting) console.log(str)}
 
 function createData(dbkey, rev, reqid, summary, project) {
   counter += 1;
@@ -108,6 +97,12 @@ function stableSort(array, conflictReqs, selectedReqs, cmp) {
     return stabilizedThis.map(el => el[0]).concat(sortedNotSelectedData.map(el => el[0]));
   } else {    
     const conflictData = array.filter(el => conflictReqs.includes(el.reqid.replace(/-/g,'')));
+    const sortedConflictData = conflictData.map((el, index) => [el, index]);
+    sortedConflictData.sort((a, b) => {
+      const order = cmp(a[0], b[0]);
+      if (order !== 0) return order;
+      return a[1] - b[1];
+    });
 
     const notSelectedData = array.filter(el => !selectedReqs.includes(el.reqid));
     const assumptionData = array.filter(el => (el.reqid.toLowerCase().includes('assumption') && !notSelectedData.map(el => el.reqid).includes(el.reqid)));
@@ -135,7 +130,7 @@ function stableSort(array, conflictReqs, selectedReqs, cmp) {
       return a[1] - b[1];
     });
 
-    return conflictData.concat(sortedAssumptions.map(el => el[0]).concat(sortedRemaining.map(el => el[0]).concat(sortedNotSelectedData.map(el => el[0]))));
+    return sortedConflictData.map(el => el[0]).concat(sortedAssumptions.map(el => el[0]).concat(sortedRemaining.map(el => el[0]).concat(sortedNotSelectedData.map(el => el[0]))));
   }
 }
 
@@ -143,6 +138,13 @@ function ccStableSort(array, conflictReqs, selectedReqs, connectedComponent, cmp
   
   if (conflictReqs.length === 0) {
     const ccData = array.filter(el => connectedComponent.requirements.includes(el.reqid));
+    const sortedccData = ccData.map((el, index) => [el, index]);
+    sortedccData.sort((a, b) => {
+      const order = cmp(a[0], b[0]);
+      if (order !== 0) return order;
+      return a[1] - b[1];
+    });
+
     const notSelectedData = array.filter(el => !selectedReqs.includes(el.reqid));
     const remainingData = array.filter(el => (!connectedComponent.requirements.includes(el.reqid) && !notSelectedData.map(el => el.reqid).includes(el.reqid)));    
 
@@ -160,9 +162,16 @@ function ccStableSort(array, conflictReqs, selectedReqs, connectedComponent, cmp
       return a[1] - b[1];
     });
 
-    return ccData.concat(sortedRemaining.map(el => el[0]).concat(sortedNotSelectedData.map(el => el[0])));
+    return sortedccData.map(el => el[0]).concat(sortedRemaining.map(el => el[0]).concat(sortedNotSelectedData.map(el => el[0])));
   } else {
     const conflictData = array.filter(el => conflictReqs.includes(el.reqid.replace(/-/g,'')));
+    const sortedConflictData = conflictData.map((el, index) => [el, index]);
+    sortedConflictData.sort((a, b) => {
+      const order = cmp(a[0], b[0]);
+      if (order !== 0) return order;
+      return a[1] - b[1];
+    });
+
     const notSelectedData = array.filter(el => !selectedReqs.includes(el.reqid));
     
     const assumptionData = array.filter(el => (el.reqid.toLowerCase().includes('assumption') && !notSelectedData.map(el => el.reqid).includes(el.reqid)));
@@ -200,8 +209,8 @@ function ccStableSort(array, conflictReqs, selectedReqs, connectedComponent, cmp
       if (order !== 0) return order;
       return a[1] - b[1];
     });
-
-    return conflictData.concat(sortedAssumptions.map(el => el[0]).concat(sortedCCRemainingData.map(el => el[0]).concat(sortedRemaining.map(el => el[0]).concat(sortedNotSelectedData.map(el => el[0])))));
+    
+    return sortedConflictData.map(el => el[0]).concat(sortedAssumptions.map(el => el[0]).concat(sortedCCRemainingData.map(el => el[0]).concat(sortedRemaining.map(el => el[0]).concat(sortedNotSelectedData.map(el => el[0])))));    
   }
 }
 
@@ -280,13 +289,6 @@ let DiagnosisRequirementsTableToolbar = props => {
               </Button>
             </Tooltip>
           </div>
-        /*) : (
-          <Tooltip title="Select requirements for analysis">
-            <IconButton onClick={() => selectEnabler()}>
-              <ListIcon color='secondary'/>
-            </IconButton>
-          </Tooltip>
-        )*/
       }
     </Toolbar>
   )
@@ -308,12 +310,12 @@ class DiagnosisRequirementsTableHead extends React.Component {
   };
 
   render() {
-    const { onSelectAllClick, order, orderBy, numSelected, rowCount, selectEnabled, importedRequirements } = this.props;
+    const { onSelectAllClick, order, orderBy, numSelected, rowCount, importedRequirements } = this.props;
 
     return (
       <TableHead>
         <TableRow>
-          {importedRequirements.length === 0 &&
+          {!importedRequirements &&
             <TableCell id="qa_diagReqTbl_selectAllReqs" padding="checkbox">
               <Checkbox                
                 indeterminate={numSelected > 0 && numSelected < rowCount}
@@ -360,12 +362,11 @@ DiagnosisRequirementsTableHead.propTypes = {
   orderBy: PropTypes.string.isRequired,
   rowCount: PropTypes.number.isRequired,
   selectEnabled: PropTypes.bool.isRequired,
-  importedRequirements: PropTypes.array.isRequired
+  importedRequirements: PropTypes.bool.isRequired
 };
 
 const styles = theme => ({
   root: {
-    // width: '100%',
     marginTop: theme.spacing(3),
   },
   tableRowSelected: {
@@ -386,115 +387,57 @@ class DiagnosisRequirementsTable extends React.Component {
     data: [],
     page: 0,
     rowsPerPage: 10,
-    selectedRequirement: {},
-    selectedProject: 'All Projects',
     selectEnabled: false
   };
 
   constructor(props){
     super(props);
-    
-    if (props.importedRequirements.length === 0) {
-      dbChangeListener = db.changes({
-        since: 'now',
-        live: true,
-        include_docs: true
-      }).on('change', (change) => {
-        if (!system_dbkeys.includes(change.id)) {
-          optLog(change);
-          this.synchStateWithDB();
-        }
-      }).on('complete', function(info) {
-        optLog(info);
-      }).on('error', function (err) {
-        optLog(err);
-      });
-    } else {
-      this.setState({
-        data: props.importedRequirements.map(r => {
-          return createData(r._id, r._rev, r.reqid, r.fulltext, r.project);
-        }).sort((a, b) => {return a.reqid > b.reqid})
-      });
-    }
+    this.updateSelection()
   }
 
   componentDidMount() {
-    const { importedRequirements, selectedRequirements } = this.props;
     this.mounted = true;
-    if (importedRequirements.length === 0) {
-      this.synchStateWithDB();
-    } else {
-      this.setState({
-        data: importedRequirements.map(r => {
-          return createData(r._id, r._rev, r.reqid, r.fulltext, r.project);
-        }).sort((a, b) => {return a.reqid > b.reqid}),
-        selected: [].concat(selectedRequirements),
-        tempSelected: [].concat(selectedRequirements)
-      });
-    } 
+    this.updateSelection();
   }
 
   componentWillUnmount() {
-    const { importedRequirements } = this.props;
     this.mounted = false;
-
-    if (importedRequirements.length === 0) {
-      dbChangeListener.cancel();
-    }
   }
 
   componentDidUpdate(prevProps) {
-    const { connectedComponent, importedRequirements, selectedRequirements } = this.props;
+    const { connectedComponent, selectedRequirements, importedRequirements, rlzData} = this.props;
+    const {setMessage} = this.context;
 
-    if (connectedComponent && (connectedComponent !== prevProps.connectedComponent)) {
-      if (importedRequirements.length === 0) {
-        const {setMessage} = this.context;
+    if (rlzData && rlzData !== prevProps.rlzData) {        
+        setMessage({reqs : '', color : ''})
+        this.setState({
+          selected: importedRequirements ? rlzData.map(el => el.reqid) : rlzData.map(el => el.doc.reqid),
+          tempSelected: importedRequirements ? rlzData.map(el => el.reqid) : rlzData.map(el => el.doc.reqid),
+        })  
+    } else if (connectedComponent && (connectedComponent !== prevProps.connectedComponent)) {
+      if (!importedRequirements) {
         setMessage({reqs : '', color : ''})
         this.setState({selected: [].concat(selectedRequirements)})
-      }      
+      }
     }
   }
 
-  synchStateWithDB() {
+  updateSelection() {
     if (!this.mounted) return;
-
-    const { selectedProject, selectedComponent, selectedRequirements, updateSelectedRequirements } = this.props
-    const filterOff = selectedProject == 'All Projects'
-    const { selectedReqs } = this.context;
-    db.allDocs({
-      include_docs: true,
-    }).then((result) => {
-      optLog(result.rows.filter(r => !system_dbkeys.includes(r.key)));
+    const { selectedRequirements , rlzData } = this.props    
+    this.setState({
+      selected: selectedRequirements,
+      tempSelected: selectedRequirements
     })
 
-    db.allDocs({
-      include_docs: true,
-    }).then((result) => {
-      optLog(result.rows
-                .filter(r => !system_dbkeys.includes(r.key)))
-      let dbData = result.rows
-                .filter(r => !system_dbkeys.includes(r.key))
-                .filter(r => filterOff || (r.doc.project === selectedProject && r.doc.semantics.component_name === selectedComponent))
-                .map(r => {
-                  return createData(r.doc._id, r.doc._rev, r.doc.reqid, r.doc.fulltext, r.doc.project)
-                })
-                .sort((a, b) => {return a.reqid > b.reqid})
-      // updateSelectedRequirements(dbData.map(n => n.reqid));
-      this.setState({
-        data: dbData,
-        selected: selectedRequirements,
-        tempSelected: selectedRequirements
-      })
-    }).catch((err) => {
-      optLog(err);
-    });
+
   }
 
   handleSelectAllClick = event => {
-    const { updateSelectedRequirements } = this.props;
+    const { rlzData } = this.props;
     const { data } = this.state
-    if (event.target.checked) {      
-      this.setState({ selectEnabled: true, tempSelected: data.map(n => n.reqid) });
+    if (event.target.checked) {
+      this.setState({ selectEnabled: true, tempSelected: rlzData.map(n => n.reqid || n.doc.reqid) });
     } else {
       this.setState({ tempSelected: []});
 
@@ -504,7 +447,6 @@ class DiagnosisRequirementsTable extends React.Component {
   };
 
   handleClick = (event, id) => {
-    const { updateSelectedRequirements } = this.props;
     const { tempSelected } = this.state;
     const selectedIndex = tempSelected.indexOf(id);
     let newSelected = [];
@@ -568,138 +510,166 @@ class DiagnosisRequirementsTable extends React.Component {
 
   render() {
     const { reqs, color } = this.context.state;
-    const { classes, connectedComponent, importedRequirements } = this.props;
-    const { data, order, orderBy, selected, tempSelected, rowsPerPage, page, selectEnabled } = this.state;
-    const emptyRows = rowsPerPage - Math.min(rowsPerPage, data.length - page * rowsPerPage);
+    const { classes, connectedComponent, importedRequirements, rlzData } = this.props;
+    const { order, orderBy, selected, tempSelected, rowsPerPage, page, selectEnabled } = this.state;
+    const { selectedRequirements } = this.props;
+
     
-    optLog(reqs)
-    optLog(color)
-    return (
+    let requirementsData = [];
+    if (importedRequirements) {
+      requirementsData = rlzData.map(r => {return createData(r._id, r._rev, r.reqid, r.fulltext, r.project);}).sort((a, b) => {return a.reqid > b.reqid})
+    } else {
+      requirementsData = rlzData.map(r => {return createData(r.doc._id, r.doc._rev, r.doc.reqid, r.doc.fulltext, r.doc.project)}).sort((a, b) => {return a.reqid > b.reqid});
+    }
+        
+        
+
+    const emptyRows = rowsPerPage - Math.min(rowsPerPage, requirementsData.length - page * rowsPerPage)
+    return ( 
+           
       <div>
-      <Paper>
-        <div>
-          <DiagnosisRequirementsTableToolbar 
-            numSelected={tempSelected.length}
-            selectEnabled={selectEnabled}
-            selectEnabler={this.handleEnableSelect}
-            applySelection={this.handleApplySelection}
-          />
-          <Table aria-labelledby="tableTitle" size="medium">
-            <DiagnosisRequirementsTableHead              
+      {requirementsData.length > 0 && 
+        <Paper>
+          <div>
+            <DiagnosisRequirementsTableToolbar 
               numSelected={tempSelected.length}
-              order={order}
-              orderBy={orderBy}
-              onSelectAllClick={this.handleSelectAllClick}
-              onRequestSort={this.handleRequestSort}
-              rowCount={data.length}
               selectEnabled={selectEnabled}
-              importedRequirements={importedRequirements}
+              selectEnabler={this.handleEnableSelect}
+              applySelection={this.handleApplySelection}
             />
-            {Object.keys(connectedComponent).length !== 0 ?
-              (<TableBody id="qa_diagReqTbl_tableBody_1">{
-                ccStableSort(data, reqs, selected, connectedComponent, getSorting(order, orderBy))
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map(n => {
-                  const isSelected = this.isSelected(n.reqid);
-                  const label = n.reqid ? n.reqid.replace(/-/g,'') : 'NONE'
-                  var isInConflict = (reqs.length !== 0 && reqs.includes(label)) ? true : false;
-                  const isInConflictOrCC = (isInConflict || connectedComponent.requirements.includes(n.reqid));               
-                  return (
-                      <TableRow 
-                        key={n.rowid} 
-                        style={{
-                          opacity : isInConflictOrCC ? 1 : .6,
-                          borderStyle: isInConflict ? 'solid' : 'initial', 
-                          borderColor: isInConflict ? color : 'initial'}}
-                        classes={{selected: (isSelected && isInConflictOrCC) ? classes.tableRowSelected : 'initial'}}
-                        onClick={event => { importedRequirements.length === 0 ? this.handleClick(event, n.reqid) : null}}            
-                      >
-                      {true &&
-                        <TableCell padding="checkbox">
-                          <Checkbox id={"qa_diagReqTbl_"+n.reqid} checked={isSelected}/>
-                        </TableCell>
-                      }
-                        <TableCell id={"qa_diagReqTbl_tc_body_id_"+label}>
-                          {label}
-                        </TableCell>
-                        <TableCell id={"qa_diagReqTbl_tc_body_summary_"+label}>{n.summary}</TableCell>
-                      </TableRow>
-                    )
-                })}
-                {emptyRows > 0 && (
-                  <TableRow style={{ height: 49 * emptyRows }}>
-                    <TableCell colSpan={6} />
-                  </TableRow>
-                )}
-              </TableBody>) :
-              (<TableBody id="qa_diagReqTbl_tableBody_2">{
-                stableSort(data, reqs, selected, getSorting(order, orderBy))
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map(n => {
-                  const isSelected = this.isSelected(n.reqid);
-                  const label = n.reqid ? n.reqid.replace(/-/g,'') : 'NONE'
-                  var isInConflict = (reqs.length !== 0 && reqs.includes(label)) ? true : false;
-                  //var isAssumption = n.reqid.includes('assumption')
-                  //const isInConflictOrAssumptions = (isInConflict || reqs.length === 0  || isAssumption);
-                  const isInConflictOrSelected = (isInConflict || isSelected);
-                  return (
-                      <TableRow
-                        key={n.rowid}
-                        style={{
-                          opacity : isInConflictOrSelected ? 1 : .6,                          
-                          borderStyle: isInConflict ? 'solid' : 'initial', 
-                          borderColor: isInConflict ? color : 'initial'}}
-                        classes={{selected: classes.tableRowSelected}}
-                        onClick={event => (importedRequirements.length === 0 ? this.handleClick(event, n.reqid) : null)}
+            <Table aria-labelledby="tableTitle" size="medium">
+              <DiagnosisRequirementsTableHead              
+                numSelected={tempSelected.length}
+                order={order}
+                orderBy={orderBy}
+                onSelectAllClick={this.handleSelectAllClick}
+                onRequestSort={this.handleRequestSort}
+                rowCount={requirementsData.length}
+                selectEnabled={selectEnabled}
+                importedRequirements={importedRequirements}
+              />
+              {Object.keys(connectedComponent).length !== 0 ?
+                (<TableBody id="qa_diagReqTbl_tableBody_1">{
+                  ccStableSort(requirementsData, reqs, selectedRequirements, connectedComponent, getSorting(order, orderBy))
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map(n => {
+                    const isSelected = this.isSelected(n.reqid);
+                    const label = n.reqid ? n.reqid.replace(/-/g,'') : 'NONE'
+                    //Previous versions of FRET had reqs as an array string, including braces. The check below accounts for these cases.
+                    const isReqsArrayString = (reqs[0] === '[' && reqs[reqs.length-1] === ']' && reqs.includes(','));
+                    const reqsArray = isReqsArrayString ? reqs.substring(1,reqs.length-1).split(", ") : reqs;
+                    var isInConflict = (reqsArray.length !== 0 && reqsArray.includes(label)) ? true : false;
+                    const isInConflictOrCC = (isInConflict || connectedComponent.requirements.includes(n.reqid));               
+                    return (
+                        <TableRow 
+                          key={n.rowid} 
+                          style={{
+                            opacity : isInConflictOrCC ? 1 : .6,
+                            borderStyle: isInConflict ? 'solid' : 'initial', 
+                            borderColor: isInConflict ? color : 'initial'}}
+                          classes={{selected: (isSelected && isInConflictOrCC) ? classes.tableRowSelected : 'initial'}}
+                          onClick={event => { !importedRequirements ? this.handleClick(event, n.reqid) : null}}            
                         >
                         {true &&
                           <TableCell padding="checkbox">
                             <Checkbox id={"qa_diagReqTbl_"+n.reqid} checked={isSelected}/>
                           </TableCell>
                         }
-                        <TableCell id={"qa_diagReqTbl_tc_body_id_"+label}>
-                          {label}
-                        </TableCell>
-                        <TableCell id={"qa_diagReqTbl_tc_body_summary_"+label}>{n.summary}</TableCell>
-                      </TableRow>
-                    )
-                })}
-                {emptyRows > 0 && (
-                  <TableRow style={{ height: 49 * emptyRows }}>
-                    <TableCell colSpan={6} />
-                  </TableRow>
-                )}
-              </TableBody>)
-            }
-          </Table>
-        </div>
-        <TablePagination
-          component="div"
-          count={data.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          backIconButtonProps={{
-            'aria-label': 'Previous Page',
-          }}
-          nextIconButtonProps={{
-            'aria-label': 'Next Page',
-          }}
-          onPageChange={this.handleChangePage}
-          onRowsPerPageChange={this.handleChangeRowsPerPage}
-        />
-      </Paper>
+                          <TableCell id={"qa_diagReqTbl_tc_body_id_"+label}>
+                            {label}
+                          </TableCell>
+                          <TableCell id={"qa_diagReqTbl_tc_body_summary_"+label}>{n.summary}</TableCell>
+                        </TableRow>
+                      )
+                  })}
+                  {emptyRows > 0 && (
+                    <TableRow style={{ height: 49 * emptyRows }}>
+                      <TableCell colSpan={6} />
+                    </TableRow>
+                  )}
+                </TableBody>) :
+                (<TableBody id="qa_diagReqTbl_tableBody_2">{
+                  stableSort(requirementsData, reqs, selectedRequirements, getSorting(order, orderBy))
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map(n => {
+                    const isSelected = this.isSelected(n.reqid);
+                    const label = n.reqid ? n.reqid.replace(/-/g,'') : 'NONE'
+                    //Previous versions of FRET had reqs as an array string, including braces. The check below accounts for these cases.
+                    const isReqsArrayString = (reqs[0] === '[' && reqs[reqs.length-1] === ']' && reqs.includes(','));
+                    const reqsArray = isReqsArrayString ? reqs.substring(1,reqs.length-1).split(", ") : reqs;
+                    var isInConflict = (reqsArray.length !== 0 && reqsArray.includes(label)) ? true : false;
+                    const isInConflictOrSelected = (isInConflict || isSelected);
+                    return (
+                        <TableRow
+                          key={n.rowid}
+                          style={{
+                            opacity : isInConflictOrSelected ? 1 : .6,                          
+                            borderStyle: isInConflict ? 'solid' : 'initial', 
+                            borderColor: isInConflict ? color : 'initial'}}
+                          classes={{selected: classes.tableRowSelected}}
+                          onClick={event => (!importedRequirements ? this.handleClick(event, n.reqid) : null)}
+                          >
+                          {true &&
+                            <TableCell padding="checkbox">
+                              <Checkbox id={"qa_diagReqTbl_"+n.reqid} checked={isSelected}/>
+                            </TableCell>
+                          }
+                          <TableCell id={"qa_diagReqTbl_tc_body_id_"+label}>
+                            {label}
+                          </TableCell>
+                          <TableCell id={"qa_diagReqTbl_tc_body_summary_"+label}>{n.summary}</TableCell>
+                        </TableRow>
+                      )
+                  })}
+                  {emptyRows > 0 && (
+                    <TableRow style={{ height: 49 * emptyRows }}>
+                      <TableCell colSpan={6} />
+                    </TableRow>
+                  )}
+                </TableBody>)
+              }
+            </Table>
+          </div>
+          <TablePagination
+            component="div"
+            count={requirementsData.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            backIconButtonProps={{
+              'aria-label': 'Previous Page',
+            }}
+            nextIconButtonProps={{
+              'aria-label': 'Next Page',
+            }}
+            onPageChange={this.handleChangePage}
+            onRowsPerPageChange={this.handleChangeRowsPerPage}
+          />
+        </Paper>
+      }
       </div>
     );
+
   }
 }
 
 DiagnosisRequirementsTable.propTypes = {
+  rlzData: PropTypes.array.isRequired,
   selectedProject: PropTypes.string.isRequired,
   selectedComponent: PropTypes.string.isRequired,
   selectedRequirements: PropTypes.array.isRequired,
-  existingProjectNames: PropTypes.array.isRequired,
+  listOfProjects: PropTypes.array.isRequired,
   connectedComponent : PropTypes.object.isRequired,
-  importedRequirements: PropTypes.array.isRequired
+  importedRequirements: PropTypes.bool.isRequired
 };
 
-export default withStyles(styles)(DiagnosisRequirementsTable);
+
+function mapStateToProps(state) {
+  const rlz_data = state.actionsSlice.rlz_data;
+  return {
+    rlz_data,
+
+  };
+}
+
+export default withStyles(styles)(connect(mapStateToProps)(DiagnosisRequirementsTable));
+

@@ -38,11 +38,6 @@ import RequirementDialogs from './RequirementDialogs';
 
 const constants = require('../parser/Constants');
 
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const db = sharedObj.db;
-const system_dbkeys = sharedObj.system_dbkeys;
-
-
 const COLOR_RANGE = ["hsl(0, 0%, 80%)", "hsl(0, 0%, 20%)"]
 
 class CirclePacking extends React.Component {
@@ -83,7 +78,7 @@ class CirclePacking extends React.Component {
       var project = r.doc.project
       if (project == '' || project == undefined){ project = 'Undefined ProjectID'}
       const parent_reqid = req.parent_reqid
-  
+
       if (reqid && reqid.length > 0) {
         if(!(project in nodeMap)) {
           nodeMap[project] = {}
@@ -120,7 +115,7 @@ class CirclePacking extends React.Component {
         }
       }
     }
-  
+
     for (var project in projectRootMap) {
       const root_reqids = projectRootMap[project]
       const project_node = {
@@ -193,8 +188,8 @@ class CirclePacking extends React.Component {
         .style("opacity", 0);
 
     function handleRequirementDialogOpen (req) {
-        req.dbkey = req._id;
-        req.rev = req._rev;
+        //req.dbkey = req._id;
+        //req.rev = req._rev;
         self.setState({
           selectedRequirement: req,
           displayRequirementOpen: true
@@ -208,7 +203,7 @@ class CirclePacking extends React.Component {
           return "qa_cirPack_circle_"+d.data.name})
         .attr("class", function(d) {
           return getRequirementStyle(d, true)})
-        .style("fill", function(d) {return d.children ? color(d.depth) : d.data.doc && d.data.doc.semantics ? ((d.data.doc.semantics.ft === constants.unhandled_semantics || d.data.doc.fulltext === "")  ? "white": "node node--leaf-unformalized") : "white" })
+        .style("fill", function(d) {return d.children ? color(d.depth) : d.data.doc && d.data.doc.semantics ? ((d.data.doc.semantics.ftExpanded === constants.unhandled_semantics || d.data.doc.fulltext === "")  ? "white": "node node--leaf-unformalized") : "white" })
         .on("click", function(d) {
           if (focus !== d)
             zoom(d), d3.event.stopPropagation();
@@ -269,7 +264,7 @@ class CirclePacking extends React.Component {
                       + "<br/><br/>"
                       + "<u>Formalization</u>"
                       + "<br/>"
-                      + d.data.doc.semantics.ft
+                      + d.data.doc.semantics.ftExpanded
                     )
               .style("left", (d3.event.pageX - 25) + "px")
               .style("top", (d3.event.pageY + 25) + "px")
@@ -380,7 +375,7 @@ class CirclePacking extends React.Component {
         <RequirementDialogs
           selectedRequirement={this.state.selectedRequirement}
           selectedProject={this.props.selectedProject}
-          existingProjectNames={this.props.projects}
+          listOfProjects={this.props.projects}
           displayRequirementOpen={this.state.displayRequirementOpen}
           handleDialogClose={this.handleRequirementDialogClose}
           requirements={this.props.requirements}

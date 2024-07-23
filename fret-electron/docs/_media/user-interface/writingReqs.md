@@ -25,14 +25,22 @@ While typing the body of a requirement, FRET parses the requirement and recogniz
 
 1. Scope. The optional *scope* field specifies the period where the requirement holds. If omitted, the requirement is deemed to hold universally, subject to condition, below. The scope is specified relative to system *modes*. The scope can specify system behavior *before* a specified mode occurs, or *after* a specified mode ends, or when the system is *in* a specified mode. In the latter case, there may be many intervals in which the requirement holds. The mode is specified by giving its mode name. [Scope Help Menu](./examples/scope.md)
 
-2. Condition. The optional *condition* field is a boolean expression that further constrains when the requirement response is to occur.  The boolean expression is in terms of variables. [Condition Help Menu](./examples/condition.md)
+2. Condition. The optional *condition* field is a boolean expression that further constrains when the requirement response is to occur. [Condition Help Menu](./examples/condition.md)
 
-3. Timing. The optional *timing* field specifies when the response shall happen, relative to the scope and condition.  Timing can be *immediately*, *at the next timepoint*, *eventually*, *always*, *never*, *within N time units*,  *for N time units*, *after N time units*, *until* stop_condition, or *before* stop_condition. The timing *after* means that the response happens _N_ time units from the beginning of the requirement's period, and does not happen before that; i.e., does not happen for *N-1* time units after the beginning of the period. [Timing Help Menu](./examples/timing.md)
+3. Timing. The optional *timing* field specifies when the response shall happen, relative to the scope and condition.  Timing can be *immediately* (synonyms: *initially*, *at the first timepoint*, *at the same timepoint*), *at the next timepoint*, *finally* (synonym: *at the last timepoint*), *eventually*, *always*, *never*, *within N time units*,  *for N time units*, *after N time units*, *until* stop_condition, or *before* stop_condition. The timing *after* means that the response happens _N_ time units from the beginning of the requirement's period, and does not happen before that; i.e., does not happen for *N-1* time units after the beginning of the period. [Timing Help Menu](./examples/timing.md)
 
-> __Note:__ The Boolean operators allowed in the boolean expression *while* scope, condition, *until* and *before* timings, and response fields are: `!` (negation), `&` (conjunction), `|` (disjunction), `xor` (exclusive or),  `->` or `=>` (implication), `<->` or `<=>` (equivalence). An alternative for implication is `if p then q`. There are nine predefined temporal predicates: , `preBool`, `preInt`, `preReal`, `persisted`, `occurred`, `persists`, `occurs`, `prevOcc` and `nextOcc`. See [Temporal Condition Help](./examples/temporal_condition_explanations.md). 
+> __Note:__ The Boolean operators allowed in the boolean expression *while* scope, condition, *until* and *before* timings, and response fields are: `!` (negation), `&` (conjunction), `|` (disjunction), `xor` (exclusive or),  `->` or `=>` (implication), `<->` or `<=>` (equivalence). An alternative phrasing for implication is `if p then q`. There are nine predefined temporal predicates: , `preBool`, `preInt`, `preReal`, `persisted`, `occurred`, `persists`, `occurs`, `prevOcc` and `nextOcc`. See [Temporal Condition Help](./examples/temporal_condition_explanations.md). 
 The arithmetic comparison operators are `=, !=, <, >, <=, >=`. The arithmetic operators are `+, -, *, /, mod`, and `^` (exponentiation). Arithmetic terms and predicates are in standard form; e.g., `f(x,y)`,  `p(x,y,z)`. 
 
-> __Important Note:__ [Restrictions](./restrictions.md)
+> __Reserved Words:__ The following cannot be used as variables in Boolean and arithmetic expressions:  
+`A, ABF, ABG, AF, AG, ASSIGN, AX, BU, COMPASSION, COMPUTE, COMPWFF,
+CONSTANTS, CONSTRAINT, CTLSPEC, CTLWFF, DEFINE, E, EBF, EBG, EF, EG, EX, F,
+FAIRNESS, FROZENVAR, G, H, IN, INIT, INVAR, INVARSPEC, ISA, IVAR, JUSTICE,
+LTLSPEC, LTLWFF, MAX, MDEFINE, MIN, MIRROR, MODULE, NAME, O, PRED,
+PREDICATES, PSLSPEC, PSLWFF, S, SIMPWFF, SPEC, T, TRANS, U, V, VAR, X, Y, Z`  
+`abs, array, bool, boolean, case, count, esac, extend, in, init, integer,
+max, min, mod, next, of, process, real, resize, self, signed, sizeof,
+swconst, union, unsigned, uwconst, word, word1, xnor, xor`.
 
 ### Templates tab
 

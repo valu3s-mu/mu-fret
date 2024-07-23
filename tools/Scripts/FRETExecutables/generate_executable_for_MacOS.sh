@@ -1,10 +1,10 @@
 cd /tmp
+if [ -d "FRET_PACK" ]; then rm -rf FRET_PACK; fi
 mkdir FRET_PACK
 cd FRET_PACK
-# git clone  https://github.com/NASA-SW-VnV/fret.git
+git clone  https://github.com/NASA-SW-VnV/fret.git
+#git clone ssh://babelfish.ndc.nasa.gov/git/fret
 
-# git clone https://babelfish.arc.nasa.gov/git/fret
-git clone ssh://babelfish.ndc.nasa.gov/git/fret
 cd fret
 #Set the branch that you want to package, e.g.,:
 #git checkout master
@@ -27,7 +27,7 @@ mv components/Grammar.js x.js;
 sed -e 's+Page from '\''\.\./\.\./docs/_media+Page from '\''../docs/_media+' x.js >components/Grammar.js
 rm x.js
 mv components/Instructions.js x.js;
-sed -e 's+\.\./docs/+docs/+' x.js >components/Instructions.js
+sed -e 's+\.\./docs/+docs/+' -e 's+from '\''examples+from '\''docs/_media/user-interface/examples+' x.js > components/Instructions.js;
 rm x.js
 mv components/SlateEditor2.js x.js;
 sed -e 's+\.\./docs/+docs/+' x.js >components/SlateEditor2.js
@@ -71,8 +71,13 @@ rm x.json;
 
 
 cd ..
+
+mv model/realizabilitySupport/realizabilityUtils.js x.js;
+sed -e 's+\.\./\.\./analysis/+analysis/+' x.js > model/realizabilitySupport/realizabilityUtils.js;
+rm x.js;
+
 mv package.json x.json;
-sed -e 's+docs/_media+app/docs/_media+'     -e 's+\.\./tools/LTLSIM+app/tools/LTLSIM+' x.json >package.json
+sed -e 's+docs/_media+app/docs/_media+'     -e 's+\.\./tools/LTLSIM+app/tools/LTLSIM+' -e 's+production electron ./app/+production electron --no-sandbox ./app/+' x.json >package.json
 rm x.json
 mv webpack.config.base.js x.js
 sed -e 's+docs/_media+app/docs/_media+' x.js >webpack.config.base.js
@@ -96,4 +101,4 @@ npx electron-packager .
 
 
 #Wrap MAC-OS executable
-tar zcvf ~/Desktop/FRET_PACK-darwin-x64/
+tar zcvf ~/Desktop/FRET-darwin-x64.tgz FRET-darwin-x64/

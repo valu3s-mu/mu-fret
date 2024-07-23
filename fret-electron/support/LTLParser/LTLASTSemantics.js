@@ -32,6 +32,7 @@
 // *****************************************************************************
 const constants = require('../../app/parser/Constants');
 const utilities = require('../utilities');
+//const xform = require('../xform');
 const utils = require('../utils');
 const antlr4 = require('antlr4/index');
 const LTLLexer = require('./LTLLexer');
@@ -40,8 +41,9 @@ const ltlastAnalyzer = require('./LTLASTAnalyzer').LTLASTAnalyzer;
 const LTLASTAnalyzer = new ltlastAnalyzer();
 
 module.exports = {
-    LTLtoAST,
-    ASTtoLTL
+  LTLtoAST,
+  ASTtoLTL,
+  ASTtoCoCo
 }
 
 // useful utils
@@ -50,20 +52,55 @@ const isAtom =   utils.isAtom;
 const isString = utils.isString;
 const isBoolean = utils.isBoolean;
 
-const infix = { ExclusiveOr : 'xor', And : '&', Or : '|', Implies : '->', Equiv : '<->', Since : 'S', Triggers : 'T', 
-		Until : 'U', Releases : 'V', SinceInclusive : 'SI', UntilInclusive : 'UI',
+const infix = { ExclusiveOr : 'xor', And : '&', Or : '|', Implies : '->',
+		Equiv : '<->',
+		Since : 'S', Triggers : 'T', Untl : 'U', Releases : 'V',
+		SinceInclusive : 'SI', UntilInclusive : 'UI',
 	        SinceTimed : 'S', UntilTimed : 'U',
-		Plus : '+', Minus : '-', Divide : '/', Mult : '*', Mod : 'mod', Expt : '^',
-		LessThan : '<', LessThanOrEqual : '<=',  NotEqual: '!=', Equal : '=',
-		GreaterThan : '>', GreaterThanOrEqual : '>='
+		SinceInclusiveTimed: 'SI', UntilInclusiveTimed: 'UI', 
+		//TriggersTimed: 'TT', ReleasesTimed: 'VT',
+		Plus : '+', Minus : '-', Divide : '/', Mult : '*', Mod : 'mod',
+		Expt : '^',
+		LessThan : '<', LessThanOrEqual : '<=',  NotEqual: '!=',
+		Equal : '=', GreaterThan : '>', GreaterThanOrEqual : '>='
 	      };
 
 const prefix = { Not : '!', Historically : 'H', Once : 'O', Negate : '-',
-		 OnceTimed : 'O', HistoricallyTimed : 'H', EventuallyTimed : 'F',
-		 Globally : 'G', Eventually : 'F', Next : 'X', PrevFalse : 'Y',
+		 OnceTimed : 'O', HistoricallyTimed : 'H', FutureTimed : 'F',
+		 Globally : 'G', Future : 'F', Nxt : 'X', PrevFalse : 'Y',
 		 PrevTrue : 'Z',
 		 GloballyTimed : 'G',
 	         LookingBackwardsTimed : '<|', LookingForwardsTimed : '|>', Negate : '-'};
+
+// CoCoPrefix and CoCoInfix have no future temporal operators
+
+const CoCoPrefix = {  Negate : '-', Not : 'not ', 
+		      Historically : 'H', Once : 'O',
+		      PrevFalse : 'YtoPre', PrevTrue : 'ZtoPre',
+		      HistoricallyTimed : 'HT', OnceTimed : 'OT', 
+		      Triggers : 'T', 
+		      Since : 'S', SinceTimed : 'ST', 
+		      SinceInclusive : 'SI', SinceInclusiveTimed : 'SIT' }
+
+// These CoCoSpec binary operators have their arguments reversed from
+// standard notation; e.g., S(p,q) = q S p. See
+// support/CommonTemplates/LibraryOfOperators.ejs
+const Reversed = ["S","ST","SI","SIT"];
+
+const CoCoInfix = { ExclusiveOr : 'xor', And : 'and', Or : 'or', 
+		    Implies : '=>', Equiv : '=',
+		    Plus : '+', Minus : '-', Divide : '/', Mult : '*', 
+		    Mod : 'mod', Expt : '^',
+		    LessThan : '<', LessThanOrEqual : '<=',  
+		    NotEqual: '<>', Equal : '=',
+		    GreaterThan : '>', GreaterThanOrEqual : '>='
+	      };
+
+function introduce_SinceInclusive (term) {
+  let sbst = utils.matchAST(['Since','__p',['And','__p','__q']],term);
+  if (sbst !== null) return ['SinceInclusive',sbst['__p'], sbst['__q']];
+  return term;
+}
 
 function LTLtoAST (LTL) {
   var chars = new antlr4.InputStream(LTL.replace(/=>/g,'->'));
@@ -123,7 +160,65 @@ function ASTtoLTL(ast) {
 
 		       }
 		}
-    } else console.log("LTLtoSMV doesn't know the type of " + ast);
+    } else console.log("ASTtoLTL doesn't know the type of: " + ast);
     return result;
 }
     
+// return a string of the ast printed in CoCoSpec (Lustre) format
+function ASTtoCoCo(ast) {
+    let result = '';
+    if (isBoolean(ast)) result = ast ? 'true' : 'false';
+    else if (isAtom(ast)) result = ast.toString();
+    else if (isArray(ast)) {
+      const head = ast[0];
+      if (isArray(head)) {
+	// The 1st element of timed temporal operators is an array:
+	// [op,[right,left]] e.g. ['H', [0,3]]
+	let op = head[0];
+	let pre = CoCoPrefix[op];
+        if (pre !== undefined) {
+	  const bound = head[1]
+          if (!isArray(bound)) console.log("ASTtoCoCo: Bound error: " + JSON.stringify(head));
+	  let args = ast.slice(1).map(ASTtoCoCo);
+	  if (Reversed.includes(pre)) args = args.reverse();
+          result = pre + '(' + bound[1] + ', ' + bound[0] + ', ' + args.join(',') + ')';
+	}
+	else console.log('ASTtoCoCo: Unknown timed temporal operator: '
+			 + JSON.stringify(head))
+      }
+      else {
+	const infixChar = CoCoInfix[head];
+	if (infixChar !== undefined)
+	  result = '(' + ASTtoCoCo(ast[1]) + ' ' + infixChar + ' ' + ASTtoCoCo(ast[2]) + ')'
+	else {
+	  const ast2 = introduce_SinceInclusive(ast);
+	  const head = ast2[0];
+	  const ccpre = CoCoPrefix[head]
+	  const op = (ccpre === undefined) ? head : ccpre;
+	  let args = ast2.slice(1).map(ASTtoCoCo);
+	  if (Reversed.includes(op)) args = args.reverse();
+	  result = (op + '(' + args.join(',') + ')');
+	}
+      }
+    } else console.log("ASTtoCoCo doesn't know the type of " + JSON.stringify(ast));
+  return result;
+}
+
+/*
+
+let ex = '(H[0,2] p&q|r) & (H (Y q) -> Z !r <-> ss) & x != 3 - 2 mod abs(-z) & p S[3,3] q xor 3 + 4 * 6 / 7 >= 2 ^ 3 | FALSE & (p S q) & (qq SI rr) & (uu SI[0,3] vv)'
+ex = 'H x-y<3'
+
+ex = '(((O[=$duration$] ($regular_condition$ & (! $post_condition$))) -> (O[<$duration$] (($scope_mode$ & (Z (! $scope_mode$))) | $post_condition$))) S (((O[=$duration$] ($regular_condition$ & (! $post_condition$))) -> (O[<$duration$] (($scope_mode$ & (Z (! $scope_mode$))) | $post_condition$))) & ($scope_mode$ & (Z (! $scope_mode$)))))'
+let exast = LTLtoAST(ex)
+console.log(ex)
+console.log('\n' + JSON.stringify(exast))
+console.log('\n' + JSON.stringify(ASTtoLTL(exast)))
+console.log('\n' + JSON.stringify(ASTtoCoCo(exast)))
+*/
+
+/*
+ST(3, 3, (((HT(2, 0, ((p and q) or r)) and H((YtoPre(q) => ZtoPre((not (r) = ss))))) and (x <> (3 - (2 mod abs(-(z)))))) and p),(q xor (((3 + ((4 * 6) / 7)) >= (2 ^ 3)) or (((false and S(p,q)) and SI(qq,rr)) and SIT(3, 0, uu,vv)))))
+*/
+
+

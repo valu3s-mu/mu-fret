@@ -36,14 +36,30 @@ const RequirementParser = require('./RequirementParser');
 const AnnotatingErrorListener = require('./AnnotatingErrorListener');
 const SemanticsAnalyzer = require('./SemanticsAnalyzer').SemanticsAnalyzer;
 const semanticsAnalyzer = new SemanticsAnalyzer();
+const utils = require('../../support/utils')
 
 const REQ_BODY_CTX_RULE = 'reqt_body'
 
 // Remove white space at beginning and end, and lop off any final dot.
+// Rename apart single capital letters which are temporal operators.
 function trimReqtText(text) {
   let trimmedText = text.trim();
   if (trimmedText.endsWith(".")) trimmedText = trimmedText.slice(0,-1).trim();
-  return trimmedText;
+  //const renamed = trimmedText.replace(/\b([AEFGHOSTUVWXYZ])\b/g, 'abc$1def')
+  const renamed = trimmedText;
+  return renamed;
+}
+
+
+// NuSMV reserved words minus TRUE|FALSE|xor|next|mod|of|in because
+// those are used in the FRETish grammar.
+const reservedWords = /\b(?:MODULE|DEFINE|MDEFINE|CONSTANTS|VAR|IVAR|FROZENVAR|INIT|TRANS|INVAR|SPEC|CTLSPEC|LTLSPEC|PSLSPEC|COMPUTE|NAME|INVARSPEC|FAIRNESS|JUSTICE|COMPASSION|ISA|ASSIGN|CONSTRAINT|SIMPWFF|CTLWFF|LTLWFF|PSLWFF|COMPWFF|IN|MIN|MAX|MIRROR|PRED|PREDICATES|process|array|boolean|integer|real|word|word1|bool|signed|unsigned|extend|resize|sizeof|uwconst|swconst|EX|AX|EF|AF|EG|AG|E|F|O|G|H|X|Y|Z|A|U|S|V|T|BU|EBF|ABF|EBG|ABG|case|esac|init|union|xnor|self|count|abs|max|min)\b/g
+
+
+function findReservedWords(text) {
+  text = utils.replace_special_chars(text);
+  const matches = text.match(reservedWords);//remaining.match(reservedWords);
+  return (matches ? 'These reserved letter combinations cannot be used: ' + matches.join(', ') + '.' : '');
 }
 
 // Tests that text is just a string starting and ending with double-quotes
@@ -52,6 +68,19 @@ function do_not_formalize(text) {
   const do_not = (text.length >= 2) && (text.startsWith('"') && text.endsWith('"') &&
 		  (2 == (text.match(/"/g).length - (text.match(/\\"/g) ? (text.match(/\\"/g).length) : 0))))
   return do_not;
+}
+
+// Check for uses of reserved words and trailing unparsed input.
+// Assumes the parse tree has been walked.
+function checkReqt(trimmedText) {
+  let reqtErrors = []; 
+  const {conds,responseEnd} = semanticsAnalyzer.conditions();
+  const reserved = findReservedWords(conds.join(" "));
+  if (reserved.length > 0) 
+    reqtErrors.push(reserved)
+  if (responseEnd !== 0 && trimmedText.length - 1 !== responseEnd)
+    reqtErrors.push("Trailing unparsed input: '" + trimmedText.slice(responseEnd + 1) + "'")
+  return reqtErrors.join('; ')
 }
 
 /**
@@ -74,21 +103,19 @@ exports.compile = (text) => {
   var parser = new RequirementParser.RequirementParser(tokens);
   var annotations = [];
   var listener = new AnnotatingErrorListener.AnnotatingErrorListener(annotations);
+  lexer.removeErrorListeners();
+  lexer.addErrorListener(listener);
+
   parser.removeErrorListeners();
   parser.addErrorListener(listener);
   var tree = parser[REQ_BODY_CTX_RULE]();
-
-  if (annotations.length > 0) {
-    return ({
-      parseErrors: annotations.map(a => { return a.text }).join('; ')
-    })
-  } else {
-    semanticsAnalyzer.clearResult();
-    antlr4.tree.ParseTreeWalker.DEFAULT.walk(semanticsAnalyzer, tree);
-    return ({
-      collectedSemantics: semanticsAnalyzer.semantics()
-    })
-  }
+  if (annotations.length > 0)
+    return {parseErrors: annotations.map(a => a.text).join('; ' )}
+  semanticsAnalyzer.clearResult();
+  antlr4.tree.ParseTreeWalker.DEFAULT.walk(semanticsAnalyzer, tree);
+  const reqtErrors = checkReqt(trimmedText)
+  if (reqtErrors.length > 0) return {parseErrors: reqtErrors}
+  else return {collectedSemantics: semanticsAnalyzer.semantics()}
   }
 }
 
@@ -100,11 +127,14 @@ exports.compilePartialText = (text) => {
   var parser = new RequirementParser.RequirementParser(tokens);
   var annotations = [];
   var listener = new AnnotatingErrorListener.AnnotatingErrorListener(annotations);
+  lexer.removeErrorListeners();
+  lexer.addErrorListener(listener);
+
   parser.removeErrorListeners();
   parser.addErrorListener(listener);
   var tree = parser[REQ_BODY_CTX_RULE]();
   antlr4.tree.ParseTreeWalker.DEFAULT.walk(semanticsAnalyzer, tree);
-
+  
   let r = {}
   if (do_not_formalize(trimmedText)) {
     semanticsAnalyzer.clearResult();
@@ -114,11 +144,21 @@ exports.compilePartialText = (text) => {
 	};
   }
   else {
-    r = { parseErrors: annotations.map(a => { return a.text }).join('; '),
-	  collectedSemantics: semanticsAnalyzer.semanticsNoFormalization()
-	};
+    if (annotations.length > 0) {
+      const parseErrors = annotations.map(a => a.text).join('; ')
+      r = {parseErrors: parseErrors,
+	   collectedSemantics :
+	   semanticsAnalyzer.semanticsNoFormalization()}
+    }
+    else {
+      const reqtErrors = checkReqt(trimmedText)
+      if (reqtErrors.length > 0)
+	r = {parseErrors: reqtErrors,
+	     collectedSemantics: semanticsAnalyzer.semanticsNoFormalization()}
+      else
+	r = { collectedSemantics : semanticsAnalyzer.semanticsNoFormalization()}
+    }
   }
-  //console.log('compilePartialText: ' + JSON.stringify(text.trim()) + "\n" + JSON.stringify(r))
   return r;
 }
 
@@ -134,19 +174,51 @@ exports.parseByCtxRule = (text, ctxRule) => {
   var lexer = new RequirementLexer.RequirementLexer(chars);
   var tokens  = new antlr4.CommonTokenStream(lexer);
   var parser = new RequirementParser.RequirementParser(tokens);
-  var annotations = [];
+  var annotations = []; //findReservedWords(trimmedText);
   var listener = new AnnotatingErrorListener.AnnotatingErrorListener(annotations);
+  lexer.removeErrorListeners();
+  lexer.addErrorListener(listener);
+
   parser.removeErrorListeners();
   parser.addErrorListener(listener);
   var tree = parser[ctxRule]();
 
   var result = new Object()
-  if (annotations.length > 0) {
-    result.parseErrors = annotations.map(a => { return a.text }).join('; ')
-  } else {
+  if (annotations.length > 0)
+    result.parseErrors = annotations.map(a => a.text).join('; ')
+  else {
     result.parseTree = tree
   }
   return result
+}
+
+// Like parseByCtxRule but checks for uses of reserved words in conditions and 
+// trailing unparsed input
+exports.parseByCtxRuleAndAnalyze = (text, ctxRule) => {
+  let trimmedText = trimReqtText(text)
+  var chars = new antlr4.InputStream(trimmedText);
+  var lexer = new RequirementLexer.RequirementLexer(chars);
+  var tokens  = new antlr4.CommonTokenStream(lexer);
+  var parser = new RequirementParser.RequirementParser(tokens);
+  var annotations = [];
+  var listener = new AnnotatingErrorListener.AnnotatingErrorListener(annotations);
+  lexer.removeErrorListeners();
+  lexer.addErrorListener(listener);
+
+  parser.removeErrorListeners();
+  parser.addErrorListener(listener);
+  var tree = parser[ctxRule]();
+
+  var result = new Object()
+  if (annotations.length > 0)
+    result.parseErrors = annotations.map(a => a.text).join('; ')
+  else {
+    antlr4.tree.ParseTreeWalker.DEFAULT.walk(semanticsAnalyzer, tree);
+    const reqtErrors = checkReqt(trimmedText) 
+    if (reqtErrors.length > 0) result.parseErrors = reqtErrors
+    else result.parseTree = tree;
+  }
+  return result;
 }
 
 /**
@@ -156,9 +228,26 @@ exports.parse = (text) => {
   return exports.parseByCtxRule(text, REQ_BODY_CTX_RULE)
 }
 
-// tests
+exports.parseAndAnalyze = (text) => {
+  return exports.parseByCtxRuleAndAnalyze(text, REQ_BODY_CTX_RULE)
+}
 
 /*
+// 
+console.log('compile: ' + JSON.stringify(this.compile('the sw shall satisfy p:q')))
+console.log('compilePartialText: ' + JSON.stringify(this.compilePartialText('the sw shall satisfy p:q')))
+
+console.log('parseAndAnalyze: ' + JSON.stringify(this.parseAndAnalyze('the sw shall satisfy p:q')))
+*/
+
+/*
+// tests
+
+// fails, needs a space before -
+console.log(JSON.stringify(this.compile('the sw shall satisfy x-y>0')))
+
+console.log(JSON.stringify(this.compile('In mode m upon p the sw shall always satisfy at the previous occurrence of q, r')))
+
 console.log(JSON.stringify(this.compile('only after p shall the sw , after 2 ticks, satisfy q')))
 
 console.log(JSON.stringify(this.compile('except while flight_mode = landed the sw shall always satisfy alt > 0')))

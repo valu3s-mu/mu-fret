@@ -30,7 +30,7 @@ int checkNuSMVInstallation(bool doPrint) {
 
     smv_binary = getenv(LTLSIM_BINARY);
     if (!smv_binary){
-	smv_binary = "nusmv";
+	smv_binary = nusmvBinaryName;
 	}
 
     if (!strcasecmp(smv_binary, "nusmv")){
@@ -105,6 +105,18 @@ static int _genFSM(ltlsim_model_t *m, int idx, const char *fn, bool doTrace) {
 static int _genState(FILE *fp, unsigned int tmax) {
 
     fprintf(fp, "VAR\n");
+    fprintf(fp, "    t : 0 .. %u;\n", tmax+1);
+    fprintf(fp, "ASSIGN\n");
+    fprintf(fp, "    init(t) := 0;\n");
+    fprintf(fp, "    next(t) := (t >= %u) ? %u : t + 1;\n", tmax+1, tmax+1);
+    return 0;
+
+}
+
+/*
+static int _genState(FILE *fp, unsigned int tmax) {
+
+    fprintf(fp, "VAR\n");
     fprintf(fp, "    t : 0 .. %u;\n", tmax);
     fprintf(fp, "ASSIGN\n");
     fprintf(fp, "    init(t) := 0;\n");
@@ -112,6 +124,7 @@ static int _genState(FILE *fp, unsigned int tmax) {
     return 0;
 
 }
+*/
 
 static int _genTrace(FILE *fp, ltlsim_model_t *m) {
 
@@ -209,7 +222,7 @@ static int _callSMV(ltlsim_model_t *m, int idx, const char *fn, bool doTrace) {
 
     smv_binary = getenv(LTLSIM_BINARY);
     if (!smv_binary){
-	smv_binary = "nusmv";
+	smv_binary = nusmvBinaryName;
 	}
 
 #ifdef WINDOWS

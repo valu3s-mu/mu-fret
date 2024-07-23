@@ -30,13 +30,7 @@
 // ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
 // AGREEMENT.
 // *****************************************************************************
-grammar Requirement ; // 16
-
-reqts   :    reqt +
-        ;
-
-reqt    :    'requirement' (DIGITS | ID | REQT_ID) ':' reqt_body
-    ;
+grammar Requirement ;
 
 reqt_body : (nasa | freeform) ('.')?
           ;
@@ -50,47 +44,25 @@ nasa
           (component SHALL | SHALL component)
           (timing)? response
         ;
-
-//unhandled: "Not unless !tank_empty shall the pump satisfy pump_on"
-//note: Can't have "when/if/unless scope_condition" because when/if/unless
-//also introduce a precondition (see qualifier_word, qualified_condition1).
+// Note: "while" was introduced because we can't have
+// "when/if/unless scope_condition" because when/if/unless
+// introduce a precondition (see qualifier_word, qualified_condition1).
 scope : (
-(ONLY ( ((DURING | ((WHEN | IF)? IN)) scope_mode) |
-        (WHILE scope_condition) |
-        ((AFTER | BEFORE) (scope_mode | scope_condition)))) |
-(EXCEPT (((DURING | ((WHEN | IF)? IN)) scope_mode) |
-         (WHILE scope_condition))) |
-((WHEN | IF) NOT? IN scope_mode) |
-((IN | DURING) scope_mode) |
-(UNLESS IN scope_mode) |
-(WHILE scope_condition) |
-((AFTER | BEFORE) (scope_mode | scope_condition))
-)
-(',')? ;
-
-//scope
-//        : ('only' | 'Only')?
-//          (  (scope_word
-//           |  (('when' | 'When'| 'unless' | 'Unless')? ('not')?
-//               ('In' | 'in'))
-//           |  ('during' | 'During')
-//             )
-//          )
-//          scope_mode ('mode')? (',')?
-//        ;
-
-//scope_word
-//        : ('before' | 'Before' | 'after' | 'After')
-//        ;
-
-//scope_required : ('(' | ',')? 'which' 'is' ('not')? 'required' 'to' 'occur' (')')? ;
-
+    (ONLY ( ((DURING | ((WHEN | IF)? IN)) scope_mode) |
+            (WHILE scope_condition) |
+            ((AFTER | BEFORE) (scope_mode | scope_condition)))) |
+    (EXCEPT (((DURING | ((WHEN | IF)? IN)) scope_mode) |
+             (WHILE scope_condition))) |
+    ((WHEN | IF) NOT? IN scope_mode) |
+    ((IN | DURING) scope_mode) |
+    (UNLESS IN scope_mode) |
+    (WHILE scope_condition) |
+    ((AFTER | BEFORE) (scope_mode | scope_condition))
+    )
+    (',')? ;
 
 reqt_condition
         : (AND)? (regular_condition) ;
-
-//only_condition
-//        : 'only' regular_condition ;
 
 regular_condition
        :   qualified_condition1
@@ -98,7 +70,7 @@ regular_condition
        ;
 
 qualifier_word
-	: (WHEN | UNLESS | WHERE | IF | UPON)
+	: (UPON | WHENEVER | WHEN | UNLESS | WHERE | IF )
         ;
 
 qualified_condition1
@@ -122,15 +94,11 @@ stop_condition
 	: bool_expr
 	;
 
-//persist_condition : bool_expr ;
-
-//persist_duration : duration ;
-
 component
           : THE? component_name
           ;
 
-response : satisfaction; // | action | order | not_order;
+response : satisfaction;
 
 satisfaction : SATISFY post_condition ;
 
@@ -144,8 +112,9 @@ timing_aux :
          | AFTER duration_lower
 	 | UNTIL stop_condition
  	 | BEFORE stop_condition
-	 | AT THE NEXT TIMEPOINT
-         | IMMEDIATELY
+	 | AT THE (FIRST | SAME | NEXT | LAST) TIMEPOINT
+         | (IMMEDIATELY | INITIALLY)
+	 | FINALLY
          | EVENTUALLY
          | ALWAYS
          | NEVER
@@ -163,66 +132,23 @@ duration
 
 timeunit : TICK | MICROSECOND | MILLISECOND | SECOND | MINUTE | HOUR ;
 
-//EARS
-//qualifier
-//        :       event
-//        |       optional_feature
-//        |       state_condition
-//        |       unwanted_condition
-//        ;
-
-// event
-//         :       'when' bool_expr
-//         |       'upon' bool_expr
-//         ;
-
-// optional_feature
-//         :       'where' bool_expr
-//         ;
-
-// state_condition
-//         :       'while' bool_expr
-//         |       'unless' bool_expr
-//         ;
-
-// unwanted_condition
-//         :       'if' bool_expr 'then'
-//         ;
-
 post_condition : bool_expr ;
 
 bool_expr :  ('!' | '~') bool_expr
           | bool_expr '&' bool_expr
           | bool_expr ('|'|XOR) bool_expr
-           // | <assoc=right> bool_expr '=>' bool_expr
           | bool_expr ('->' | '=>'| '<->' | '<=>') bool_expr
 	  | IF bool_expr THEN bool_expr
 	  | AT THE (PREVIOUS | NEXT) OCCURRENCE OF bool_expr ',' bool_expr
-          //| bool_expr '=' bool_expr
           | '(' bool_expr ')'
           | numeric_expr RELATIONAL_OP numeric_expr
           |  ID ('(' ( (bool_expr | numeric_expr) (',' (bool_expr | numeric_expr))*)? ')')?
           | 'true'
           | 'false'
-// 	  | (FOR | WITHIN) (THE LAST)? duration bool_expr
-//	  | tl_expr
           ;
-
-// tl_expr :
-// 	'Y' bool_expr
-// 	| 'H' tl_intvl bool_expr
-// 	| 'O' tl_intvl bool_expr
-// 	| bool_expr 'S' tl_intvl bool_expr
-// 	;
-
-// tl_intvl :
-// 	| '[' duration ']'
-// 	| '[' duration ',' duration ']'
-// 	;
 
 numeric_expr :
                numeric_expr '^' numeric_expr
-             // | <assoc=right> numeric_expr '^' numeric_expr
              |  '-' numeric_expr
              | numeric_expr ('*' | '/' | MOD) numeric_expr
              | numeric_expr ('+' | '-') numeric_expr
@@ -240,13 +166,16 @@ DURING : D U R I N G;
 EVENTUALLY : E V E N T U A L L Y;
 EXCEPT : E X C E P T;
 FALSE : F A L S E;
+FINALLY : F I N A L L Y;
+FIRST : F I R S T;
 FOR : F O R;
 HOUR : H O U R S?;
 IF : I F;
 IMMEDIATELY : I M M E D I A T E L Y;
 IN : I N;
+INITIALLY : I N I T I A L L Y;
 IS : I S;
-//LAST : L A S T;
+LAST : L A S T;
 MICROSECOND : M I C R O S E C (O N D)? S?;
 MILLISECOND : M I L L I S E C (O N D)? S?;
 MINUTE : M I N U T E S?;
@@ -260,6 +189,7 @@ OF : O F;
 ONLY : O N L Y;
 OR : O R;
 PREVIOUS : P R E V I O U S;
+SAME : S A M E;
 SATISFY : S A T I S F Y;
 SECOND : S E C (O N D)? S?;
 SHALL : S H A L L;
@@ -272,12 +202,11 @@ UNLESS : U N L E S S;
 UNTIL : U N T I L;
 UPON : U P O N;
 WHEN : W H E N;
+WHENEVER : W H E N E V E R;
 WHERE : W H E R E;
 WHILE : W H I L E;
 WITHIN : W I T H I N;
 XOR : X O R;
-
-//| ('\'' .+? '\'')) ;
 
 ID     :    ((('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'0'..'9'|'_'|'.'|'%')*)
 	    | STRING ) ;
@@ -296,21 +225,6 @@ fragment EXP :
          [Ee] [+\-]? INT ;
 
 fragment INT : '0' | [1-9][0-9]* ;
-
-DIGITS :    '0'..'9'+
-    ;
-
-
-REQT_ID :    ('a'..'z'|'A'..'Z'|'0'..'9') ('a'..'z'|'A'..'Z'|'0'..'9'|'_'|'-'|'.')* ;
-
-//PREDICATE  :    ('A'..'Z') ('a'..'z'|'A'..'Z'|'0'..'9'|'_')* ;
-
-//FUNCTION :    ('a'..'z') ('a'..'z'|'A'..'Z'|'0'..'9'|'_')* ;
-
-//COMMENT
-//    :   '//' ~('\n'|'\r')* '\r'? '\n' {$channel=HIDDEN;}
-//    |   '/*' ( options {greedy=false;} : . )* '*/' {$channel=HIDDEN;}
-//    ;
 
 WS  :   ( ' '
         | '\t'

@@ -38,21 +38,11 @@ import Button from '@material-ui/core/Button';
 
 import RealizabilityContent from './RealizabilityContent';
 import AnalysisReportContent from './AnalysisReportContent';
+import { connect } from "react-redux";
+import { saveAs } from 'file-saver';
+import { readAndParseJSONFile } from '../utils/utilityFunctions';
 
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const constants = require('../parser/Constants');
-const db = sharedObj.db;
-const modeldb = sharedObj.modeldb;
-const system_dbkeys = sharedObj.system_dbkeys;
-const checkDbFormat = require('../../support/fretDbSupport/checkDBFormat.js');
-const fs = require('fs');
-const app = require('electron').remote.app;
-const dialog = require('electron').remote.dialog;
-
-var dbChangeListener;
 let id = 0;
-
-function optLog(str) {if (constants.verboseRealizabilityTesting || constants.verboseReportTesting) console.log(str)}
 
 const styles = theme => ({
   root: {
@@ -69,37 +59,22 @@ const styles = theme => ({
 });
 
 class RealizabilityView extends React.Component {
-  
+
   state = {
     importedReport: {}
   };
 
   constructor(props){
     super(props);
-    dbChangeListener = db.changes({
-      since: 'now',
-      live: true,
-      include_docs: true
-    }).on('change', (change) => {
-      if (!system_dbkeys.includes(change.id)) {
-        this.props.synchStateWithDB();
-        console.log("synch finished");
-      }
-    }).on('complete', function(info) {
-      optLog(info);
-    }).on('error', function (err) {
-      optLog(err);
-    });
+    this.loadRealizabilityReport = React.createRef();
   }
 
   componentDidMount() {
     this.mounted = true;
-    this.props.synchStateWithDB();
   }
 
   componentWillUnmount() {
     this.mounted = false;
-    dbChangeListener.cancel();
   }
 
   componentDidUpdate(prevProps) {
@@ -110,31 +85,30 @@ class RealizabilityView extends React.Component {
     }
   }
 
-  handleLoadClick = (event) => {
-    event.stopPropagation();    
-    var homeDir = app.getPath('home');
-    var filepaths = dialog.showOpenDialogSync({
-      defaultPath: homeDir,
-      title: 'Load Analysis Report',
-      buttonLabel: 'Load',
-      filters: [
-        { name: "Documents", extensions: ['json'] }
-      ],
-      properties: ['openFile']})
-    let report = {};
+  handleLoadClick = async(event) => {
+
 
     try {
-      var fileContent = fs.readFileSync(filepaths[0], 'utf8');
-      report = JSON.parse(fileContent);
-      this.setState({importedReport: report});
-    } catch (err) {       
-      optLog(err);
-    }     
+      event.stopPropagation();
+      const file = event.target.files[0]
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      if('json' === fileExtension) {
+        const replaceString = false;
+        const report = await readAndParseJSONFile(file, replaceString);
+        this.setState({importedReport: report})
+      } else {
+        console.log('We only support json file import for relizability report')
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+
   };
 
   render() {
     const { importedReport } = this.state;
-    const {classes, selectedProject, existingProjectNames, components, completedComponents, getPropertyInfo, getDelayInfo, getContractInfo, variableIdentifierReplacement} = this.props;
+    const {classes, selectedProject, listOfProjects, components, completedComponents} = this.props;
 
     if (selectedProject === 'All Projects'){
       if (Object.keys(importedReport).length === 0) {
@@ -144,14 +118,27 @@ class RealizabilityView extends React.Component {
               Please choose a specific project or load an existing report
             </Typography>
             &nbsp;&nbsp;&nbsp;&nbsp;
-            <Button size="small" variant="contained" color="secondary" onClick={(event) => this.handleLoadClick(event)}>
+            <Button id="qa_rlzView_btn_load" size="small"
+              variant="contained" color="secondary"
+              onClick={(event) => this.loadRealizabilityReport.current.click(event)}>
                 Load
             </Button>
+            <input
+                      id="qa_rlzView_input_load"
+                      ref={this.loadRealizabilityReport}
+                      type="file"
+                      onClick={(event)=> {
+                        event.target.value = null
+                      }}
+                      onChange={this.handleLoadClick}
+                      style={{ display: 'none' }}
+                      accept=".json"
+            />
           </div>
         );
       } else {
         return (
-          <AnalysisReportContent importedReport={importedReport} handleLoadClick={this.handleLoadClick} optLog={optLog}/>
+          <AnalysisReportContent importedReport={importedReport} handleLoadClick={this.handleLoadClick}/>
         );
       }
     } else {
@@ -164,10 +151,6 @@ class RealizabilityView extends React.Component {
             selectedProject={selectedProject}
             components={components}
             completedComponents={completedComponents}
-            getPropertyInfo={getPropertyInfo}
-            getDelayInfo={getDelayInfo}
-            getContractInfo={getContractInfo}
-            variableIdentifierReplacement={variableIdentifierReplacement}
           />
         </div>
       );
@@ -178,16 +161,11 @@ class RealizabilityView extends React.Component {
 RealizabilityView.propTypes = {
   classes: PropTypes.object.isRequired,
   selectedProject: PropTypes.string.isRequired,
-  existingProjectNames: PropTypes.array.isRequired,
-  synchStateWithDB: PropTypes.func.isRequired,
+  listOfProjects: PropTypes.array.isRequired,
   cocospecData: PropTypes.object.isRequired,
   cocospecModes: PropTypes.object.isRequired,
   components: PropTypes.array.isRequired,
   completedComponents: PropTypes.array.isRequired,
-  getPropertyInfo: PropTypes.func.isRequired,
-  getDelayInfo: PropTypes.func.isRequired,
-  getContractInfo: PropTypes.func.isRequired,
-  variableIdentifierReplacement: PropTypes.func.isRequired
 };
 
 export default withStyles(styles)(RealizabilityView);

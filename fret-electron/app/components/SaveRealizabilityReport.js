@@ -35,14 +35,10 @@ import PropTypes from 'prop-types';
 import Tooltip from '@material-ui/core/Tooltip';
 import Button from '@material-ui/core/Button';
 import { withStyles } from '@material-ui/core/styles';
+import { connect } from "react-redux";
+import { saveAs } from 'file-saver';
 
-const app = require('electron').remote.app;
-const fs = require('fs');
-const dialog = require('electron').remote.dialog;
-const archiver = require('archiver');
-const constants = require('../parser/Constants');
-
-function optLog(str) {if (constants.verboseRealizabilityTesting) console.log(str)}
+const { ipcRenderer } = require('electron');
 
 const styles = theme => ({
 	vAlign : {
@@ -56,31 +52,20 @@ class SaveRealizabilityReport extends React.Component {
 	}
 
 	saveRealizabilityResults = async (event) => {
-		event.stopPropagation();
-		const {projectReport, selectedRequirements} = this.props;		
-		const homeDir = app.getPath('home');
-
-		projectReport.systemComponents = projectReport.systemComponents.filter(sc => sc.monolithic);
-		// const self = this;
-		var filePathObject = await dialog.showSaveDialog({
-          defaultPath : homeDir,
-          title : 'Save realizability results',
-          buttonLabel : 'Save',
-          filters: [
-            { name: "Documents", extensions: ['json'] }
-          ],
-        });
-
-		let filePath = filePathObject.filePath;
-    if (filePath) {
-    	var output = fs.createWriteStream(filePath);
-    	var content = JSON.stringify(projectReport, null, 4);
-    	fs.writeFile(filePath, content, (err) => {
-    		if (err) {
-    			optLog(err);
-    		}
-    	});
+    try {
+      event.stopPropagation();
+      const {projectReport} = this.props;
+      projectReport.systemComponents = projectReport.systemComponents.filter(sc => sc.monolithic);
+      var content = JSON.stringify(projectReport, null, 4);
+      var blob = new Blob([content],{type:"text/plain;charset=utf-8"});
+      saveAs(blob,"realizabilityReport.json");
+      //ipcRenderer.invoke('saveRealizabilityReport', projectReport).catch((err) => {
+      //	console.log(err);
+      //})
+    } catch (error) {
+      console.log(err);
     }
+
 	}
 
 	render() {
@@ -90,7 +75,7 @@ class SaveRealizabilityReport extends React.Component {
 				<span onClick={this.saveRealizabilityResults}>
 					Save Report
 				</span>
-			</Tooltip>			
+			</Tooltip>
 		);
 
 	}

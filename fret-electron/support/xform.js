@@ -40,6 +40,7 @@ module.exports = {
     finitizeFT,
     introduceSI,
     transform,
+    transformToAST,
     transformPastTemporalConditions,
     transformFutureTemporalConditions,
     transformTemporalConditions,
@@ -71,35 +72,50 @@ const booleanSimplifications = [
     [ '(! __p) & ! (__p & __q)', trueFn, '! __p'],
     [ '__p & ! ((! __p) & __q)', trueFn, '__p'],
     [ '(! (__p & __q)) & (! (__r | __q))', trueFn, '(! __q) & (! __r)'],
-    ['! FALSE',trueFn,'TRUE'],
+    ['! FALSE',trueFn,'TRUE'], ['! TRUE', trueFn, 'FALSE'],
     ['__p | FALSE',trueFn,'__p'], ['FALSE | __p',trueFn,'__p'],
+    ['__p | TRUE',trueFn,'TRUE'], ['TRUE | __p',trueFn,'TRUE'],
     ['__p & TRUE',trueFn,'__p'], ['TRUE & __p',trueFn,'__p'],
-  ['__p & FALSE', trueFn, 'FALSE'], ['FALSE & __p', trueFn, 'FALSE'],
-  ['ite(__p, __q, __r)', trueFn, '((__p & __q) | ((! __p) & __r))']
+    ['__p & FALSE', trueFn, 'FALSE'], ['FALSE & __p', trueFn, 'FALSE'],
+    ['TRUE => __p', trueFn, '__p'],   ['FALSE => __p', trueFn, 'TRUE'],
+    ['ite(__p, __q, __r)', trueFn, '((__p & __q) | ((! __p) & __r))']
 ];
 
 const pastTimeSimplifications = [
+  ['O FALSE',trueFn,'FALSE'], ['O TRUE', trueFn, 'TRUE'],
+  ['H FALSE',trueFn,'FALSE'], ['H TRUE', trueFn, 'TRUE'],
   [ '! H ! __p', trueFn, 'O __p'],
   [ '! O ! __p', trueFn, 'H __p'],
+  [ 'TRUE S __p', trueFn, 'O __p'],
   ['__p S (__p & FTP)', trueFn, 'H __p'],
+  ['__p S (__p & Z FALSE)', trueFn, 'H __p'],
   ['__p S (__p & ! Y TRUE)', trueFn, 'H __p'],
   ['__p S (FTP & __p)', trueFn, 'H __p'],
+  ['! ((! __p) S (! __p))', trueFn, '__p'],
+  ['((Y TRUE) & __p) S __q', trueFn, '__p S __q'],
   ['(Y TRUE) & (Y __p)', trueFn, '(Y __p)'],
-  ['(! (Y TRUE)) | (Y __p)', trueFn, '(Z __p)']
-  
-          // -xtltl flag given to SALT does this: [ '__p | <| [] __p', trueFn, 'O __p'] 
+  ['(! (Y TRUE)) | (Y __p)', trueFn, '(Z __p)'],
+  ['(Y __p) | (! (Y TRUE))', trueFn, '(Z __p)'],
+  ['O Z __p', trueFn, 'TRUE']
+
+          // -xtltl flag given to SALT does this: [ '__p | <| [] __p', trueFn, 'O __p']
 	  // For "regular,within":
 	  // Text substitution done in substitutionsCustomizeFret in SemanticsGenerator.js
-	  //['<|[=$duration$] __p', trueFn, 'O[=$duration$] __p'], 
+	  //['<|[=$duration$] __p', trueFn, 'O[=$duration$] __p'],
 ];
 
 const futureTimeSimplifications = [
     ['! ((! __p) U __q)', trueFn, '__p V ! __q'],
     ['! (((! __p) & (! __q)) U (! __r))',trueFn, '(__p | __q) V __r'],
-    ['F FALSE',trueFn,'FALSE'],
-    ['G FALSE',trueFn,'FALSE'],
-    ['F[< __p] FALSE',trueFn,'FALSE'],
-    ['F[<= __p] FALSE',trueFn,'FALSE']
+    ['TRUE U __p', trueFn, 'F __p'],
+    ['FALSE V __p', trueFn, 'G __p'], ['TRUE V __p', trueFn, '__p'],
+    // The next one is a fact about weak until (SMV doesn't have weak until)
+    ['((__p V (__q | __p)) | (G __q))', trueFn, '__p V (__q | __p)'],
+    ['F FALSE',trueFn,'FALSE'], ['F TRUE', trueFn, 'TRUE'],
+    ['G FALSE',trueFn,'FALSE'], ['G TRUE', trueFn, 'TRUE'],
+    ['G[__l,__h] TRUE', trueFn, 'TRUE'],
+    ['X TRUE', trueFn, 'TRUE'], ['X FALSE', trueFn, 'FALSE'],
+    ['F[< __p] FALSE',trueFn,'FALSE'], ['F[<= __p] FALSE',trueFn,'FALSE']
 ];
 
 const finitizeFuture = [
@@ -107,11 +123,15 @@ const finitizeFuture = [
     ['F __p', trueFn, '(!LAST) U __p']
 ];
 
+function nIsNumber (sbst) {
+  return utils.isIntegerString(sbst.__n);
+}
+
 const futureTemporalConditions = [
-    ['persists(__n,__p)',trueFn,'((G[<=__n] __p) & (G[<__n] ! $Right$))'],
-    ['occurs(__n,__p)',trueFn,'(((! $Right$) U __p) & (F[<=__n] __p))'],
+    ['persists(__n,__p)', nIsNumber ,'((G[<=__n] __p) & (G[<__n] ! $Right$))'],
+    ['occurs(__n,__p)', nIsNumber,'(((! $Right$) U __p) & (F[<=__n] __p))'],
     // This commented out version assumes there must be a next occurrence of p
-    // ['nextOcc(__p,__q)', trueFn, '(X((!__p & !$Right$) U (__p & __q)))'] 
+    // ['nextOcc(__p,__q)', trueFn, '(X((!__p & !$Right$) U (__p & __q)))']
     // This version is satisfied if there is no next occurrence of p.
     ['nextOcc(__p,__q)', trueFn, '($Right$ | (X (((!__p & !$Right$) U __p) => ((!__p & !$Right$) U (__p & __q)))))']
     ]
@@ -124,7 +144,7 @@ function nonBoolConstant(v) {
 
 const pastTemporalConditions = [
   ['FTP', trueFn, '(! (Y TRUE))'],
-  //These special cases are unnecessary due to booleanSimplifications 
+  //These special cases are unnecessary due to booleanSimplifications
   //['preBool(FALSE,__p)',trueFn,'((! $Left$) & (Y __p))'],
   //['preBool(TRUE,__p)',trueFn,'($Left$ | (Y __p))'],
   // This is the mode sensitive version.
@@ -132,8 +152,8 @@ const pastTemporalConditions = [
   //'(($Left$ & __init) | ((! $Left$) & (Y __p)))'],
   ['preBool(__init,__p)', trueFn, //(sbst) => nonBoolConstant(sbst["__init"]),
    '(((! (Y TRUE)) & (__init)) | ((! (! Y TRUE) ) & (Y __p)))'],
-  ['persisted(__n,__p)',trueFn,'((H[<=__n] __p) & (H[<__n] ! $Left$))'],
-  ['occurred(__n,__p)',trueFn,'(((! $Left$) S __p) & (O[<=__n] __p))'],
+  ['persisted(__n,__p)', nIsNumber,'((H[<=__n] __p) & (H[<__n] ! $Left$))'],
+  ['occurred(__n,__p)', nIsNumber,'(((! $Left$) S __p) & (O[<=__n] __p))'],
   //['prevOcc(__p,__q)', trueFn, '(Z (((! $Left$ & !__p) S __p) => ((! $Left$ & !__p) S (__p & __q))))']
   ['prevOcc(__p,__q)', trueFn, '($Left$ | (Y (((! $Left$ & !__p) S __p) => ((! $Left$ & !__p) S (__p & __q)))))']
 ]
@@ -141,19 +161,20 @@ const pastTemporalConditions = [
 const temporalConditions = pastTemporalConditions.concat(futureTemporalConditions);
 
 const futureTemporalConditionsNoBounds = [
-    ['persists(__n,__p)',trueFn,'(G[<=__n] __p)'],
-    ['occurs(__n,__p)',trueFn,'(F[<=__n] __p)'],
+    ['persists(__n,__p)',nIsNumber,'(G[<=__n] __p)'],
+    ['occurs(__n,__p)',nIsNumber,'(F[<=__n] __p)'],
     ['nextOcc(__p,__q)', trueFn, '(X((!__p) U (__p & __q)))']
     ]
 
 const pastTemporalConditionsNoBounds = [
-    ['persisted(__n,__p)',trueFn,'(H[<=__n] __p)'],
-    ['occurred(__n,__p)',trueFn,'(O[<=__n] __p)'],
+    ['persisted(__n,__p)',nIsNumber,'(H[<=__n] __p)'],
+    ['occurred(__n,__p)',nIsNumber,'(O[<=__n] __p)'],
     ['prevOcc(__p,__q)', trueFn, '(Y ((!__p) S (__p & __q)))']
 ]
 
 const temporalConditionsNoBounds = pastTemporalConditionsNoBounds.concat(futureTemporalConditionsNoBounds);
 
+/*
 // pat has variables which are strings prefixed with '__'. Return null if no match else
 // a hashmap of variables to subterms of term.
 function matchAST(pat,term) {
@@ -182,7 +203,7 @@ function mergeSubsts(sbst1,sbst2) {
     return r
 }
 
-// given term which may include variables, do the substitution  
+// given term which may include variables, do the substitution
 function subst(term,sbst) {
     if (isVar(term)) {
 	let x = sbst[term];
@@ -195,7 +216,7 @@ function subst(term,sbst) {
 	return term.map(aux);
     } else console.log('subst says: what type is ' + term)
 }
-
+*/
 /*
 // rule returns null if it didn't apply. Apply the rule.
 function rewrite1(term,rule) {
@@ -232,8 +253,8 @@ function applyTriple(term,triple) {
     let pat = triple[0];
     let replacement = triple[2];
     let cond = triple[1];
-    let sbst = matchAST(pat,term)
-    if (sbst !== null && cond(sbst)) return subst(replacement,sbst);
+    let sbst = utils.matchAST(pat,term)
+    if (sbst !== null && cond(sbst)) return utils.subst(replacement,sbst);
     else return null;
 }
 
@@ -277,7 +298,7 @@ const parsedTemporalConditionsNoBounds = temporalConditionsNoBounds.map(parseit)
 function applyPtSimplifications (term) {
     return applyTriples(term,ptSimplifications);
 }
-   
+
 function applyFtSimplifications (term) {
     return applyTriples(term,ftSimplifications);
 }
@@ -331,13 +352,12 @@ function rewrite_bottomup(term,rules) {
 }
 
 function rule_SinceInclusive (term) {
-    let sbst = matchAST(['Since','__p',['And','__p','__q']],term);
-    //console.log(sbst);
-    if (sbst !== null) return ['SinceInclusive',sbst['__p'], sbst['__q']];
-    else { let sbst = matchAST(['Since','__p',['And','__q','__p']]);
-	   if (sbst !== null) return ['SinceInclusive',sbst['__p'], sbst['__q']];
-	   else return null;
-	 }
+  let sbst = ustils.matchAST(['Since','__p',['And','__p','__q']],term);
+  if (sbst !== null) return ['SinceInclusive',sbst['__p'], sbst['__q']];
+  else { let sbst = utils.matchAST(['Since','__p',['And','__q','__p']]);
+	 if (sbst !== null) return ['SinceInclusive',sbst['__p'], sbst['__q']];
+	 else return null;
+       }
 }
 
 const optimizePTrules = [applyPtSimplifications];
@@ -417,8 +437,16 @@ function transform(formulaString,transformation) {
     let AST = astsem.LTLtoAST(formulaString);
     if (AST === undefined) console.log("xform.transform couldn't parse '" + formulaString + "'");
     let transformedAST = transformation(AST);
+  if (transformedAST === undefined) console.log("xform.transform transformed '" + formulaString + "' into undefined")
     let transformedString = astsem.ASTtoLTL(transformedAST);
     return transformedString;
+}
+
+function transformToAST(formulaString,transformation) {
+    let AST = astsem.LTLtoAST(formulaString);
+    if (AST === undefined) console.log("xform.transform couldn't parse '" + formulaString + "'");
+  let transformedAST = transformation(AST);
+  return transformedAST;
 }
 
 function transformPastTemporalConditions (formulaString) {
@@ -497,7 +525,7 @@ function rule_simplifyAbsorber(term) {
 	} else return null;
     } else return null;
 }
-	
+
 // simplify ['+'] to 0 and ['+', A] to A
 function rule_simplifyUnit(term) {
     if (isArray(term)) {
@@ -517,7 +545,7 @@ function rule_simplifyReflexive(term) {
     if (sbst !== null && reflexiveOps.includes(sbst['__rel']))
 	return true;
     else return null;
-}	
+}
 */
 
 /*
@@ -550,6 +578,7 @@ optimizeSemantics()
 */
 
 /*
+console.log(optimizeFT(astsem.LTLtoAST('FALSE | ite(safe,green,red)')))
 console.log(transformTemporalConditions("persisted(3,!p) & occurred(4,p)"))
 console.log(transformTemporalConditionsNoBounds("persisted(3,!p) & occurred(4,p)"))
 console.log(transformPastTemporalConditions("persisted(3,!p) & occurred(4,p)"))
@@ -557,7 +586,7 @@ console.log(transformPastTemporalConditionsNoBounds("persisted(3,!p) & occurred(
 console.log(transformFutureTemporalConditions("persists(3,!p) & occurs(4,p)"))
 console.log(transformFutureTemporalConditionsNoBounds("persists(3,!p) & occurs(4,p)"))
 console.log(transformTemporalConditions("m"))
-*/
+
 
 /*
 console.log(transform('persisted(3,temp>100)',expandTemporalConditions));

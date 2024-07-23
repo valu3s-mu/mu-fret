@@ -70,6 +70,7 @@ import CloseIcon from '@material-ui/icons/Close';
 import KeyboardArrowDownIcon from "@material-ui/icons/KeyboardArrowDown";
 import NotesIcon from "@material-ui/icons/Notes";
 import DeleteIcon from '@material-ui/icons/Delete';
+import LoopIcon from '@material-ui/icons/Loop';
 import Tooltip from '@material-ui/core/Tooltip';
 import EditIcon from '@material-ui/icons/Edit';
 
@@ -84,19 +85,29 @@ import ExportRequirementsDialog from './ExportRequirementsDialog';
 import VersionDialog from './VersionDialog';
 import RenameProjectDialog from './RenameProjectDialog';
 
-const app = require('electron').remote.app
-const dialog = require('electron').remote.dialog
-const db = require('electron').remote.getGlobal('sharedObj').db;
+import { connect } from "react-redux";
+import {
+  addProject,
+  deleteProject,
+  selectProject,
+  initializeStore,
+  importRequirements,
+  mapVariables, formalizeRequirement,
+} from '../reducers/allActionsSlice';
+import ImportedVariablesWarningDialog from "./ImportedVariablesWarningDialog";
+import csv from 'csv';
+import { readAndParseCSVFile, readAndParseJSONFile } from '../utils/utilityFunctions';
+import Error from '@material-ui/icons/Error';
+
+const FretSemantics = require('../parser/FretSemantics');
+
+
+const app = require('electron').remote.app;
 const fs = require('fs');
-const uuidv1 = require('uuid/v1');
-const system_dbkeys = require('electron').remote.getGlobal('sharedObj').system_dbkeys;
-const csv2json=require("csvtojson");
-const requirementsImport = require('../../support/requirementsImport/convertAndImportRequirements');
-const modelSupport = require('../../support/modelDbSupport/populateVariables');
-const checkDbFormat = require('../../support/fretDbSupport/checkDBFormat.js');
+
+
 const drawerWidth = 240;
-let dbChangeListener = null;
-const ext_imp_json_file = require('electron').remote.getGlobal('sharedObj').ext_imp_json;
+
 const {ipcRenderer} = require('electron');
 
 const styles = theme => ({
@@ -210,9 +221,7 @@ class MainView extends React.Component {
     createProjectDialogOpen: false,
     lastCreatedRequirementId: undefined,
     mainContent: 'dashboard',
-    selectedProject: 'All Projects',
     anchorEl: null,
-    listOfProjects: [],
     deleteProjectDialogOpen: false,
     projectTobeDeleted: '',
     exportRequirementsDialogOpen: false,
@@ -222,134 +231,125 @@ class MainView extends React.Component {
     projectTobeRenamed: '',
     csvFields: [],
     importedReqs: [],
-    requirements: [],
     changingReqsInBulk: false,
     externalRequirement: {},
     externalVariables: {},
     missingExternalImportDialogOpen: false,
     missingExternalImportDialogReason: 'unknown',
-  };
+    warningDialogOpen: false,
+    };
 
-  initializeSelectedProject = () => {
-    this.setState({
-      selectedProject: 'All Projects',
-    })
-  }
+  constructor(props) {
+    super(props);
+    this.requirementsFileInput = React.createRef();
 
-  synchStateWithDB() {
-    // this function update the requirements in state from database
-    db.allDocs({
-      include_docs: true,
-    }).then((result) => {
-      this.setState({
-        requirements : result.rows.filter(r => !system_dbkeys.includes(r.key)).map(r => {
-          if (r.doc && r.doc.semantics && r.doc.semantics.variables){
-            r.doc.semantics.variables = checkDbFormat.checkVariableFormat(r.doc.semantics.variables);
-          }
-          return r;
-        })
-      })
-    }).catch((err) => {
-      console.log(err);
-    });
   }
 
   componentDidMount = () => {
-    modelSupport.populateVariables();
-    this.synchStateWithDB();
-    db.get('FRET_PROJECTS')
-      .then((result) => {
-      this.setState({
-        listOfProjects : result.names.sort()
-      })
+    // initialize the store from database 1st time here.
+    ipcRenderer.invoke('initializeFromDB',undefined).then((result) => {
+      const defaultProject = result.listOfProjects.shift();
+      this.props.initializeStore({ type: 'actions/initializeStore',
+                                  // projects
+                                  listOfProjects: [defaultProject, ...result.listOfProjects.sort()],
+                                  selectedProject: result.selectedProject,
+                                  fieldColors: result.fieldColors,
+                                  // requirements
+                                  requirements: result.requirements,
+                                  // components
+                                  variable_data: result.variable_data,
+                                  components: result.components,
+                                  modelComponent: result.modelComponent,
+                                  modelVariables : result.modelVariables,
+                                  selectedVariable: result.selectedVariable,
+                                  importedComponents: result.importedComponents,
+                                  completedComponents: result.completedComponents,
+                                  cocospecData: result.cocospecData,
+                                  cocospecModes: result.cocospecModes,
+                                  // realizability
+                                  rlz_data: result.rlz_data,
+                                  selectedRlz: result.selectedRlz,
+                                  monolithic: result.monolithic,
+                                  compositional: result.compositional,
+                                  ccSelected: result.ccSelected,
+                                  projectReport: result.projectReport,
+                                  diagnosisRequirements: result.diagnosisRequirements,
+                                  prevState: result.prevState,
+                                  })
     }).catch((err) => {
-      console.log(err)
+      console.log(err);
     })
 
-    dbChangeListener = db.changes({
-      since: 'now',
-      live: true,
-      include_docs: true
-    }).on('change', (change) => {
-      if (change.id == 'FRET_PROJECTS') {
-        this.setState({
-          listOfProjects : change.doc.names.sort()
-        })
-      }
-      else if (change.id == 'REAL_TIME_CONFIG' ) {
-        // synchStateWithDB after finishing importing/deleting and other bulk requirement changes operations
-        this.setState({changingReqsInBulk: change.doc.changingReqsInBulk});
-        this.synchStateWithDB();
-        // !system_dbkeys.includes(change.id): requirement change
-      } else if (!system_dbkeys.includes(change.id) && !this.state.changingReqsInBulk) {
-        this.synchStateWithDB();
-      }
-    })
     if(process.env.EXTERNAL_TOOL=='1'){
-      //console.log('env EXTERNAL_TOOL',process.env.EXTERNAL_TOOL);
       this.handleImportExternalTool();
     }
   }
 
 
   componentWillUnmount() {
-    dbChangeListener.cancel()
+
   }
 
-  handleImport = () => {
-    const self = this;
-    var homeDir = app.getPath('home');
-    const { listOfProjects } = this.state;
-    var filepaths = dialog.showOpenDialogSync({
-      defaultPath : homeDir,
-      title : 'Import Requirements',
-      buttonLabel : 'Import',
-      filters: [
-        { name: "Documents",
-          extensions: ['json', 'csv']
-        }
-      ],
-      properties: ['openFile']});
-    if (filepaths && filepaths.length > 0) {
-	     const filepath = filepaths[0];
-       //checking the extension of the file
-       const fileExtension = filepath.split('.').pop();
-       if (fileExtension === 'csv'){
-         csv2json().fromFile(filepath).then((importedReqs)=>{
-           let csvFields = Object.keys(importedReqs[0]);
-           self.handleCSVImport(csvFields, importedReqs);
-        }).catch((err) => {
-          console.log(err);
-        });
-
-       } else if (fileExtension === 'json'){
-         /*
-         // Version using "require" causes error: Cannot find module "."
-         const filepathnoext = filepath.slice(0,-5); // The slice is to remove the .json suffix
-         console.log('*** filepathnoext = ' + JSON.stringify(filepathnoext));
-         data = require(filepathnoext);
-
-         // Version using "readFileSync" causes error: Cannot read property 'shift' of undefined
-         var content = fs.readFileSync(filepath);  // maybe add "utf8" to return a string instead of a buffer
-         var data = JSON.parse(content);
-
-         // Version using readTextFile defined above, works.
-         readTextFile(filepath, function (text) {
-             let data = JSON.parse(text);
-         })
-         */
-         // Version using readFile, works.
-         fs.readFile(filepath, function (err,buffer) {
-             if (err) throw err;
-             let data = JSON.parse(buffer);
-             requirementsImport.importRequirements(data, listOfProjects);
-              });
-       }
-       else{
-         // when we choose an unsupported file
-         console.log("We do not support yet this file import")
-       }
+  handleImport = async (event) => {
+    //console.log('handleImport')
+    try {
+      const file = event.target.files[0]
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      // check file extension
+      if('csv' === fileExtension) {
+        const importedReqs = await readAndParseCSVFile(file);
+        this.setState({
+          csvFields: Object.keys(importedReqs[0]),
+          importedReqs: importedReqs
+        })
+        this.openRequirementImportDialog()
+      } else if('json' === fileExtension) {
+        const replaceString = false;
+        const data = await readAndParseJSONFile(file, replaceString);
+        this.handleJSONImport(data)
+      } else {
+        console.log('We do not support yet this file import')
+      }
+    } catch (error) {
+      console.log('Error reading import file: ', error)
     }
+
+  }
+
+  handleJSONImport = (data) => {
+
+    var argList = [this.props.listOfProjects, data];
+    ipcRenderer.invoke('importRequirements',argList).then((result) => {
+
+      if (result.requirements){
+        const defaultProject = result.listOfProjects.shift();
+        this.props.importRequirements({ type: 'actions/importRequirements',
+          // projects
+          listOfProjects : [defaultProject, ...result.listOfProjects.sort()],
+          // requirements
+          requirements : result.requirements,
+          // analysis
+          components : result.components,
+          completedComponents : result.completedComponents,
+          cocospecData : result.cocospecData,
+          cocospecModes : result.cocospecModes,
+          // variables
+          variable_data : result.variable_data,
+          modelComponent : result.modelComponent,
+          modelVariables : result.modelVariables,
+          selectedVariable : result.selectedVariable,
+          importedComponents : result.importedComponents,
+
+        })
+      }
+      this.setState({warningDialogOpen: !!result.areThereIgnoredVariables})
+
+    }).catch((err) => {
+      console.log(err);
+    })
+
+
+
   }
 
   handleProjectMenuClick = event => {
@@ -357,52 +357,43 @@ class MainView extends React.Component {
   };
 
   handleSetProject = (name) => {
-    this.setState({
-      selectedProject: name,
+    const self = this
+    var args = [name]
+    ipcRenderer.invoke('selectProject',args).then((result) => {
+      this.props.selectProject({ type: 'actions/selectProject',
+                                   // projects
+                                  selectedProject : result.selectedProject,
+                                  // requirements
+                                  requirements : result.requirements,
+                                  projectRequirements: result.projectRequirements,
+                                  // analysis
+                                  components : result.components,
+                                  completedComponents : result.completedComponents,
+                                  cocospecData : result.cocospecData,
+                                  cocospecModes : result.cocospecModes,
+                      })
+      return result.components
+    }).then((components) => ipcRenderer.invoke('mapVariables', components)).then((result) => {
+      this.props.mapVariables({ type: 'actions/mapVariables',
+          variable_data : result.variable_data,
+          modelComponent : result.modelComponent,
+          modelVariables : result.modelVariables,
+          importedComponents : result.importedComponents,
+        })
+    }).catch((err) => {
+      console.log(err);
+    })
+    /*
+    self.setState({
       anchorEl: null
-    });
+    });*/
+    this.setState({ anchorEl: null });
+
   }
 
   handleClose = () => {
     this.setState({ anchorEl: null });
   };
-
-  handleExport = () => {
-    var homeDir = app.getPath('home');
-    var filepath = dialog.showSaveDialogSync(
-      {
-        defaultPath : homeDir,
-        title : 'Export Requirements',
-        buttonLabel : 'Export',
-        filters: [
-          { name: "Documents", extensions: ['json'] }
-        ],
-      })
-    if (filepath) {
-      db.allDocs({
-        include_docs: true,
-      }).then((result) => {
-        var filteredReqs = result.rows.filter(r => !system_dbkeys.includes(r.key))
-        var filteredResult = []
-        filteredReqs.forEach((r) => {
-          var doc = (({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input}) =>
-                      ({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input}))(r.doc)
-          doc._id = uuidv1()
-          filteredResult.push(doc)
-        })
-        var content = JSON.stringify(filteredResult, null, 4)
-        fs.writeFile(filepath, content, (err) => {
-            if(err) {
-                return console.log(err);
-            }
-            console.log("The file was saved!");
-        });
-      }).catch((err) => {
-        console.log(err);
-      });
-    }
-  }
-
 
   handleCreateDialogOpen = () => {
     this.setState({ createDialogOpen: true});
@@ -437,6 +428,13 @@ class MainView extends React.Component {
       });
   }
 
+  handleWarningDialogClose = () => {
+    this.setState(
+      {
+        warningDialogOpen: false,
+      });
+  }
+
   // Handling project management END
 
   handleDrawerOpen = () => {
@@ -461,6 +459,12 @@ class MainView extends React.Component {
           mainContent: content
         }
       )
+  }
+
+  handleCalculateProjectSemantics = async (name) => {
+    const result = await ipcRenderer.invoke('calculateProjectSemantics', name);
+    this.props.formalizeRequirement({ type: 'actions/formalizeRequirement', requirements: result.requirements})
+    this.setState({ anchorEl: null });
   }
 
   handleDeleteProject = (name) => {
@@ -532,13 +536,6 @@ class MainView extends React.Component {
     })
   }
 
-  handleCSVImport = (csvFields, importedReqs) => {
-      this.setState({
-        csvFields: csvFields,
-        importedReqs: importedReqs
-      })
-    this.openRequirementImportDialog()
-  }
 
   openRequirementImportDialog = () => {
     this.setState({
@@ -553,7 +550,7 @@ class MainView extends React.Component {
       anchorEl: null
     })
   }
-  
+
   handleNoExtFileImport = () => {
     this.handleCreateDialogOpen();
   }
@@ -561,9 +558,12 @@ class MainView extends React.Component {
 
   handleImportExternalTool = () => {
     const self = this;
-    //var homeDir = app.getPath('home');
+
+    var ext_imp_json_file = '';
+    ext_imp_json_file = process.env.EXTERNAL_IMP_JSON+'.json';
+
     var filepath = ext_imp_json_file;
-    //console.log('ext_imp_json_file in handleImportExternalTool: ', filepath);
+    // console.log('ext_imp_json_file in handleImportExternalTool: ', filepath);
     if (filepath && filepath.length > 0) {
       //const filepath = filepaths[0];
       fs.readFile(filepath, function (err,buffer) {
@@ -581,8 +581,6 @@ class MainView extends React.Component {
               anchorEl: null
             });
           }
-
-
         } else {
           try {
             let data = JSON.parse(buffer);
@@ -594,7 +592,7 @@ class MainView extends React.Component {
                 missingExternalImportDialogOpen: true,
                 missingExternalImportDialogReason: 'invalid',
                 anchorEl: null
-              });         
+              });
             } else {
               self.setState({
                 externalRequirement : data.requirement,
@@ -603,76 +601,41 @@ class MainView extends React.Component {
               self.handleCreateDialogOpen();
             }
           } catch (error) {
-            //  empty file  
-            //console.log('error in JSON.parse for text import: ',error);
-            //console.log('setting missingExternalImportDialogReason to empty')
+            //  empty file
+            console.log('error in JSON.parse for text import: ',error);
+            console.log('setting missingExternalImportDialogReason to empty')
             self.setState({
               missingExternalImportDialogOpen: true,
               missingExternalImportDialogReason: 'invalid',
               anchorEl: null
-            });         
+            });
           }
-          
+
         }
       })
     }
   }
 
-  handleBrowseExtImpFile = () => {
-      // call file browser
+  handleBrowseExtImpFile = (data) => {
       const self = this;
-      var homeDir = app.getPath('home');
-      //console.log('calling browser in closeMissingExternalImportDialog');
-      var filepaths2 = dialog.showOpenDialogSync({
-        defaultPath : homeDir,
-        title : 'Import Requirements',
-        buttonLabel : 'Import',
-        filters: [
-          { name: "Documents",
-            extensions: ['json', 'csv']
-          }
-        ],
-        properties: ['openFile']});
+      try {
+        self.setState({
+          externalRequirement : data.requirement,
+          externalVariables : data.variables,
+          missingExternalImportDialogOpen: false
+        })
+        self.handleCreateDialogOpen();
 
-        //console.log('handleBrowseExtImpFile-filepaths2: ', filepaths2);
+      } catch (error) {
+          self.setState({missingExternalImportDialogOpen: true})
+          console.log(err)
+      }
 
-        if (filepaths2 && filepaths2.length > 0) {
-          var data;
-          const filepath2 = filepaths2[0];
-          try {
-            fs.readFile(filepath2, function (err,buffer2) {
-              if (err) {
-                self.setState({missingExternalImportDialogOpen: true})
-                throw err;
-              }
-              try {
-                data = JSON.parse(buffer2);
-                //console.log('data: ', data)
-                self.setState({
-                  externalRequirement : data.requirement,
-                  externalVariables : data.variables,
-                  missingExternalImportDialogOpen: false
-                })
-                self.handleCreateDialogOpen();
-              } catch (e){
-                //console.log('inside  catch in handleBrowseExtImpFile')
-                self.setState({missingExternalImportDialogOpen: true})
-                console.log(e)                
-              }
-            });
-          } catch (error) {
-            //console.log('outside catch in handleBrowseExtImpFile')
-            self.setState({missingExternalImportDialogOpen: true})
-            console.log(err)
-          }
-        } 
-
-    //if(!self.state.missingExternalImportDialogOpen){self.handleCreateDialogOpen();}
   }
 
   render() {
-    const { classes, theme } = this.props;
-    const { anchorEl, requirements } = this.state;
+    const { classes, theme, listOfProjects, requirements } = this.props;
+    const { anchorEl, warningDialogOpen } = this.state;
 
     return (
       <div className={classes.root}>
@@ -705,19 +668,30 @@ class MainView extends React.Component {
                       <KeyboardArrowDownIcon className={classes.rightIcon} fontSize="small"/>
                     </Button>
                     <Menu
-                      id="simple-menu"
+                      id="qa_proj_menu"
                       anchorEl={anchorEl}
                       open={Boolean(anchorEl)}
                       onClose={this.handleClose}
                     >
+                      <MenuItem dense>
+                        <Button
+                          id="qa_db_btn_newProject"
+                          color="secondary"
+                          size="small"
+                          onClick={this.handleNewProject}
+                          style={{ textTransform : 'none' }}
+                        >
+                          New Project...
+                        </Button>
+                      </MenuItem>
                       <MenuItem
                         onClick={() =>  this.handleSetProject('All Projects')}
                         dense
                         >
-                        <ListItemText primary = {<b>All Projects</b>} />
+                        <ListItemText id="qa_proj_select_All_Projects" primary = {<b>All Projects</b>} />
                       </MenuItem>
                       {
-                        this.state.listOfProjects.map(name => {
+                        listOfProjects.map(name => {
                           return <MenuItem
                                     key={name}
                                     dense>
@@ -728,25 +702,19 @@ class MainView extends React.Component {
                                       <EditIcon />
                                       </Tooltip>
                                     </IconButton>
-                                    <IconButton id={"qa_proj_del_"+name.replace(/\s+/g, '_')} onClick={() => this.handleDeleteProject(name)} size="small" aria-label="delete" >
+                                    <IconButton id={"qa_proj_cal_"+name.replace(/\s+/g, '_')} onClick={() => this.handleCalculateProjectSemantics(name)} size="small" aria-label="calculate" >
+                                      <Tooltip id="project-tooltip-icon-calculate" title="Calculate Semantics">
+                                      <LoopIcon/>
+                                      </Tooltip>
+                                    </IconButton>
+                                    <IconButton id={"qa_proj_del_"+name.replace(/\s+/g, '_')} onClick={() => this.handleDeleteProject(name)} size="small" aria-label="delete" disabled={name === 'Default'} >
                                       <Tooltip id="project-tooltip-icon-delete" title="Delete Project">
-                                      <DeleteIcon color='error'/>
+                                      <DeleteIcon color={name === 'Default' ? 'disabled': 'error'}/>
                                       </Tooltip>
                                     </IconButton>
                                   </MenuItem>
                         })
                       }
-                      <MenuItem dense>
-                      <Button
-                        id="qa_db_btn_newProject"
-                        color="secondary"
-                        size="small"
-                        onClick={this.handleNewProject}
-                        style={{ textTransform : 'none' }}
-                      >
-                        New Project...
-                      </Button>
-                      </MenuItem>
                     </Menu>
                     &nbsp;
                     <Button id="qa_db_btn_create" variant="contained" onClick={this.handleCreateDialogOpen} color="secondary" size="small" className={classes.button}>
@@ -796,11 +764,24 @@ class MainView extends React.Component {
               <Divider />
                 <List>
                 <div>
-                  <ListItem id="qa_db_li_import" button onClick={() => this.handleImport()}>
+                  <ListItem id="qa_db_li_import" button onClick={() => {
+                    this.requirementsFileInput.current.click()
+                  }}>
                     <ListItemIcon>
                       <ImportIcon />
                     </ListItemIcon>
                     <ListItemText primary="Import" />
+                    <input
+                      id="qa_db_li_import_input"
+                      ref={this.requirementsFileInput}
+                      type="file"
+                      onClick={(event)=> {
+                        event.target.value = null
+                      }}
+                      onChange={this.handleImport}
+                      style={{ display: 'none' }}
+                      accept=".csv, .json"
+                    />
                   </ListItem>
                   <ListItem id="qa_db_li_export" button onClick={() => this.openExportRequirementsDialog()}>
                     <ListItemIcon>
@@ -834,8 +815,8 @@ class MainView extends React.Component {
           <main className={classes.content}>
           <AppMainContent
           content={this.state.mainContent}
-          selectedProject={this.state.selectedProject}
-          existingProjectNames={this.state.listOfProjects}
+          selectedProject={this.props.selectedProject}
+          listOfProjects={listOfProjects}
           requirements={requirements}/>
           </main>
           <CreateRequirementDialog
@@ -843,32 +824,29 @@ class MainView extends React.Component {
             handleCreateDialogClose={this.handleCreateDialogClose}
             editRequirement={this.state.externalRequirement}
             editVariables={this.state.externalVariables}
-            selectedProject={this.state.selectedProject}
-            existingProjectNames={this.state.listOfProjects}
-            requirements={this.state.requirements}
             />
           <CreateProjectDialog
               open={this.state.createProjectDialogOpen}
               handleDialogClose={this.handleCreateProjectDialogClose}
-              existingProjectNames={this.state.listOfProjects}
+              listOfProjects={listOfProjects}
           />
           <DeleteProjectDialog
             open={this.state.deleteProjectDialogOpen}
             projectTobeDeleted={this.state.projectTobeDeleted}
             handleDialogClose={this.closeDeleteProjectDialog}
-            selectedProject={this.state.selectedProject}
+            selectedProject={this.props.selectedProject}
             initializeSelectedProject={this.initializeSelectedProject}
           />
           <RenameProjectDialog
             open={this.state.renameProjectDialogOpen}
             projectTobeRenamed={this.state.projectTobeRenamed}
             handleDialogClose={this.closeRenameProjectDialog}
-            selectedProject={this.state.selectedProject}
+            selectedProject={this.props.selectedProject}
             initializeSelectedProject={this.initializeSelectedProject}
           />
           <ExportRequirementsDialog
             open={this.state.exportRequirementsDialogOpen}
-            fretProjects={this.state.listOfProjects}
+            fretProjects={listOfProjects}
             handleDialogClose={this.closeExportRequirementsDialog}
           />
           <VersionDialog
@@ -880,7 +858,7 @@ class MainView extends React.Component {
             open={this.state.requirementImportDialogOpen}
             handleDialogClose={this.closeRequirementImportDialog}
             csvFields={this.state.csvFields}
-            listOfProjects={this.state.listOfProjects}
+            listOfProjects={listOfProjects}
             importedReqs={this.state.importedReqs}
           />
           <MissingExternalImportDialog
@@ -890,6 +868,7 @@ class MainView extends React.Component {
           selection='BROWSE'
           reason={this.state.missingExternalImportDialogReason}
           />
+          <ImportedVariablesWarningDialog open={warningDialogOpen} handleClose={this.handleWarningDialogClose}/>
         </div>
         <Snackbar
           anchorOrigin={{
@@ -928,4 +907,25 @@ MainView.propTypes = {
   theme: PropTypes.object.isRequired,
 };
 
-export default withStyles(styles, { withTheme: true })(MainView);
+function mapStateToProps(state) {
+  const requirements = state.actionsSlice.requirements;
+  const listOfProjects = state.actionsSlice.listOfProjects;
+  const selectedProject = state.actionsSlice.selectedProject;
+  return {
+    requirements,
+    listOfProjects,
+    selectedProject,
+  };
+}
+
+const mapDispatchToProps = {
+  addProject,
+  deleteProject,
+  selectProject,
+  initializeStore,
+  importRequirements,
+  mapVariables,
+  formalizeRequirement
+};
+
+export default withStyles(styles, { withTheme: true })(connect(mapStateToProps,mapDispatchToProps)(MainView));

@@ -56,12 +56,14 @@ import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import NewVariablesDialog from './NewVariablesDialog';
+import { updateVariable_noNewVariables, } from '../reducers/allActionsSlice';
+import { connect } from "react-redux";
 
-const db = require('electron').remote.getGlobal('sharedObj').db;
-const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
+const {ipcRenderer} = require('electron');
 
 const lustreExprSemantics = require('../../support/lustreExprSemantics');
 const copilotExprSemantics = require('../../support/copilotExprSemantics');
+
 
 const styles = theme => ({
   container: {
@@ -101,7 +103,7 @@ class DisplayVariableDialog extends React.Component {
     copilotAssignment: '',
     moduleName: '',
     modeRequirement: '',
-    modeldoc_id: '',
+    modeldoc_id: '',            // not needed for Redux store
     modelComponent: '',
     errorsCopilot: '',
     errorsLustre: '',
@@ -127,11 +129,6 @@ class DisplayVariableDialog extends React.Component {
   closeNewVariablesDialog = () => {
     this.setState({
       newVariablesDialogOpen: false,
-      newVariables: [],
-      copilotVariables: [],
-      lustreVariables: [],
-      assignment: '',
-      copilotAssignment: '',
     });
   }
 
@@ -180,6 +177,27 @@ class DisplayVariableDialog extends React.Component {
 
   handleClose = () => {
     this.state.dialogCloseListener(false);
+    // reset all states
+    this.setState({
+      focus: '',
+      description: '',
+      idType: '',
+      dataType: '',
+      assignment: '',
+      copilotAssignment: '',
+      moduleName: '',
+      modeRequirement: '',
+      modeldoc_id: '',            // not needed for Redux store
+      modelComponent: '',
+      errorsCopilot: '',
+      errorsLustre: '',
+      checkLustre: true,
+      checkCoPilot: false,
+      newVariablesDialogOpen: false,
+      newVariables: [],
+      copilotVariables: [],
+      lustreVariables: [],
+    })
   };
 
   handleUpdate = () => {
@@ -191,72 +209,53 @@ class DisplayVariableDialog extends React.Component {
     var newVariables = [];
     var variables = lustreVariables.concat(copilotVariables);
 
-    if (variables.length) {
-      modeldb.find({
-        selector: {
-          project: selectedVariable.project,
-          component_name: selectedVariable.component_name,
-          modeldoc: false
-        }
-      }).then(function (result) {
-        if(result.docs.length != 0) {
-          variables.forEach(function (v) {
-            if (!result.docs.some(r => r.variable_name === v)) {
-              newVariables.push(v);
-            }
-          })
-          self.handleNewVariables(newVariables);
-        }
-      });
-    }
+    var args = [selectedVariable.project,selectedVariable.component_name,variables, idType,
+      modeldoc_id, dataType, modeldbid, description,assignment,
+      copilotAssignment,modeRequirement,modelComponent,lustreVariables,copilotVariables,
+      moduleName]
 
-    /*
-     For each Variable Type we need the following:
-      Mode -> Mode Requirement
-      Input/Output -> Model Variable or DataType
-      Internal -> Data Type + Variable Assignment
-      Function -> nothing (moduleName optionally)
-    */
-    if (idType === "Input" || idType === 'Output') {
-      if (modeldoc_id || dataType) {
-        completedVariable = true;
+    // context isolation
+    ipcRenderer.invoke('updateVariable_checkNewVariables',args).then(async (result) => {
+      var noNewVariablesResult = result
+      let newVariables = [];
+      if (result.openNewVariablesDialog){
+        //console.log('DisplayVariableDialog invoke updateVariable_checkNewVariables',result)
+        newVariables= result.newVariables
+        self.handleNewVariables(newVariables);
       }
-    } else if (modeRequirement || (dataType && (assignment || copilotAssignment)) || (idType === "Function")) {
-      completedVariable = true;
-    }
-
-    modeldb.get(modeldbid).then(function (vdoc) {
-      return modeldb.put({
-        _id: modeldbid,
-        _rev: vdoc._rev,
-        project: vdoc.project,
-        component_name: vdoc.component_name,
-        variable_name: vdoc.variable_name,
-        reqs: vdoc.reqs,
-        dataType: dataType,
-        idType: idType,
-        moduleName: moduleName,
-        description: description,
-        assignment: assignment,
-        copilotAssignment: copilotAssignment,
-        modeRequirement: modeRequirement,
-        modeldoc: false,
-        modeldoc_id: modeldoc_id,
-        modelComponent: modelComponent,
-        completed: completedVariable
-      }).then(function (response){
-        self.state.checkComponentCompleted(vdoc.component_name, vdoc.project);
-      }).catch(function (err) {
+      if (newVariables.length == 0){
+        await ipcRenderer.invoke('updateVariable_noNewVariables',args).then((result) => {
+          noNewVariablesResult = result
+        }
+        ).catch((err) => {
+          console.log(err);
+        })
+        this.props.updateVariable_noNewVariables({ type: 'actions/updateVariable_noNewVariables',
+                  // analysis
+                  components : noNewVariablesResult.components,
+                  completedComponents : noNewVariablesResult.completedComponents,
+                  cocospecData : noNewVariablesResult.cocospecData,
+                  cocospecModes : noNewVariablesResult.cocospecModes,
+                  // variables
+                  variable_data : noNewVariablesResult.variable_data,
+                  modelComponent : noNewVariablesResult.modelComponent,
+                  modelVariables : noNewVariablesResult.modelVariables,
+                  selectedVariable : noNewVariablesResult.selectedVariable,
+                  importedComponents : noNewVariablesResult.importedComponents,
+                  })
+        this.setState({ projectName: '' });
         self.handleClose();
-        return console.log(err);
-      });
-    }).then(() => {
-      this.state.dialogCloseListener(false);
-    });
+        }
+      }).catch((err) => {
+        self.handleClose();
+        console.log(err);
+      })
+
+
   }
 
   componentWillReceiveProps = (props) => {
-    const { selectedVariable, handleDialogClose, checkComponentCompleted } = props
+    const { selectedVariable, handleDialogClose } = props
     if (Object.keys(selectedVariable).length) {
       this.setState({
         description: selectedVariable.description,
@@ -269,7 +268,6 @@ class DisplayVariableDialog extends React.Component {
         modeldoc_id: selectedVariable.modeldoc_id,
         modelComponent: selectedVariable.modelComponent,
         dialogCloseListener: handleDialogClose,
-        checkComponentCompleted : checkComponentCompleted,
       });
     }
   }
@@ -301,23 +299,13 @@ class DisplayVariableDialog extends React.Component {
 
   handleChange = event => {
     const self = this;
-    const { selectedVariable } = this.props;
-    const { modelComponent } = this.state;
+    var result = this.props.modelVariables.filter(v => {return v.variable_name === event.target.value});
 
     if (event.target.name === 'modeldoc_id') {
-      modeldb.find({
-        selector: {
-          component_name: modelComponent,
-          project: selectedVariable.project,
-          variable_name: event.target.value
-        }
-      }).then(function (result) {
-        //TODO:Update when higher dimensions allowed
         self.setState({
-          dataType: result.docs[0].dataType[0],
-          modeldoc_id: event.target.value
+          dataType: result[0].dataType[0],
+          modeldoc_id: event.target.value         // not from db; this is a local state
         });
-      });
     }
     else {
       this.setState({
@@ -610,7 +598,10 @@ DisplayVariableDialog.propTypes = {
   handleDialogClose: PropTypes.func.isRequired,
   modelVariables: PropTypes.array.isRequired,
   classes: PropTypes.object.isRequired,
-  checkComponentCompleted: PropTypes.func.isRequired
 }
 
-export default withStyles(styles)(DisplayVariableDialog);
+const mapDispatchToProps = {
+  updateVariable_noNewVariables,
+};
+
+export default withStyles(styles)(connect(null,mapDispatchToProps)(DisplayVariableDialog));

@@ -31,6 +31,9 @@
 // AGREEMENT.
 // *****************************************************************************
 const constants = require('../parser/Constants');
+const utilities = require('../../support/utilities');
+import csv from 'csv';
+
 export const getRequirementStyle = (requirement, isNode) => {
   let style;
   if(!isNode) {
@@ -69,3 +72,74 @@ export const getRequirementStyle = (requirement, isNode) => {
   }
   return style;
 }
+
+export const export_to_md = (R, P) => {
+  var s="# Requirements for Project `"+ P + "`\n";
+
+  s = s + "|ID|P-ID| Text | Rationale |" + "\n";
+  s = s + "|---|---|---|---|" + "\n";
+//                      ({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input}))(r.doc)
+
+  R.forEach((r) => {
+    s=s + "| " + r.reqid +
+      " | " + r.parent_reqid +
+      " | " + r.fulltext.replace(/\|/g,",").replace(/\n/g," ").replace(/\r/g,"") +
+      " | " + r.rationale.replace(/\|/g,",").replace(/\n/g," ").replace(/\r/g,"");
+    s=s + "\n";
+  })
+
+  return s;
+}
+
+export const readAndParseJSONFile = (file, replaceString) => {
+  try {
+    return new Promise((resolve, reject) => {
+      const fileReader = new FileReader();
+      fileReader.onloadend = (e) => {
+        try {
+          var buffer = fileReader.result;
+          var content = buffer;
+          if (replaceString){
+            content = utilities.replaceStrings([['\\"id\\"', '\"_id\"']], buffer);
+          }
+          const data  = JSON.parse(content);
+          resolve(data);
+        } catch (err) {
+          console.log('invalid format')
+          reject(err)
+        }
+      };
+      fileReader.readAsText(file);
+    });
+  } catch (error) {
+    console.log('Error reading import file: ', error)
+  }
+
+}
+
+export const readAndParseCSVFile = (file) => {
+
+  try {
+    return new Promise((resolve, reject) => {
+      const fileReader = new FileReader();
+      fileReader.onloadend = (e) => {
+        const content = fileReader.result;
+        csv.parse(content, {columns: true}, (err, data) => {
+          if(err) {
+            console.log('invalid format')
+            reject(err)
+          }
+          resolve(data);
+        });
+      };
+      fileReader.readAsText(file);
+    });
+  } catch (error) {
+    console.log('Error reading import file: ', error)
+  }
+
+}
+
+
+
+

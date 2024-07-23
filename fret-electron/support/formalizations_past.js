@@ -59,9 +59,11 @@ const SpecialCases =
 	   'historically (FTP implies (not RES))']
       ];
 
+var noTrigger = false;
 
 function determineBaseForm (negate, timing, condition) {
-  var cond = (condition=='regular')?'COND':'null';
+  var cond = (condition=='regular'|condition=='noTrigger')?'COND':'null';
+  noTrigger = condition == 'noTrigger'
   var duration = 'BOUND';
   var property = 'RES';
   var stopCondition = 'STOPCOND'
@@ -71,6 +73,9 @@ function determineBaseForm (negate, timing, condition) {
     case 'immediately':
         main_formula = (negate=='true') ? notImmediately(property, cond):immediately(property, cond);
         break;
+  case 'finally':
+    main_formula = (negate == 'true') ? notFinally(property, cond) : Finally(property,cond);
+    break;
     case 'next':
         main_formula = (negate=='true') ? notNext(property, cond):next(property, cond);
         break;
@@ -141,7 +146,8 @@ function occursBeforeTime (duration, formula) {
 function previous(formula) {return `previous ${formula}`}
 
 function conditionTrigger (cond, left) {
-  return disjunction(`${cond} and previous (not (${cond}))`, `${cond} and ${left}`)
+  if (noTrigger) return cond
+  else return disjunction(`${cond} and previous (not (${cond}))`, `${cond} and ${left}`)
 }
 
 function noCondInterval (cond, start) {
@@ -173,6 +179,19 @@ function immediately(property, cond='null') {
 
 function notImmediately(property, cond='null') {
   return(immediately(negate(property), cond))
+}
+
+function Finally(property, cond='null') {
+  var formula = property
+  if (cond != 'null') {
+    formula = disjunction(noCondInterval(cond,left),
+                          property)
+  }
+  return (formula)
+}
+
+function notFinally(property, cond='null') {
+  return Finally(negate(property),cond);
 }
 
 function next(property, cond='null') {

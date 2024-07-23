@@ -81,6 +81,8 @@ import {
 } from 'examples'
 import Glossary from "./Glossary";
 
+import { connect } from "react-redux";
+import { updateFieldColors } from '../reducers/allActionsSlice';
 
 const instructions = {
   'scopeField' : scopeInstruction,
@@ -93,9 +95,7 @@ const instructions = {
 const constants = require('../parser/Constants');
 
 const fieldsWithExplanation = ['scopeField', 'conditionField', 'componentField', 'responseField', 'timingField'];
-const isDev = require('electron-is-dev');
-const db = require('electron').remote.getGlobal('sharedObj').db;
-
+const {ipcRenderer} = require('electron');
 const ltlsim = require('ltlsim-core').ltlsim;
 
 const styles = theme => ({
@@ -196,7 +196,6 @@ class Instructions extends React.Component {
     this.LTLSimStatus = status;
 
     this.state = {
-      fieldColors : {},
       LTLSimDialogOpen: false,
       components: {},
       selectedItem: null,
@@ -220,38 +219,24 @@ class Instructions extends React.Component {
       notationUrl: notationPath
     })
 
-    const db = require('electron').remote.getGlobal('sharedObj').db;
-    db.get('FRET_PROPS').then((doc) => {
-      this.setState({
-        fieldColors: doc.fieldColors
-      })
-    }).catch((err) => {
-      console.log(err)
-    })
   }
 
   openDiagramNotationWindow = () => {
     window.open(this.state.notationUrl);
   }
 
-  handleColorUpdate = (color) => {
+  handleColorUpdate = async (color) => {
     const fieldKey = this.props.field.toLowerCase().replace('field','')
-    let updatedFieldColors;
-    db.get('FRET_PROPS').then((doc) => {
-      updatedFieldColors = doc.fieldColors
-      updatedFieldColors[fieldKey] = color.hex
-      return db.put({
-        _id: 'FRET_PROPS',
-        _rev: doc._rev,
-        fieldColors: updatedFieldColors
-      });
-    }).then(() => {
-      this.setState({
-        fieldColors: updatedFieldColors,
-      })
-    }).catch(function (err) {
+
+    // context isolation
+    var argList = [fieldKey,color];
+    ipcRenderer.invoke('updateFieldColors',argList).then((result) => {
+      this.props.updateFieldColors({  type: 'actions/updateFieldColors',
+                                      fieldColors: result.fieldColors})
+    }).catch((err) => {
       console.log(err);
-    });
+    })
+
   }
 
 handleFormatChange = (event) => {
@@ -299,7 +284,7 @@ handleSwitchChange =(event) => {
                             onOpen={this.openLTLSimDialog}
                             onClose={this.closeLTLSimDialog}
                             requirement={requirement}
-            		    project={this.props.projectName}
+            		            project={this.props.projectName}
                             requirementID={requirementID}
                             />;
     }
@@ -505,14 +490,14 @@ handleSwitchChange =(event) => {
   }
 
   renderInstruction(field) {
-    const { classes } = this.props;
+    const { classes, fieldColors } = this.props;
     if (fieldsWithExplanation.includes(field)) {
       const mdsrc = instructions[field]
       return(
         <div id="qa_crtAst_div_explanations">
           <ReactMarkdown source={mdsrc} />
           <ColorPicker
-            initialColorInHex={this.state.fieldColors[field.replace('Field', '').toLowerCase()]}
+            initialColorInHex={fieldColors[field.replace('Field', '').toLowerCase()]}
             handleColorUpdate={this.handleColorUpdate} />
         </div>
       )
@@ -584,4 +569,15 @@ Instructions.propTypes = {
   editVariables: PropTypes.object
 };
 
-export default withStyles(styles)(Instructions);
+function mapStateToProps(state) {
+  const fieldColors = state.actionsSlice.fieldColors;
+  return {
+    fieldColors
+  };
+}
+
+const mapDispatchToProps = {
+  updateFieldColors,
+};
+
+export default withStyles(styles)(connect(mapStateToProps,mapDispatchToProps)(Instructions));

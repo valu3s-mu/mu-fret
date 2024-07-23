@@ -30,6 +30,9 @@ unformalized in the future-time formalization of the requirement; similarly,
 the future-time predicates appear unformalized in the past-time
 formalization of the requirement.
  
+In what follows, the variable `n` must be a literal integer (i.e., 1, 2);
+e.g., not a variable name.
+
 The past-time predicates are `persisted(n,p)` and `occurred(n,p)`. Here `p`
 is any boolean expression, which may include temporal predicates itself. The
 predicate `persisted` means that `p` has held true for the previous `n` time
@@ -68,11 +71,12 @@ in the following `n` timepoints. So *occurs(2,p)* means that *p* holds
 either at the current timepoint, or at the next timepoint, or at the
 timepoint after that.
 
-Another subtlety: The persist predicate never holds over an entire finite
+Another subtlety: The `persists` predicate never holds over an entire finite
 interval. For example, the requirement *Before mode m the software shall
 always satisfy persists(3, p)* is never satisfied because the `persists`
 predicate can't be satisfied within 2 timepoints of the right end of the
-scope interval.
+scope interval. Similarly, the `occurs` predicate may be false near the end of
+the trace if `p` doesn't occur.
 
 ### Next and Previous Occurrences
 

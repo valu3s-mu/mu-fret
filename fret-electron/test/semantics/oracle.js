@@ -45,7 +45,7 @@ exports.applyConstraints =
   var modesArray = this.activeScopeIntervals(scope,traceInterval,modeIntervals);
 
   var timingFunction = timing;
-  if (condition == 'regular') {
+  if (condition === 'regular' || condition === 'noTrigger' ) {
     timingFunction = timingFunction + 'Cond'
     //console.log("************  CHECK THIS OUT **************")
   }
@@ -73,6 +73,25 @@ exports.applyConstraints =
 	      }
 	  }
       }
+    else if (condition == 'noTrigger') {
+	  for (let conditionInterval of conditionIntervals) {
+	    let triggerInterval = intervalLogic.intersect(scopeInterval, conditionInterval);
+	      if (testOptions.verboseOracle)
+              console.log('Trigger: scopeInterval: ' + intervalLogic.intervalToString(scopeInterval)
+			  + ' conditionInterval: ' + intervalLogic.intervalToString(conditionInterval)
+			  + ' triggerInterval: ' + JSON.stringify(triggerInterval));
+	      if (triggerInterval.length > 0) {
+		for (let triggerPt = triggerInterval[0].left; triggerPt <= triggerInterval[0].right; triggerPt++) {
+		  const trigger = {point : triggerPt, scope : intervalLogic.createInterval(triggerPt,scopeInterval.right)}
+		   let res = this.checkTimings(n, scope, scopeInterval, trigger,
+					       stopCondIntervals,responseIntervals,
+					       timingFunction, traceInterval)
+		  if (res != null) // null means it's a don't care
+		      resultArray.push(res)
+		}
+	  }
+      }
+    }
       else {
 	  res = this.checkTimings(n, scope, scopeInterval, null, stopCondIntervals,responseIntervals, timingFunction, traceInterval);
           if (res != null) // means it's a don't care
@@ -91,6 +110,8 @@ var isNegated = scope.includes('only');
 switch (functionCase) {
   case 'immediately': constraints = immediately(scopeInterval, responseIntervals, isNegated); break;
   case 'immediatelyCond': constraints = immediatelyCond(responseIntervals, trigger, isNegated); break;
+  case 'finally': constraints = Finally(scopeInterval, responseIntervals, isNegated); break;
+  case 'finallyCond': constraints = FinallyCond(scopeInterval,responseIntervals, trigger, isNegated); break;
   case 'next': constraints = next(scopeInterval, responseIntervals, isNegated); break;
   case 'nextCond': constraints = nextCond(responseIntervals, trigger, isNegated); break;
   case 'always': constraints = always(scopeInterval, responseIntervals, isNegated); break;
@@ -229,6 +250,15 @@ function immediately(scopeInterval, responseIntervals, negate=false) {
 // immediately when conditions are around
 function immediatelyCond(responseIntervals, trigger, negate=false) {
 	return immediately(trigger.scope, responseIntervals, negate)
+}
+
+function Finally(scopeInterval, responseIntervals, negate=false) {
+  var pos = intervalLogic.includesPointMultiple(responseIntervals, scopeInterval.right);
+  return (negate?!pos:pos)
+}
+
+function FinallyCond(scopeInterval, responseIntervals, trigger, negate=false) {
+  return Finally(trigger.scope, responseIntervals, negate);
 }
 
 function next(scopeInterval, responseIntervals, negate=false) {

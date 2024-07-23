@@ -62,21 +62,24 @@ import NotesIcon from "@material-ui/icons/Notes";
 import TimeSeriesWidget from './TimeSeriesWidget';
 import LTLSimRequirementDetails from './LTLSimRequirementDetails';
 import LTLSimAddTraceDialog from './LTLSimAddTraceDialog';
+import {connect} from "react-redux";
+import {ipcRenderer} from "electron";
+import {
+  setProjectRequirements
+} from "../reducers/allActionsSlice";
 
 const ltlsim = require('ltlsim-core').ltlsim;
 const LTLSimController = require('ltlsim-core').LTLSimController;
 const EFormulaStates = require('ltlsim-core').EFormulaStates;
 
 	// access for files and database
-const app = require('electron').remote.app
-const dialog = require('electron').remote.dialog
+const app =require('@electron/remote').app
+const dialog =require('@electron/remote').dialog
 
 const fs = require("fs");
 
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const db = sharedObj.db;
-const system_dbkeys = sharedObj.system_dbkeys;
 
+//TODO 082023
 const trace_db_json = "/tmp/fret_traces.json";
 
 const styles = theme => ({
@@ -98,12 +101,19 @@ class LTLSimDialog extends Component {
     constructor(props) {
         super(props);
 
+		//
+		// default length of trace
+		//
         const traceLength = 10;
         let model = LTLSimController.init(traceLength);
 
-        // LTLSimController.addFormula(model, props.id, props.ftExpression);
-        // LTLSimController.getFormula(model, props.id).label = props.requirementID;
 
+		//
+		// load initial set of requirements / requirementIDs
+		// into model; according to logic
+		//   requirement, *expression --> model
+		//   requirementID  --> model.label
+		//
 	for (let i=0; i< props.requirementIDs.length; i++){
 			if (this.props.logics == "FT"){
 				LTLSimController.addFormula(model, props.ids[i], props.ftExpressions[i]);
@@ -114,45 +124,67 @@ class LTLSimDialog extends Component {
         	LTLSimController.getFormula(model, props.ids[i]).label = props.requirementIDs[i];
 		}
 
-	
-        this.state = {
-            model,
-            updateOnce: true,
-            visibleSubformulas: [],
-            highlight: true,
-			// Trace Menu anchor
-    	    anchorEl: null,
-			// Requirements Menu anchor
-    	    anchorEl_Req: null,
-			// trace add dialog
-	    traceAddDialogOpen: false,
-			// selected logic
-            logics: this.props.logics,
-			// available traces -- need to be filled up with DB
-			// these are just the trace-IDs (for listing/selection
-			// in the menu
-			// full trace data are in the JSCTraces
-	    traces: [],
-			// current trace & description 
-	    traceID: this.props.traceID,
-	    traceDescription: "",
-	    traceIDCnt: 0,
-			// list of all requirements (objects) for project
-//JSC 0328-3	    reqID_data: [],
-	    //JSC-0406 reqID_data: this.props.requirements,
-	    reqID_data: [],
-			// list of requirement formulas visible
-//JSC 0328-3	    JSCReqID: [this.props.id],
-	    JSCReqID: this.props.ids,
-			// ReqID from where LTLSim was called 
-			// (cannot remove from list)
-//JSC 0328-3	    JSCRootReqID: [this.props.id],  
-	    JSCRootReqID: this.props.ids,  
+	//--------------------------------------------------------------
+		//
+		// set inital state variables
+		//
 
-			//
-			// list of active traces (can be selected)
-			//
-	    JSCTraces: []
+        this.state = {
+		// the model with formulas
+            model,
+
+		// controls update mechanism
+            updateOnce: true,
+
+		// don't show subformulas
+            visibleSubformulas: [],
+
+		// show overall valuation of formula
+            highlight: true,
+
+		// Trace Menu anchor
+    	    anchorEl: null,
+
+		// Requirements Menu anchor
+    	    anchorEl_Req: null,
+
+		// trace add dialog
+	    traceAddDialogOpen: false,
+
+		// selected logic
+            logics: this.props.logics,
+
+
+		// available traces -- need to be filled up with DB
+		// these are just the trace-IDs (for listing/selection
+		// in the menu
+		// full trace data are in the activeTraces
+	    traces: [],
+		// current trace ID (if loaded)
+	    traceID: this.props.traceID,
+		// current trace description
+	    traceDescription: "",
+		// current counter how many traces are loaded
+	    traceIDCnt: 0,
+
+
+		// list of all requirements (objects) for project
+		// Note: This information is loaded from the DB
+		// Note: for the current requirements from props
+		//	these IDs, etc. are NOT necessarily up to date
+	    reqID_data: [],
+
+		// list of requirements visible (as list or requirement IDs)
+	    visibleRequirementIDs: this.props.ids,
+
+		// ReqID from where LTLSim was called
+		// (cannot remove from list)
+	    rootRequirementID: this.props.ids,
+
+		//
+		// list of active traces (can be selected)
+		//
+	    activeTraces: []
         }
 
         // Set the traces for "LAST" or "FTP" variables in the model, if any
@@ -161,18 +193,16 @@ class LTLSimDialog extends Component {
 
 	// initialize and bind the action elements
 
-	this.handleFoo = this.handleFoo.bind(this);
-        this.handleFooNew = this.handleFooNew.bind(this);
+	this.handleSelectTask = this.handleSelectTask.bind(this);
+        this.handleSelectNewTask = this.handleSelectNewTask.bind(this);
         this.handleTraceAddDialogOpen = this.handleTraceAddDialogOpen.bind(this);
         this.handleTraceAddDialogSave = this.handleTraceAddDialogSave.bind(this);
         this.handleTraceAddDialogCancel = this.handleTraceAddDialogCancel.bind(this);
-
         this.handleAddRequirements = this.handleAddRequirements.bind(this);
         this.handleLoadTrace = this.handleLoadTrace.bind(this);
         this.handleLoadTraces = this.handleLoadTraces.bind(this);
         this.handleSaveTraces = this.handleSaveTraces.bind(this);
         this.handleSaveToFile = this.handleSaveToFile.bind(this);
-
         this.handleClickLogics = this.handleClickLogics.bind(this);
         this.handleClickHighlight = this.handleClickHighlight.bind(this);
         this.handleLtlsimResult_FT = this.handleLtlsimResult_FT.bind(this);
@@ -182,29 +212,32 @@ class LTLSimDialog extends Component {
         this.handleTraceLengthChange = this.handleTraceLengthChange.bind(this);
         this.update = this.update.bind(this);
 
-//    const filterOff = selectedProject == 'All Projects'
-    const filterOff = false;
 
-	//
-	// load the suitable Requirement ID from the database into the state
-	//
-    db.allDocs({
-      include_docs: true,
-    }).then((result) => {
+
+
+
+    }
+
+    createReqID_data = () => {
       this.setState({
-        reqID_data: result.rows
-                .filter(r => !system_dbkeys.includes(r.key))
-                .filter(r => filterOff || r.doc.project == this.props.project)
-                .map(r => {
-			return {
-			dbkey: r.doc._id, 
-			reqID: r.doc.reqid,
-			formula_FT: r.doc.semantics.ftExpanded,
-			formula_PT: r.doc.semantics.ptExpanded,
-//			component_name: r.doc.semantics.component_name,
-			fulltext: r.doc.fulltext
-			};
-                    })
+        reqID_data: this.props.projectRequirements
+          .map(r => {
+            return {
+              dbkey: r._id,
+              reqID: r.reqid,
+              formula_FT: r.semantics !== undefined ? r.semantics.ftExpanded : "",
+              formula_PT: r.semantics !== undefined ? r.semantics.ptExpanded : "",
+              fulltext: r.fulltext
+            };
+          })
+      })
+    }
+
+  getProjectRequirements = async () => {
+    const { project } = this.props;
+    ipcRenderer.invoke('selectProjectRequirements', project).then((result) => {
+      this.props.setProjectRequirements({
+        projectRequirements: result.docs
       })
     }).catch((err) => {
       console.log(err);
@@ -215,144 +248,126 @@ class LTLSimDialog extends Component {
     }
 
     //===============================================================
+    // FUNCTION componentDidMount()
+    //
+    // load realizability counter-example file if name is defined
     componentDidMount() {
-	// this.handleReqSel(this.state.reqID_data[4])
     	if (this.props.CEXFileName !== undefined){
-/*
-        	this.setState((prevState) => {
-			this.loadCEXTrace(this.props.CEXFileName)
-        		}, () => {
-            		// Call LTL simulation after the state was updated 
-	    		console.log("trace loaded --update");
-            		this.update();
-        		});
-*/
-		this.loadCEXTrace(this.props.CEXFileName)		
+		this.loadCEXTrace(this.props.CEXFileName)
 		}
-
-/*JSC-NEW-BUGGY-0419
-	//
-	// update the traces and evaluate the variables
-	//
-	console.log("initial eval of variables")
-	this.state.model.atomics.keys.forEach((id) => {
-		if (this.state.model.atomics.keys.indexOf(id) !== -1) {
-            		var trace = this.state.model.atomics.values[id].trace;
-			LTLSimController.setAtomicTraceEval(this.state.model, id, trace, 0,trace[0]);
-			}
-		});
-	console.log("initial eval of variables done")
-*/
-	
-
-    }
+      this.getProjectRequirements()
+    	}
 
 
 
     //===============================================================
+    // FUNCTION componentDidUpdate(prevProps)
+    //
     componentDidUpdate(prevProps) {
-    const {CEXFileName} = this.props;
+    const {CEXFileName, projectRequirements, project} = this.props;
         let { model, updateOnce, logics } = this.state;
         let  traceLength  = LTLSimController.getTraceLength(model);
+        if(projectRequirements !== prevProps.projectRequirements) {
+          this.createReqID_data()
+        }
+        if(project !== prevProps.project) {
+          this.getProjectRequirements()
+        }
 
+	//
+	// have any of the requirement ID in the props have changed?
+	// or the formulas ?
+	// TODO 082023: how about changes in the requirements text?????
+	//    & change in length of req's list (does that occur???)
+	//    & can the ptExpression change (only)????
 	var isChanged=false;
 	for (let i=0; i< this.props.requirementIDs.length; i++){
-            if (this.props.ids[i] !== prevProps.ids[i] || 
+            if (this.props.ids[i] !== prevProps.ids[i] ||
 		this.props.ftExpressions[i] !== prevProps.ftExpressions[i]) {
 			isChanged=true;
 		}
 	    }
 
-        /* If label or expression changed, initialize a new model */
+	//
+        // If label or expression changed, initialize a new model
+	// only add to the model if things have changed
+	// TODO 0823:  what happens to the unchanged requirements?
+	//	here, the new requirementIDs are set in the model
 	if (isChanged){
             model = LTLSimController.init(traceLength);
 	    for (let i=0; i< this.props.requirementIDs.length; i++){
-        	if (this.props.ids[i] !== prevProps.ids[i] || 
+        	if (this.props.ids[i] !== prevProps.ids[i] ||
 		    this.props.ftExpressions[i] !== prevProps.ftExpressions[i]) {
 			if (logics == "FT"){
-            			LTLSimController.addFormula(model, 
-					this.props.ids[i], 
+            			LTLSimController.addFormula(model,
+					this.props.ids[i],
 					this.props.ftExpressions[i]);
 				}
 			else {
-            			LTLSimController.addFormula(model, 
-					this.props.ids[i], 
+            			LTLSimController.addFormula(model,
+					this.props.ids[i],
 					this.props.ptExpressions[i]);
 				}
             		LTLSimController.getFormula(model, this.props.ids[i]).label = this.props.requirementIDs[i];
 		     }
 		}
 	    LTLSimController.evalModel(model);
-            this.setState({model});
+
+	    let visibleRequirementIDs =  this.props.ids;
+	    let rootRequirementID =  this.props.ids;
+
+	// update the model
+            this.setState({model,visibleRequirementIDs,rootRequirementID});
         }
 
-        /* If the dialog just became visible and the formula has a valid expression,
-        simulate the formula if required (checked by this.update()) */
+	//
+	// If the dialog just became visible and the formula has
+	/// a valid expression, simulate the formula if required
+	// (checked by this.update())
     for (let i=0; i< this.props.requirementIDs.length; i++){
         let formula = LTLSimController.getFormula(model, this.props.ids[i]);
-		// if (this.props.open && !prevProps.open &&        	
-  //           formula && formula.parseErrors.length === 0) {
-  	if (((this.props.open && !prevProps.open) || updateOnce) &&        	
+  	if (((this.props.open && !prevProps.open) || updateOnce) &&
             formula && formula.parseErrors.length === 0) {
 	    LTLSimController.evalModel(model);
             this.update();
             this.setState({updateOnce: false})
         }
-        /* Update the formula label, to always display the correct label on the y-axis */
+
+	//
+        // Update the formula label, to always display the
+	// correct label on the y-axis */
+	//
         formula.label = this.props.requirementIDs[i];
         }
 
-
- //    } else {
- //    	if (CEXFileName !== prevProps.CEXFileName) {
- //    		this.loadCEXTrace(CEXFileName);
- //    	}
-	// }
-	}
+    }
 
 	//===============================================================
+    	// FUNCTION handleClickHighlight()
+	// Press of the "flashlight" button
+	//
+
     handleClickHighlight() {
         this.setState((prevState) => ({
             highlight: prevState.highlight ? false : true
         }));
     }
 
-	//===============================================================
-//OBSOLETE
-/*
-    handleClickLogics_SingleFormula_OLD() {
-        this.setState((prevState) => {
-            let { model, logics } = prevState;
-            const { ids, ftExpressions, ptExpressions } = this.props;
-            // let tracelength = LTLSimController.getTraceLength(model);
-
-
-            logics = (logics === "FT") ? "PT" : "FT";
-            LTLSimController.setFormulaExpression(model, ids, (logics === "FT") ? ftExpression : ptExpression, true);
-
-            return {
-                logics,
-                model
-            }
-        }, () => {
-            // Call LTL simulation after the state was updated 
-            this.update();
-        });
-    }
-	*/
 
 	//===============================================================
+    	// FUNCTION handleClickLogics()
+	// handles button to switch between PT and FT logic
+	//
     handleClickLogics() {
         this.setState((prevState) => {
-            let { model, logics, JSCReqID, reqID_data } = prevState;
+            let { model, logics, visibleRequirementIDs, reqID_data } = prevState;
             const { ids, ftExpressions, ptExpressions } = this.props;
-            // let tracelength = LTLSimController.getTraceLength(model);
             logics = (logics === "FT") ? "PT" : "FT";
 
 		// change logic for "current" requirement/aaFor
 		// don't update the variables
 		for (var i=0; i< ftExpressions.length;i++){
-            LTLSimController.setFormulaExpression(model, ids[i], 
+            LTLSimController.setFormulaExpression(model, ids[i],
 				(logics === "FT") ? ftExpressions[i] : ptExpressions[i],
 				false);
 			}
@@ -362,72 +377,66 @@ class LTLSimDialog extends Component {
 			  .replace(/-/g,"_")
 			  .replace(/\./g,"_")
 			  .replace(/\+/g,"_")
-		let idx = JSCReqID.indexOf(reqID_R);
+		let idx = visibleRequirementIDs.indexOf(reqID_R);
 		if (idx >= 0){
-   		let N_formula = 
-			((logics === "FT") ? 
-				reqID_data[i].formula_FT : 
+   		let N_formula =
+			((logics === "FT") ?
+				reqID_data[i].formula_FT :
 			 reqID_data[i].formula_PT)
-		  /*
-            		.replace(/<b>/g, "")
-            		.replace(/<i>/g, "")
-            		.replace(/<\/b>/g, "")
-            		.replace(/<\/i>/g, "")
-// arithmetic V0.0
-//            .replace(/([0-9A-Za-z_]+) < ([0-9A-Za-z_]+)/g, "$1_lt_$2")
-//            .replace(/([0-9A-Za-z_]+) > ([0-9A-Za-z_]+)/g, "$1_gt_$2")
-//            .replace(/([0-9A-Za-z_]+) <= ([0-9A-Za-z_]+)/g, "$1_le_$2")
-//            .replace(/([0-9A-Za-z_]+) >= ([0-9A-Za-z_]+)/g, "$1_ge_$2")
-//            .replace(/([0-9A-Za-z_]+) = ([0-9A-Za-z_]+)/g, "$1_eq_$2")
-// end arithmetic
-            		.replace(/(\d+)\+1/g, (str, p1, offset, s) => (`${parseInt(p1)+1}`))
-            		.replace(/\[<=(\d+)\]/g, "[0, $1]")
-            		.replace(/\[=(\d+)\]/g, "[$1, $1]")
-            		.replace(/\[<(\d+)\]/g, (str, p1, offset, s) => (`[0, ${parseInt(p1)-1}]`));
-*/
+
 	               LTLSimController.setFormulaExpression(
-				model, 
-				reqID_R, 
+				model,
+				reqID_R,
 				N_formula,
 				false
 				);
 			}
 		}
 
-//JSC0420-2
 	    setMarginVariableTraces(model);
             return {
                 logics,
                 model
             }
         }, () => {
-            /* Call LTL simulation after the state was updated */
+            	// Call LTL simulation after the state was updated
             this.update();
         });
     }
 
-    //===============================================================
-        handleTraceAddDialogOpen() {
+    	//===============================================================
+	// FUNCTION   handleTraceAddDialogOpen()
+	// button to open the "add trace" dialog
+	//
+    handleTraceAddDialogOpen() {
         this.setState({
             traceAddDialogOpen: true
         })
     }
 
-    //===============================================================
+    	//===============================================================
+	// FUNCTION   handleTraceAddDialogCancel()
+	// button to cancel the "add trace" dialog
+	//
     handleTraceAddDialogCancel() {
         this.setState({
             traceAddDialogOpen: false
         });
     }
 
-    //===============================================================
+    	//===============================================================
+	// FUNCTION handleTraceAddDialogSave(dialogState)
+	// handle for the "add trace" SAVE
+	// TODO 082023: only saves into JSON file; should use a "traces" DB
+	// TODO: 082023 pull the default filename into configuration
+	//
     handleTraceAddDialogSave(dialogState) {
         this.setState((prevState) => {
-        const {traces, JSCTraces} = prevState;
+        const {traces, activeTraces} = prevState;
         const {reqID, traceID, traceDescription, saveTo} = dialogState;
         let { model } = prevState;
 	let trace = LTLSimController.getTrace(model);
-	
+
 
 	LTLSimController.saveTrace(model, '/tmp/debug-trace.csv');
 
@@ -443,12 +452,12 @@ class LTLSimDialog extends Component {
 		saveToComponent = "*"
 		}
 
-	if ((this.state.JSCTraces.find(tr => {
+	if ((this.state.activeTraces.find(tr => {
 		return tr.traceID === traceID;
 		})) == null){
-		
+
 		const allTraces = traces.concat(traceID);
-		const NewJSCTraces = JSCTraces.concat({
+		const newActiveTraces = activeTraces.concat({
 			traceID: traceID,
 			traceDescription: traceDescription,
 			theTrace: trace,
@@ -457,7 +466,7 @@ class LTLSimDialog extends Component {
 			saveToProject: saveToProject
 			});
 
-	        var JTrace = JSON.stringify(NewJSCTraces, null, 4)
+	        var JTrace = JSON.stringify(newActiveTraces, null, 4)
 	        fs.writeFile(trace_db_json, JTrace, (err) => {
 		if(err) {
        			return console.log(err);
@@ -470,15 +479,15 @@ class LTLSimDialog extends Component {
 	    			traceID: traceID,
 	    			traceDescription: traceDescription,
 					traces: allTraces,
-	    			JSCTraces: NewJSCTraces
+	    			activeTraces: newActiveTraces
             		};
 
 		}
 	else {
-		console.log("TODO: updating existing trace");
-		const NewJSCTraces = JSCTraces;
+		// updating existing traces file, i.e. overwrite
+		const newActiveTraces = activeTraces;
 
-	        var JTrace = JSON.stringify(NewJSCTraces, null, 4)
+	        var JTrace = JSON.stringify(newActiveTraces, null, 4)
 	        fs.writeFile(trace_db_json, JTrace, (err) => {
 		if(err) {
        			return console.log(err);
@@ -489,7 +498,7 @@ class LTLSimDialog extends Component {
             		traceAddDialogOpen: false,
 	    			traceID: traceID,
 	    			traceDescription: traceDescription,
-	    			JSCTraces: NewJSCTraces
+	    			activeTraces: newActiveTraces
             		};
 		};
         });
@@ -497,30 +506,29 @@ class LTLSimDialog extends Component {
     }
 
 
-    //===============================================================
+    	//===============================================================
+    	// FUNCTION handleSaveToFile = async () => {
+	// save current trace (export) to file as .csv or json
+	//
     handleSaveToFile = async () => {
-	//
-	// just a dummy save current trace to file
-	//
-        // this.setState((prevState) => {
-  		var homeDir = app.getPath('home');
-    		var filepath = await dialog.showSaveDialog(
-      				{
-        		defaultPath : homeDir,
-        		title : 'Export Trace',
-        		buttonLabel : 'Save',
-        		filters: [
-          		{ name: "Documents", extensions: ['csv','json'] }
-        		],
-      			})
+	var homeDir = app.getPath('home');
+    	var filepath = await dialog.showSaveDialog(
+      		{
+       		defaultPath : homeDir,
+       		title : 'Export Trace',
+       		buttonLabel : 'Save',
+       		filters: [
+       		{ name: "Documents", extensions: ['csv','json'] }
+       		],
+      		})
 
 			//
 			// cancel ?
 			//
-		if (!filepath.filePath){
-			return;
-			}
-		this.setState((prevState) => {
+	if (!filepath.filePath){
+		return;
+		}
+	this.setState((prevState) => {
 		if (filepath.filePath.substring(filepath.filePath.length-3) == "csv"){
        			let { model } = prevState;
             		LTLSimController.saveTrace(model, filepath.filePath);
@@ -528,12 +536,12 @@ class LTLSimDialog extends Component {
 			}
 
 		if (filepath.filePath.substring(filepath.filePath.length-4) == "json"){
-			let { model, 
-			      JSCTraces, 
-			      traceID, 
+			let { model,
+			      activeTraces,
+			      traceID,
 			      traceDescription} = prevState;
 
-			var currTrace = JSCTraces.find(tr => {
+			var currTrace = activeTraces.find(tr => {
 				return tr.traceID === traceID
 				});
 			if (!currTrace){
@@ -561,7 +569,8 @@ class LTLSimDialog extends Component {
     		});
 	}
 
-    //===============================================================
+	//===============================================================
+    	// FUNCTION handleLoadTrace() {
     	// load a single trace from file in csv format
 	// callback: <LOAD TRACE> (down-arrow) button
 	//
@@ -570,12 +579,13 @@ class LTLSimDialog extends Component {
 	//
 	// updates:
 	//	* traces: add new ID
-	//	* JSCTraces: add structure with info
+	//	* activeTraces: add structure with info
 	//
-    handleLoadTrace() {
 	//
 	// just a load from file
+	// TODO: 082023  load trace DB
 	//
+    handleLoadTrace() {
         this.setState((prevState) => {
   		var homeDir = app.getPath('home');
     		var filepath = dialog.showOpenDialogSync(
@@ -588,12 +598,12 @@ class LTLSimDialog extends Component {
           		{ name: "Trace", extensions: ['csv','json'] }
         		],
       			});
-		 if (filepath && filepath.length == 0) {
+		 if (!filepath || filepath.length == 0) {
 			// cancel
 			return;
 			}
 
-		let { model, traces, JSCTraces, traceIDCnt} = prevState;
+		let { model, traces, activeTraces, traceIDCnt} = prevState;
 		if (filepath[0].substring(filepath[0].length-3) == "csv"){
 			//
 			// load CSV as current trace; no meta information
@@ -610,7 +620,7 @@ class LTLSimDialog extends Component {
 			let saveToComponent = "*"
 			let saveToProject = this.props.project
 			let trace = LTLSimController.getTrace(model);
-			let NewJSCTraces = JSCTraces.concat(
+			let newActiveTraces = activeTraces.concat(
 				{
 	    			traceID: NewTraceID,
 	    			traceDescription: "imported from "+filepath[0],
@@ -627,7 +637,7 @@ class LTLSimDialog extends Component {
 	    			traceID: NewTraceID,
 				traces: NewTraces,
 	    			traceDescription: "imported from "+filepath[0],
-	    			JSCTraces: NewJSCTraces
+	    			activeTraces: newActiveTraces
             			};
 			}
 		else {
@@ -637,17 +647,17 @@ class LTLSimDialog extends Component {
       			var content = fs.readFileSync(filepath[0]);
       			var loadedTrace = JSON.parse(content);
 
-			var loadedTraceInList = JSCTraces.find(tr => {
+			var loadedTraceInList = activeTraces.find(tr => {
 				return tr.traceID === loadedTrace.traceID
 				});
-			let NewJSCTraces = JSCTraces;
+			let newActiveTraces = activeTraces;
 			let NewTraces = traces;
 			if (!loadedTraceInList){
-				NewJSCTraces = JSCTraces.concat(loadedTrace);
+				newActiveTraces = activeTraces.concat(loadedTrace);
 				NewTraces = traces.concat(loadedTrace.traceID);
 				}
 			else {
-				NewJSCTraces = JSCTraces;
+				newActiveTraces = activeTraces;
 				console.log("TODO: update Existing Trace")
 				}
 		//
@@ -661,33 +671,32 @@ console.log("TODO: update the traces")
 	    		traceID: loadedTrace.traceID,
 	    		traceDescription: loadedTrace.traceDescription,
 			traces: NewTraces,
-	    		JSCTraces: NewJSCTraces
+	    		activeTraces: newActiveTraces
             		};
 		} // endif
-        
+
         }, () => {
             /* Call LTL simulation after the state was updated */
             this.update();
         });
     }
 
-    //===============================================================
+	//===============================================================
+    	// FUNCTION loadCEXTrace(filepath)
     	// load a single trace from CEX file
 	//
 	// updates: current state!
 	//	* traces: add new ID
-	//	* JSCTraces: add structure with info
+	//	* activeTraces: add structure with info
 	//
     loadCEXTrace(filepath) {
-	//
-	// just a load from file
-	//
-var loadedTrace = filepath;
-	var K = loadedTrace.K;
+	var loadedTrace = filepath;
+	var K = loadedTrace.K < 4 ? 4 : loadedTrace.K;
 
 	var cex = loadedTrace.Counterexample;
-    // Andreas: Tried to add this here to deal with traces that were longer than the initial trace length value,
-    // but it seems like it causes issues with traces of length < 4.
+    		// TODO: Andreas: Tried to add this here to deal with
+		// traces that were longer than the initial trace length value,
+    		// but it seems like it causes issues with traces of length < 4.
 	LTLSimController.setTraceLength(this.state.model, K);
 	let LTLSIM_tracelength = LTLSimController.getTraceLength(this.state.model);
 	var keys=[]
@@ -697,23 +706,8 @@ var loadedTrace = filepath;
 			  .replace(/\./g,"_")
 			  .replace(/\+/g,"_"));
 	cex = cex.filter(variable => !sanitizedReqIds.includes(variable.name));
-	for (let idx=0; idx < cex.length; idx++){				
-		// check if requirements name
-/*
-		var do_ignore = 0;
-		console.log("db length "+this.state.reqID_data.length)
-		for (let i=0; i< this.state.reqID_data.length; i++){
-			console.log(this.state.reqID_data[i].reqID)
-			if (cex[idx].name == this.state.reqID_data[i].reqID){
-				console.log("CEX-req name found "+cex[idx].name);
-				do_ignore = 1;
-				continue;
-				}
-			}
-		if (do_ignore){
-			continue;
-			}
-*/
+	for (let idx=0; idx < cex.length; idx++){
+
 		let key_R =cex[idx].name.replace(/ /g,"_")
 		  .replace(/-/g,"_")
 		  .replace(/\./g,"_")
@@ -734,6 +728,7 @@ var loadedTrace = filepath;
 				}
 			//
 			// find minimum and maximum value
+			//
 			mi = 9e99;
 			ma = -9e99;
 			for (let step = 0; step < LTLSIM_tracelength; step++){
@@ -778,7 +773,7 @@ var loadedTrace = filepath;
 		var varType = vars_trace_type[idx];
 		    var val = 0
 		    if (step < K){
-		    	val = cex[idx]["Step "+step.toString()];
+		    	val = cex[idx]["Step "+step.toString()] ? cex[idx]["Step "+step.toString()] : 0;
 			}
 		    else {
 			if (varType == "bool"){
@@ -797,7 +792,7 @@ var loadedTrace = filepath;
 
 	var NewtraceID="CEX-ID"
 	var NewtraceDescription="CEX description"
-	var NewJSCTraces = [
+	var newActiveTraces = [
 		{
 		traceID: NewtraceID,
 		traceDescription: NewtraceDescription,
@@ -810,25 +805,32 @@ var loadedTrace = filepath;
 	LTLSimController.setTrace(this.state.model,theTrace);
 
 	this.state.traces = this.state.traces.concat([NewtraceID]);
-	this.state.JSCTraces = this.state.JSCTraces.concat(NewJSCTraces);
-	//JSC 0328-2 this.state.TraceID = "CEX-1"
+	this.state.activeTraces = this.state.activeTraces.concat(newActiveTraces);
     	}
 
-    //===============================================================
-    // load traces from json data-base in "trace_db_json"
-    // 
-    handleLoadTraces(origin) {
-	//
-        this.setState((prevState) => {
-	  let { model, traces, JSCTraces} = prevState;
-	   var content = fs.readFileSync(trace_db_json);
-	   var loadedTraces = JSON.parse(content);
+  //===============================================================
+  // FUNCTION handleLoadTraces(origin) {
+  // load traces from json data-base in "trace_db_json"
+  //
+  handleLoadTraces(origin) {
+         var content = fs.readFileSync(trace_db_json, (err) => {
+              if(err) {
+                      console.log("The JSON DB file could not be opened!");
+                      return console.log(err);
+                      }
+              });
+      if (content){
+      this.setState((prevState) => {
+
+	       let { model, traces, activeTraces} = prevState;
+	        //var content = fs.readFileSync(trace_db_json);
+	        var loadedTraces = JSON.parse(content);
 
 	    //
-            // populate the JSCTraces and traces lists
+            // populate the activeTraces and traces lists
             //
 	    traces=[];
-	    JSCTraces=[];
+	    activeTraces=[];
 	    for (let tr=0; tr< loadedTraces.length; tr++){
 			//
 			// load only those matching to project
@@ -846,7 +848,7 @@ var loadedTrace = filepath;
 			//
 			// if "requirement" is selected...
 			//
-		if ((origin === "Requirement") && 
+		if ((origin === "Requirement") &&
 		     ! (
 		    (loadedTraces[tr].saveToReqID == "*") ||
 		    (loadedTraces[tr].saveToReqID == this.props.requirementIDs[0])
@@ -854,27 +856,30 @@ var loadedTrace = filepath;
 			continue;
 			}
 		traces = traces.concat(loadedTraces[tr].traceID);
-		JSCTraces = JSCTraces.concat(loadedTraces[tr]);
+		activeTraces = activeTraces.concat(loadedTraces[tr]);
 		}
        	    return {
 		traces: traces,
-    		JSCTraces: JSCTraces
+    		activeTraces: activeTraces
        		};
         }, () => {
             /* Call LTL simulation after the state was updated */
             this.update();
         });
+        }
     }
 
-    //===============================================================
-    // save traces to json data-base in "trace_db_json"
-    // 
+
+    	//===============================================================
+    	// FUNCTION handleSaveTraces(origin) {
+    	// save traces to json data-base in "trace_db_json"
+    	//
     handleSaveTraces(origin) {
 	//
         this.setState((prevState) => {
-	  let { model, traces, JSCTraces} = prevState;
+	  let { model, traces, activeTraces} = prevState;
 
-	  var JTrace = JSON.stringify(JSCTraces, null, 4)
+	  var JTrace = JSON.stringify(activeTraces, null, 4)
 	  fs.writeFile(trace_db_json, JTrace, (err) => {
 		if(err) {
        			return console.log(err);
@@ -889,10 +894,12 @@ var loadedTrace = filepath;
 
 
     //===============================================================
+    // function handleSelectTask
+    //
     // setting trace to named trace (existing)
-    handleFoo(name){
+    handleSelectTask(name){
       this.setState(() => {
-	var NC = this.state.JSCTraces.find(tr => {
+	var NC = this.state.activeTraces.find(tr => {
 		return tr.traceID === name
 		});
 		//
@@ -900,21 +907,22 @@ var loadedTrace = filepath;
 		//
 	LTLSimController.setTrace(this.state.model,NC.theTrace);
 	setMarginVariableTraces(this.state.model);
-        
-        return { 
+
+        return {
 		anchorEl: null,
 		traceID: NC.traceID,
 		traceDescription: NC.traceDescription
 		};
-	}, () => { 
-//		this.handleLtlsimSimulate();
+	}, () => {
 		this.update();
 		}
 	    );
       	}
 
     //===============================================================
-    handleFooNew(name){
+    // function handleSelectNewTask
+    // make a new trace
+    handleSelectNewTask(name){
       this.setState(() =>{
 
 	let NTC = this.state.traceIDCnt;
@@ -927,22 +935,22 @@ var loadedTrace = filepath;
 		//
 	LTLSimController.setEmptyTrace(this.state.model);
 	setMarginVariableTraces(this.state.model);
-        
-         return { 
+
+         return {
 		anchorEl: null,
 		traceID: NewTraceID,
 		traceIDCnt: NTC,
 		traceDescription: ""
 		};
-	}, () => { 
-//			this.handleLtlsimSimulate();
-			this.update();
-			}
+	}, () => {
+		this.update();
+		}
 	);
 
       	}
 
     //===============================================================
+    //
     handleClose = () => {
     this.setState({ anchorEl: null });
     };
@@ -971,14 +979,12 @@ var loadedTrace = filepath;
 	//
         this.setState({ anchorEl_Req: null });
 
-
 	}
 
     //===============================================================
     handleReqSel(ReqID){
       this.setState((prevState) => {
-//	Object.keys(prevState).forEach((prop)=> console.log(prop))
-	const {model, logics, JSCReqID, reqID_data} = prevState;
+	const {model, logics, visibleRequirementIDs, reqID_data} = prevState;
 	const {reqID,formula_PT,formula_FT} = ReqID;
         const {requirementIDs } = this.props;
 
@@ -987,14 +993,13 @@ var loadedTrace = filepath;
 			  .replace(/\./g,"_")
 			  .replace(/\+/g,"_")
 for (let i=0; i< reqID_data.length; i++){
-//	Object.keys(reqID_data[i]).forEach((prop)=> console.log(prop))
 	}
 	// need to also sanitize the 1st undeleteable ID
 	let reqID0_R =requirementIDs[0].replace(/ /g,"_")
 			  .replace(/-/g,"_")
 			  .replace(/\./g,"_")
 			  .replace(/\+/g,"_")
-	
+
 	if (reqID_R == reqID0_R){
 		return;
 		}
@@ -1002,16 +1007,16 @@ for (let i=0; i< reqID_data.length; i++){
 		//
 		// Are we adding or deleting?
 		//
-	let idx = JSCReqID.indexOf(reqID_R);
+	let idx = visibleRequirementIDs.indexOf(reqID_R);
 	if (idx >= 0){
 		//
 		// in current list -- need to remove
 		//
         	LTLSimController.removeFormula(model, reqID_R);
-	JSCReqID.splice(idx);        
-        return { 
+	visibleRequirementIDs.splice(idx);
+        return {
 		anchorEl_Req: null,
-		JSCReqID: JSCReqID,
+		visibleRequirementIDs: visibleRequirementIDs,
 		model: model
 		};
 
@@ -1024,24 +1029,16 @@ for (let i=0; i< reqID_data.length; i++){
 
 	if (F != undefined){
 
-	let FF = F.replace(/<b>/g, "")
-            .replace(/<i>/g, "")
-            .replace(/<\/b>/g, "")
-            .replace(/<\/i>/g, "")
-// arithmetic V0.0
-//            .replace(/([0-9A-Za-z_]+) < ([0-9A-Za-z_]+)/g, "$1_lt_$2")
-//            .replace(/([0-9A-Za-z_]+) > ([0-9A-Za-z_]+)/g, "$1_gt_$2")
-//            .replace(/([0-9A-Za-z_]+) <= ([0-9A-Za-z_]+)/g, "$1_le_$2")
-//            .replace(/([0-9A-Za-z_]+) >= ([0-9A-Za-z_]+)/g, "$1_ge_$2")
-//            .replace(/([0-9A-Za-z_]+) = ([0-9A-Za-z_]+)/g, "$1_eq_$2")
-// end arithmetic
-            .replace(/<\/i>/g, "")
-            .replace(/(\d+)\+1/g, (str, p1, offset, s) => (`${parseInt(p1)+1}`))
-            .replace(/\[<=(\d+)\]/g, "[0, $1]")
-            .replace(/\[=(\d+)\]/g, "[$1, $1]")
-            .replace(/\[<(\d+)\]/g, (str, p1, offset, s) => (`[0, ${parseInt(p1)-1}]`));
+	   let FF = F.replace(/<b>/g, "")
+            	.replace(/<i>/g, "")
+            	.replace(/<\/b>/g, "")
+            	.replace(/<\/i>/g, "")
+                .replace(/<\/i>/g, "")
+                .replace(/(\d+)\+1/g, (str, p1, offset, s) => (`${parseInt(p1)+1}`))
+                .replace(/\[<=(\d+)\]/g, "[0, $1]")
+                .replace(/\[=(\d+)\]/g, "[$1, $1]")
+                .replace(/\[<(\d+)\]/g, (str, p1, offset, s) => (`[0, ${parseInt(p1)-1}]`));
 
-	//TODO: REWRITE the reqID to be in "ident-form"
 		//
 		// load in the formula depending on the current
 		// logic
@@ -1049,20 +1046,19 @@ for (let i=0; i< reqID_data.length; i++){
         LTLSimController.addFormula(model, reqID_R, FF);
         LTLSimController.getFormula(model, reqID_R).label = reqID_R;
         LTLSimController.setFormulaValue(model, reqID_R, "", EFormulaStates.UNKNOWN);
-	const NewJSCReqID = JSCReqID.concat(reqID_R);
-        
-        return { 
+	const NewvisibleRequirementIDs = visibleRequirementIDs.concat(reqID_R);
+
+        return {
 		anchorEl_Req: null,
-		JSCReqID: NewJSCReqID,
+		visibleRequirementIDs: NewvisibleRequirementIDs,
 		model: model
 		};
         }
 	else {
 		console.log("no FT/PT representation of requirement");
 		}
-	} 
-	}, () => { 
-//		this.handleLtlsimSimulate();
+	}
+	}, () => {
 		this.update();
 		}
 	    );
@@ -1134,7 +1130,7 @@ for (let i=0; i< reqID_data.length; i++){
     //============================================================
     handleLtlsimSimulate(formulaFilter) {
         this.setState((prevState) => {
-            let { model, visibleSubformulas, JSCReqID, logics } = prevState;
+            let { model, visibleSubformulas, visibleRequirementIDs, logics } = prevState;
             const { ids } = this.props;
 
             /* Set the simulated formula and subformulas to busy */
@@ -1153,13 +1149,11 @@ for (let i=0; i< reqID_data.length; i++){
             }
 
 
-// JOHANN
-	    JSCReqID.forEach(reqID => {
+	    visibleRequirementIDs.forEach(reqID => {
                 /* Set the simulated formula and subformulas to busy */
-                LTLSimController.setFormulaValue(model, reqID, 
+                LTLSimController.setFormulaValue(model, reqID,
 			"", EFormulaStates.UNKNOWN);
 		});
-//JSC-=NEW: filter vs formulaFilter below
             ltlsim.simulate(
                 model,
                 formulaFilter,
@@ -1207,7 +1201,7 @@ for (let i=0; i< reqID_data.length; i++){
         })
     }
 
-//==========================================================
+    //===============================================================
       handleLtlsimResult_FT(id, sid, value, trace) {
         this.setState((prevState) => {
             let {model} = prevState;
@@ -1223,10 +1217,10 @@ for (let i=0; i< reqID_data.length; i++){
         })
     }
 
+    //===============================================================
     handleLtlsimResult_PT(id, sid, value, trace) {
         this.setState((prevState) => {
             let {model} = prevState;
-//JSC/CAV-4            let {model} = this.State;
             if (LTLSimController.getFormulaKeys(model).indexOf(id) !== -1) {
                 LTLSimController.setFormulaTrace(model, id, sid, trace);
 
@@ -1244,34 +1238,15 @@ for (let i=0; i< reqID_data.length; i++){
     }
 
 
-//=========================================================
+    //===============================================================
     update() {
-        let { model, visibleSubformulas, JSCReqID} = this.state;
+        let { model, visibleSubformulas, visibleRequirementIDs} = this.state;
         const { ids } = this.props;
-//JSC-0612
 	// from MainView
-        let formulaFilter = JSCReqID.filter((f) => {
+        let formulaFilter = visibleRequirementIDs.filter((f) => {
                 let formula = LTLSimController.getFormula(model, f);
 		//JSC
 		return true;
-                if (formula === undefined || formula === null) {
-                    return false;
-                } else {
-                    if (formula.value === EFormulaStates.UNKNOWN ||
-                        formula.value === EFormulaStates.BUSY ) {
-                        return true;
-                    } else {
-                        let subexpressions = JSCReqID[f];
-                        if (subexpressions && false) {
-                            return formula.subexpressions
-                                    .filter((s, i) => (subexpressions.indexOf(i) !== -1))
-                                    .some((s) => (s.value === EFormulaStates.UNKNOWN ||
-                                                  s.value === EFormulaStates.BUSY));
-                        } else {
-                            return false;
-     			}
-                    }
-                }
             });
 
       LTLSimController.evalModel(model);
@@ -1282,9 +1257,8 @@ for (let i=0; i< reqID_data.length; i++){
 	//=================================================================
     render () {
         const { classes, open, onClose, requirements, ids, requirementIDs } = this.props;
-        let { model, visibleSubformulas, highlight, anchorEl, anchorEl_Req, logics, traceID, reqID_data, JSCReqID } = this.state;
+        let { model, visibleSubformulas, highlight, anchorEl, anchorEl_Req, logics, traceID, reqID_data, visibleRequirementIDs } = this.state;
         let formula = LTLSimController.getFormula(model, ids[0]);
-//JSC/CAV        const displayID = requirementID ? requirementID : "REQ";
         const displayID = requirementIDs[0] ? requirementIDs[0] : "FSM-006";
 
         if (formula !== undefined && formula !== null) {
@@ -1309,7 +1283,7 @@ for (let i=0; i< reqID_data.length; i++){
                     </Typography>
                     <Tooltip title="Show additional Requirements" >
                     <Button
-					  id="qa_ltlSim_sel_Req" 
+					  id="qa_ltlSim_sel_Req"
                       color="secondary"
                       size="small"
                       aria-owns={anchorEl_Req ? 'simple-menu' : null}
@@ -1329,12 +1303,12 @@ for (let i=0; i< reqID_data.length; i++){
                     >
 						Add/Remove Require
                       <MenuItem
-					    id={"qa_ltlSim_mi_Req_1_"+this.props.project+":"+requirementIDs[0]} 
+					    id={"qa_ltlSim_mi_Req_1_"+this.props.project+":"+requirementIDs[0]}
                         onClick={() =>  this.handleReqSelAll()}
                         dense
                         >
                         <ListItemIcon><NotesIcon color="primary"/></ListItemIcon>
-                        <ListItemText inset 
+                        <ListItemText inset
 				disableTypography
 			  primary = {<Typography style={{ color: '#AAA000'}}>{this.props.project+":"+requirementIDs[0]}</Typography>} />
                       </MenuItem>
@@ -1344,16 +1318,15 @@ for (let i=0; i< reqID_data.length; i++){
 			  .replace(/-/g,"_")
 			  .replace(/\./g,"_")
 			  .replace(/\+/g,"_")
-			  if ((this.state.JSCReqID.indexOf(reqID_R) >=0) || (reqID.reqID == requirementIDs[0])){
+			  if ((this.state.visibleRequirementIDs.indexOf(reqID_R) >=0) || (reqID.reqID == requirementIDs[0])){
                                 return <MenuItem
 								    id={"qa_ltlSim_mi_Req_2_"+this.props.project+":"+reqID.reqID}
                                     key={this.props.project+":"+reqID.dbkey}
                                     dense
                                     onClick={() => this.handleReqSel(reqID)}>
                                     <ListItemIcon><NotesIcon color="secondary"/></ListItemIcon>
-                                    <ListItemText inset 
+                                    <ListItemText inset
 				       disableTypography
-//                                       primary = {this.props.project+" "+reqID.reqID} />
 			  	       primary = {<Typography style={{ color: '#A0A0A0'}}>{this.props.project+":"+reqID.reqID}</Typography>} />
                                   </MenuItem>
 				  }
@@ -1364,7 +1337,7 @@ for (let i=0; i< reqID_data.length; i++){
                                     dense
                                     onClick={() => this.handleReqSel(reqID)}>
                                     <ListItemIcon><NotesIcon color="secondary"/></ListItemIcon>
-                                    <ListItemText inset 
+                                    <ListItemText inset
 				       disableTypography
 			  	       primary = {<Typography style={{ color: '#000000'}}>{this.props.project+":"+reqID.reqID}</Typography>} />
                                   </MenuItem>
@@ -1387,14 +1360,14 @@ for (let i=0; i< reqID_data.length; i++){
                     </Button>
                     </Tooltip>
                     <Menu
-                      id="qa_ltlSim_sel_menu_Trace" 
+                      id="qa_ltlSim_sel_menu_Trace"
                       anchorEl={anchorEl}
                       open={Boolean(anchorEl)}
                       onClose={this.handleClose}
                     >
                       <MenuItem
 					    id="qa_ltlSim_mi_traceNew"
-                        onClick={() =>  this.handleFooNew('NewTrace')}
+                        onClick={() =>  this.handleSelectNewTask('NewTrace')}
                         dense
                         >
                         <ListItemIcon><NotesIcon color="primary"/></ListItemIcon>
@@ -1422,7 +1395,7 @@ for (let i=0; i< reqID_data.length; i++){
                         dense
                         >
                         <ListItemIcon><NotesIcon color="primary"/></ListItemIcon>
-                        <ListItemText inset primary = {'Save [JSON])'} />
+                        <ListItemText inset primary = {'Save [JSON]'} />
                       </MenuItem>
                       {
                         (this.state.traces || []).map(traceID => {
@@ -1430,7 +1403,7 @@ for (let i=0; i< reqID_data.length; i++){
 						            id={"qa_ltlSim_mi_trace_name_"+traceID}
                                     key={traceID}
                                     dense
-                                    onClick={() => this.handleFoo(traceID)}>
+                                    onClick={() => this.handleSelectTask(traceID)}>
                                     <ListItemIcon><NotesIcon color="secondary"/></ListItemIcon>
                                     <ListItemText inset primary = {traceID} />
                                   </MenuItem>
@@ -1506,7 +1479,7 @@ for (let i=0; i< reqID_data.length; i++){
                     requirementID={displayID}  // OLD
                     description={requirements[0]}  // OLD
 		    allreq = {reqID_data}
-		    selreq = {JSCReqID}
+		    selreq = {visibleRequirementIDs}
                 />
                 {LTLSimController.getFormulaKeys(model).length > 0 &&
                   <div>
@@ -1520,7 +1493,7 @@ for (let i=0; i< reqID_data.length; i++){
                         onTraceLengthChange={this.handleTraceLengthChange}
                         displayFormulaEvaluation={highlight}
                         displayAtomicsWithFormulas={false}
-                        displaySubformulas={false}   //JSC 03-28
+                        displaySubformulas={false}
                         selectedFormula=""
 						requirementID={requirementIDs[0]}
                     />
@@ -1554,25 +1527,6 @@ function setMarginVariableTraces(model) {
     }
 }
 
-    //===============================================================
-function loadReqID(){
-//    const filterOff = selectedProject == 'All Projects'
-    const filterOff = false;
-
-    db.allDocs({
-      include_docs: true,
-    }).then((result) => {
-      this.setState({
-        reqID_data: result.rows
-                .filter(r => !system_dbkeys.includes(r.key))
-                .filter(r => filterOff || r.doc.project == this.props.project)
-                .map(r => {return r.doc.reqid;
-                })
-      })
-    }).catch((err) => {
-      console.log(err);
-    });
-    }
 
 
 //=====================================================================
@@ -1580,15 +1534,26 @@ LTLSimDialog.propTypes = {
     classes: PropTypes.object.isRequired,
     open: PropTypes.bool.isRequired,
     ids: PropTypes.array.isRequired,
-	logics: PropTypes.string.isRequired,
+    logics: PropTypes.string.isRequired,
     ptExpressions: PropTypes.array.isRequired,
     ftExpressions: PropTypes.array.isRequired,
     onClose: PropTypes.func.isRequired,
     project: PropTypes.string.isRequired,
     requirements: PropTypes.array.isRequired,
     requirementIDs: PropTypes.array.isRequired,
-	traceID: PropTypes.string.isRequired,
+    traceID: PropTypes.string.isRequired,
     CEXFileName: PropTypes.object
 };
 
-export default withStyles(styles)(LTLSimDialog)
+function mapStateToProps(state) {
+  const projectRequirements = state.actionsSlice.projectRequirements;
+  return {
+    projectRequirements
+  };
+}
+
+const mapDispatchToProps = {
+  setProjectRequirements,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles)(LTLSimDialog))

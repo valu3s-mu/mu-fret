@@ -48,7 +48,7 @@ import IconButton from '@material-ui/core/IconButton';
 import Tooltip from '@material-ui/core/Tooltip';
 import ExportIcon from '@material-ui/icons/ArrowUpward';
 import ImportIcon from '@material-ui/icons/ArrowDownward';
-
+import { saveAs } from 'file-saver';
 /* Accordion Imports */
 import Accordion from '@material-ui/core/Accordion';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
@@ -67,21 +67,10 @@ import Select from '@material-ui/core/Select';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 
-const checkDbFormat = require('../../support/fretDbSupport/checkDBFormat.js');
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const constants = require('../parser/Constants');
-const db = sharedObj.db;
-const modeldb = sharedObj.modeldb;
-const system_dbkeys = sharedObj.system_dbkeys;
-
-const fs = require('fs');
-const archiver = require('archiver');
-const app = require('electron').remote.app;
-const dialog = require('electron').remote.dialog;
-const utils = require('../../support/utils');
+const {ipcRenderer} = require('electron');
 
 import analysisPortalManual from '../../docs/_media/ExportingForAnalysis/analysisInsideFRET.md';
-var dbChangeListener;
+import JSZip from "jszip";
 
 const styles = theme => ({
   root: {
@@ -150,8 +139,6 @@ VariablesViewHeader.propTypes = {
 
 VariablesViewHeader = withStyles(styles)(VariablesViewHeader);
 
-
-
 const componentStyles = theme => ({
   root: {
     width: '100%',
@@ -201,75 +188,27 @@ class ComponentSummary extends React.Component {
 
   exportComponentCode = event => {
     event.stopPropagation();
-    const {component, selectedProject, language, getPropertyInfo, getDelayInfo, getContractInfo} = this.props;
-    const homeDir = app.getPath('home');
-    const self = this;
-    var filepath = dialog.showSaveDialogSync({
-          defaultPath : homeDir,
-          title : 'Export specification',
-          buttonLabel : 'Export',
-          filters: [
-            { name: "Documents", extensions: ['zip'] }
-          ],
-        });
 
-      if (filepath) {
-        // create a file to stream archive data to.
-        var output = fs.createWriteStream(filepath);
-        var archive = archiver('zip', {
-          zlib: { level: 9 } // Sets the compression level.
-        });
-        // listen for all archive data to be written
-        // 'close' event is fired only when a file descriptor is involved
-        output.on('close', function() {
-          console.log('archiver has been finalized and the output file descriptor has closed.');
-        });
-        // good practice to catch this error explicitly
-        archive.on('error', function(err) {
-          throw err;
-        });
+    const {component, selectedProject, language} = this.props;
+    var args = [component, selectedProject, language]
+    ipcRenderer.invoke('exportComponent',args).then((result) => {
+      const zip = new JSZip();
+      console.log('Export VariableView result: ', result)
 
-        modeldb.find({
-          selector: {
-            component_name: component,
-            project: selectedProject,
-            completed: true, //for modes that are not completed; these include the ones that correspond to unformalized requirements
-            modeldoc: false
-          }
-        }).then(function (modelResult){
-          let contract = getContractInfo(modelResult);
-          contract.componentName = component+'Spec';
-          archive.pipe(output);
-          if (language === 'cocospec' && modelResult.docs[0].modelComponent != ""){
-            var variableMapping = self.getMappingInfo(modelResult, contract.componentName);
-            archive.append(JSON.stringify(variableMapping), {name: 'cocospecMapping'+component+'.json'});
-          }
-          db.find({
-            selector: {
-              project: selectedProject
-            }
-          }).then(function (fretResult){
-            contract.properties = getPropertyInfo(fretResult, contract.outputVariables, component);
-            contract.delays = getDelayInfo(fretResult, component);
-            if (language === 'cocospec'){
-              self.props.variableIdentifierReplacement(contract);
-              archive.append(ejsCache.renderContractCode().contract.complete(contract), {name: contract.componentName+'.lus'})
-            } else if (language === 'copilot'){
-              contract.internalVariables.push.apply(contract.internalVariables, contract.modes);
-              contract.modes.forEach(function(mode) {
-              contract.assignments.push(mode.assignment);
-              });
-              self.props.variableIdentifierReplacement(contract);
-              archive.append(ejsCacheCoPilot.renderCoPilotSpec().contract.complete(contract), {name: contract.componentName+'.json'})
-            }
-            // finalize the archive (ie we are done appending files but streams have to finish yet)
-            archive.finalize();
-
-          }).catch((err) => {
-            console.log(err);
-          })
+      result.forEach(file => {
+        zip.file(file.name, file.content)
       })
-    }
+
+      zip.generateAsync({type:"blob"}).then(function(content) {
+        // see FileSaver.js
+        saveAs(content, 'components.zip');
+      });
+    }).catch((err) => {
+      console.log(err);
+    })
+
+    this.setState({ projectName: '' });
+
   }
 
   render() {
@@ -307,15 +246,10 @@ ComponentSummary.propTypes = {
   completed: PropTypes.bool.isRequired,
   selectedProject: PropTypes.string.isRequired,
   language: PropTypes.string.isRequired,
-  getPropertyInfo: PropTypes.func.isRequired,
-  getDelayInfo: PropTypes.func.isRequired,
-  getContractInfo: PropTypes.func.isRequired,
   variableIdentifierReplacement: PropTypes.func.isRequired
 };
 
 ComponentSummary = withStyles(componentStyles)(ComponentSummary);
-
-
 
 class VariablesView extends React.Component {
   state = {
@@ -338,45 +272,23 @@ class VariablesView extends React.Component {
 
   constructor(props){
     super(props);
-    // this.checkComponentCompleted = this.checkComponentCompleted.bind(this);
-    dbChangeListener = db.changes({
-      since: 'now',
-      live: true,
-      include_docs: true
-    }).on('change', (change) => {
-      if (!system_dbkeys.includes(change.id)) {
-        this.props.synchStateWithDB();
-      }
-    }).on('complete', function(info) {
-      console.log(info);
-    }).on('error', function (err) {
-      console.log(err);
-    });
   }
 
   componentDidMount() {
     this.mounted = true;
-    // this.props.synchStateWithDB();
+
   }
 
   componentWillUnmount() {
     this.mounted = false;
-    dbChangeListener.cancel();
   }
 
-  // componentDidUpdate(prevProps) {
-  //   if (this.props.selectedProject !== prevProps.selectedProject) {
-  //     console.log(this.props.selectedProject)
-  //     console.log("varview syncing with db...")
-  //     this.props.synchStateWithDB();
-  //     console.log(this.props.components);
-  //   }
-  // }
 
   render() {
     const self = this;
-    const {classes, selectedProject, existingProjectNames, checkComponentCompleted, components, completedComponents, cocospecData, cocospecModes, getPropertyInfo, getDelayInfo, getContractInfo} = this.props;
+    const {classes, selectedProject, listOfProjects, components, completedComponents, cocospecData, cocospecModes} = this.props;
     const{language}= this.state;
+    components.sort();
 
     return (
       <div>
@@ -416,9 +328,6 @@ class VariablesView extends React.Component {
                   completed = {completedComponents.includes(component)}
                   selectedProject={selectedProject}
                   language={language}
-                  getPropertyInfo={getPropertyInfo}
-                  getDelayInfo={getDelayInfo}
-                  getContractInfo={getContractInfo}
                   variableIdentifierReplacement={this.props.variableIdentifierReplacement}
                 />
               </AccordionSummary>
@@ -428,7 +337,6 @@ class VariablesView extends React.Component {
                   <VariablesSortableTable
                     selectedProject={selectedProject}
                     selectedComponent={component}
-                    checkComponentCompleted={checkComponentCompleted}
                   />
                 </div>
                 </AccordionDetails>
@@ -444,16 +352,11 @@ class VariablesView extends React.Component {
 VariablesView.propTypes = {
   classes: PropTypes.object.isRequired,
   selectedProject: PropTypes.string.isRequired,
-  existingProjectNames: PropTypes.array.isRequired,
-  synchStateWithDB: PropTypes.func.isRequired,
-  checkComponentCompleted:PropTypes.func.isRequired,
+  listOfProjects: PropTypes.array.isRequired,
   cocospecData: PropTypes.object.isRequired,
   cocospecModes: PropTypes.object.isRequired,
   components: PropTypes.array.isRequired,
   completedComponents: PropTypes.array.isRequired,
-  getPropertyInfo: PropTypes.func.isRequired,
-  getDelayInfo: PropTypes.func.isRequired,
-  getContractInfo: PropTypes.func.isRequired,
   variableIdentifierReplacement: PropTypes.func.isRequired
 };
 

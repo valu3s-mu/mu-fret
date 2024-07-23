@@ -49,15 +49,11 @@ const styles = theme => ({
     root: {
         position: 'sticky',
         padding: theme.spacing(),
-//JSC/CAV        paddingTop: theme.spacing(4),
         paddingTop: theme.spacing(2),
         bottom: 0
     },
     details: {
         flexDirection: 'row'
-//        display: 'flex',
-//        flexDirection: 'row',
-//        alignItems: 'center'
     },
     content: {
         color: theme.palette.primary.main,
@@ -90,19 +86,25 @@ class LTLSimRequirementDetails extends Component {
                   selreq.map(R_ID => {
                     let ID=R_ID;
                     let Desc;
-                    (selreq.length === 1)? (Desc=description):(Desc="unknown-ID not in DB")
-                    for (let i=0; i< allreq.length; i++){
-                      let reqID = allreq[i].reqID;
-                      let reqID_R = reqID.replace(/ /g,"_")
+		    
+		    if ((selreq.length === 1)|| (R_ID == requirementID)) {
+			Desc = description;
+			// ID = ID;
+			}
+		    else {
+                        for (let i=0; i< allreq.length; i++){
+                      		let reqID = allreq[i].reqID;
+                      		let reqID_R = reqID.replace(/ /g,"_")
                                          .replace(/-/g,"_")
                                          .replace(/\./g,"_")
                                          .replace(/\+/g,"_")
-                      if (reqID_R == R_ID){
-                        Desc=allreq[i].fulltext
-                        ID=reqID;
-                        break;
-                      }
-                    }
+                      		if (reqID_R == R_ID){
+                        		Desc=allreq[i].fulltext
+                        		ID=reqID;
+                        		break;
+                      				}
+                    		}
+			}
                 	return(<div key={"LTLSimRequirementDetails_"+R_ID}><Typography id="qa_ltlSim_typ_reqId">
                   		<b key={ID}>{ID}</b>: {Desc}
                   	</Typography></div>)})

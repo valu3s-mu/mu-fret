@@ -74,32 +74,35 @@ const SpecialCases =
       ];
 
 const BaseForm = [ // negate,timing,condition
-  ['false,immediately,null|regular', immediately('RES')],
-  ['true,immediately,null|regular', notImmediately('RES')],
-  ['false,next,null|regular', next('RES')],
-  ['true,next,null|regular', notNext('RES')],
-  ['false,eventually|null,null|regular', eventually('RES')],
-  ['true,eventually|null,null|regular', notEventually('RES')],
-  ['false,always,null|regular', always('RES')],
-  ['true,always,null|regular', notAlways('RES')],
-  ['false,never,null|regular', never('RES')],
-  ['true,never,null|regular', notNever('RES')],
-  ['false,within,null|regular', within('RES','BOUND')],
-  ['true,within,null|regular', notWithin('RES','BOUND')],
-  ['false,for,null|regular', throughout('RES','BOUND')],
-  ['true,for,null|regular', notThroughout('RES','BOUND')],
-  ['false,after,null|regular', afterTiming('RES','BOUND')], // scope also named after...
-  ['true,after,null|regular', notAfterTiming('RES','BOUND')],
-    ['false,until,null|regular', untilTiming('RES','STOPCOND')],
-    ['true,until,null|regular', notUntilTiming('RES','STOPCOND')],
-    ['false,before,null|regular', beforeTiming('RES','STOPCOND')], // scope also named before
-    ['true,before,null|regular', notBeforeTiming('RES','STOPCOND')]
+  ['false,immediately,-', immediately('RES')],
+  ['true,immediately,-', notImmediately('RES')],
+  ['false,finally,-', Finally('RES')], // "finally" is a Javascript keyword but Finally isn't.
+  ['true,finally,-', notFinally('RES')],
+  ['false,next,-', next('RES')],
+  ['true,next,-', notNext('RES')],
+  ['false,eventually|null,-', eventually('RES')],
+  ['true,eventually|null,-', notEventually('RES')],
+  ['false,always,-', always('RES')],
+  ['true,always,-', notAlways('RES')],
+  ['false,never,-', never('RES')],
+  ['true,never,-', notNever('RES')],
+  ['false,within,-', within('RES','BOUND')],
+  ['true,within,-', notWithin('RES','BOUND')],
+  ['false,for,-', throughout('RES','BOUND')],
+  ['true,for,-', notThroughout('RES','BOUND')],
+  ['false,after,-', afterTiming('RES','BOUND')], // scope also named after...
+  ['true,after,-', notAfterTiming('RES','BOUND')],
+  ['false,until,-', untilTiming('RES','STOPCOND')],
+  ['true,until,-', notUntilTiming('RES','STOPCOND')],
+  ['false,before,-', beforeTiming('RES','STOPCOND')], // scope also named before
+  ['true,before,-', notBeforeTiming('RES','STOPCOND')]
 ]
 
 function negate(str) {return utilities.negate(str)}
 function parenthesize(str) {return utilities.parenthesize(str)}
 function disjunction(str1, str2) {return utilities.disjunction([str1, str2])}
 function conjunction(str1, str2) {return utilities.conjunction([str1, str2])}
+function implication(str1, str2) {return utilities.implication(str1, str2)}
 
 // if we are on infinite semantics then we set LAST=FALSE
 function conditionTrigger(cond) {
@@ -119,6 +122,15 @@ function immediately(property) {
 function notImmediately(property) {
                   return(immediately(negate(property)))
                 }
+
+function Finally(property,endsScope='ENDSCOPE') {
+  return always(implication(endsScope,property))
+}
+
+function notFinally(property, endsScope='ENDSCOPE') {
+  return Finally(negate(property))
+    }
+
 
 function next(property, endsScope='ENDSCOPE') {
             return parenthesize(`${endsScope} or (next (${property}))`);
@@ -255,6 +267,12 @@ exports.getFormalization = (key, negate, leftEnd, rightEnd, options) => {
 
       main_formula = conjunction(formula_1, formula_2)
     }
+  else if (key[1].includes('noTrigger')) {
+    main_formula = parenthesize(' always ' +
+				parenthesize(parenthesize('COND') +
+					     ' implies ' +
+					     parenthesize(main_formula)))
+  }
 
     return addScope(key[0], main_formula, leftEnd, rightEnd, options)
 }
@@ -265,7 +283,7 @@ exports.getFormalization = (key, negate, leftEnd, rightEnd, options) => {
 function addScope (scope, main_formula, left, right, options) {
   // endsScope may actually be LAST but only with after, null, and onlyBefore
   // so it will never occur in the calls to the actual functions below
-    var endsScope = ((options.in == 'afterUntil') && !(right=='LAST')) ?
+  var endsScope = ((options.in == 'afterUntil') && !(right=='LAST')) ?
 	`(${right} or LAST)` : right;
   var formula = main_formula.replace(/ENDSCOPE/g, endsScope)
 

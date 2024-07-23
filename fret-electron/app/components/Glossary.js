@@ -47,9 +47,10 @@ import FormLabel from "@material-ui/core/FormLabel";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
 import PropTypes from 'prop-types';
 import CheckBoxOutlineBlankIcon from "@material-ui/icons/CheckBoxOutlineBlank";
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const modeldb = sharedObj.modeldb;
-const db = require('electron').remote.getGlobal('sharedObj').db;
+import {ipcRenderer} from "electron";
+import {setGlossaryProjectRequirements, setGlossaryVariables
+} from "../reducers/allActionsSlice";
+import {connect} from "react-redux";
 
 const styles = theme => ({
   treeItemGroup: {
@@ -88,33 +89,35 @@ const variableTypes = ['Mode', 'Input', 'Output', 'Internal', 'Undefined'];
 class Glossary extends React.Component {
 
   state = {
+    componentsWithVariables: [],
     components: [],
     selectedComponent: '',
     checked: { Mode: true, Input: true, Output: true, Internal: true,  Undefined: true},
     filteredVariables: [],
-    mapDbIdToReqId: {}
   }
 
   componentDidMount = () => {
-    this.getComponents();
-    this.createMapDbIdToReqId();
-  }
+    this.getProjectRequirements();
+    this.getVariables();
+    if (process.env.EXTERNAL_TOOL == '1') {
+      this.setVariablesToComponents();
+    }
+    }
 
   createMapDbIdToReqId = () => {
-    const { requirements } = this.props;
-    if (requirements !== undefined ) {
-      const mapDbIdToReqId = {}
-      requirements.forEach(req => {
-        mapDbIdToReqId[req.doc._id] = req.doc.reqid;
-        mapDbIdToReqId[req.doc.reqid] = req.doc.reqid;
-      })
-      this.setState({mapDbIdToReqId})
-    }
+    const { projectRequirements } = this.props;
+    const mapDbIdToReqId = {}
+    projectRequirements.forEach(req => {
+      mapDbIdToReqId[req._id] = req.reqid;
+      mapDbIdToReqId[req.reqid] = req.reqid;
+    })
+    return mapDbIdToReqId;
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
     if (prevProps.projectName !== this.props.projectName) {
-      this.getComponents();
+      this.getProjectRequirements();
+      this.getVariables();
       this.setState({selectedComponent: ''})
     }
     if(prevState.selectedComponent !== this.state.selectedComponent || prevState.checked !== this.state.checked){
@@ -123,42 +126,68 @@ class Glossary extends React.Component {
     if(prevState.filteredVariables !== this.state.filteredVariables){
       this.props.setAutoFillVariables(this.state.filteredVariables.map(variable => variable.name));
     }
-    if(this.props.requirements !== prevProps.requirements) {
-      this.createMapDbIdToReqId();
+    if(this.props.projectRequirements !== prevProps.projectRequirements) {
+      this.setComponentsNames();
+    }
+    if(this.props.variables !== prevProps.variables || this.props.projectRequirements !== prevProps.projectRequirements ||  process.env.EXTERNAL_TOOL == '1' && this.props.editVariables !== prevProps.editVariables) {
+      this.setComponentsNames();
+      this.setVariablesToComponents();
     }
   }
 
-  getComponents = async () => {
-    let variables= {}
-    let components_names = {};
+  getProjectRequirements = async () => {
     if(process.env.EXTERNAL_TOOL !=='1'){
       const { projectName } = this.props;
-      const project = await db.find({
-        selector: {
-          project: projectName,
-        }
-      });
-
-      project && project.docs.forEach(function (req) {
-        const component_name = req.semantics && req.semantics.component_name;
-        if (component_name && !components_names[component_name]) {
-          components_names[component_name] = [];
-        }
-      });
-
-      variables = await modeldb.find({
-        selector: {
-          project: projectName,
-          component_name: { $in: Object.keys(components_names) }
-        }
-      });
-    } else {
-      variables = this.props.editVariables;
-
-      //TODO: now it only works for one component, update.
-      components_names[variables.docs[0].component_name] = [];
+      ipcRenderer.invoke('selectProjectRequirements', projectName).then((result) => {
+        this.props.setGlossaryProjectRequirements({
+          glossaryProjectRequirements: result.docs
+        })
+      }).catch((err) => {
+        console.log(err);
+      })
     }
-    variables && variables.docs && variables.docs.forEach(v => {
+  }
+
+  getVariables = async () => {
+    if (process.env.EXTERNAL_TOOL !== '1') {
+      ipcRenderer.invoke('selectGlossaryVariables', [this.props.projectName]).then((result) => {
+        //console.log('result', result.docs)
+        this.props.setGlossaryVariables({
+          glossaryVariables: result.docs
+        })
+      }).catch((err) => {
+        console.log(err);
+      })
+    }
+  }
+
+  setComponentsNames = () => {
+    const { projectRequirements } = this.props;
+    const components = {};
+    projectRequirements.forEach(function (req) {
+      const componentName = req.semantics && req.semantics.component_name;
+      if (componentName && !components[componentName]) {
+        components[componentName] = [];
+      }
+    });
+    this.setState({ components})
+
+  }
+
+  setVariablesToComponents = async () => {
+    let variables;
+    const componentsWithVariables = {...this.state.components}
+    if(process.env.EXTERNAL_TOOL !=='1'){
+      variables = this.props.variables
+    } else {
+      variables = this.props.editVariables.docs;
+      // console.log('new editVariables', this.props.editVariables)
+      //TODO: now it only works for one component, update.
+      componentsWithVariables[variables[0].component_name] = [];
+    }
+    const mapDbIdToReqId =  this.createMapDbIdToReqId();
+
+    variables && variables.forEach(v => {
       const variable = {
         name: v.variable_name || '',
       };
@@ -183,15 +212,18 @@ class Glossary extends React.Component {
       if(v.reqs){
         let variableRequirements = []
         v.reqs.forEach( req => {
-          if(this.state.mapDbIdToReqId[req]) {
-            variableRequirements.push(this.state.mapDbIdToReqId[req]);
+          if(mapDbIdToReqId[req]) {
+            variableRequirements.push(mapDbIdToReqId[req]);
           }
         })
         variable['reqs'] = variableRequirements.sort().join(', ');
       }
-      components_names[v.component_name].push(variable);
+      if(!componentsWithVariables[v.component_name]) {
+        componentsWithVariables[v.component_name] = [];
+      }
+      componentsWithVariables[v.component_name].push(variable);
     })
-    this.setState({ components: components_names})
+    this.setState({ componentsWithVariables })
   }
 
   handleComponentChange = event => {
@@ -207,10 +239,10 @@ class Glossary extends React.Component {
 
 
   filterVariables = () => {
-    const {components, selectedComponent, checked} = this.state;
+    const {componentsWithVariables, selectedComponent, checked} = this.state;
     const checkedVariableTypes = Object.keys(checked).filter(variableType => checked[variableType]);
     const filteredVariables = selectedComponent ?
-      components[selectedComponent].filter(variable => checked.Undefined && !variable['variable type'] || checkedVariableTypes.includes(variable['variable type'])).sort(this.sortFunction): [];
+      componentsWithVariables[selectedComponent].filter(variable => checked.Undefined && !variable['variable type'] || checkedVariableTypes.includes(variable['variable type'])).sort(this.sortFunction): [];
     this.setState({filteredVariables})
   }
 
@@ -224,7 +256,11 @@ class Glossary extends React.Component {
 
   render() {
     const { classes } = this.props;
-    const { selectedComponent, checked, filteredVariables } = this.state;
+    const { selectedComponent, checked, filteredVariables, components } = this.state;
+    var compMi = this.state.componentsWithVariables;
+    if(process.env.EXTERNAL_TOOL !=='1'){
+      compMi = components;
+    }
     return (
       <div>
         <FormControl>
@@ -235,7 +271,7 @@ class Glossary extends React.Component {
             onChange={this.handleComponentChange}
             value={selectedComponent}
           >
-            {Object.keys(this.state.components).sort().map(componentName =>
+            {Object.keys(compMi).sort().map(componentName =>
               <MenuItem id={"qa_gls_mi_comp_"+componentName} key={componentName} value={componentName}>{componentName}</MenuItem>
             )
             }
@@ -304,8 +340,24 @@ class Glossary extends React.Component {
 Glossary.propTypes = {
   projectName:PropTypes.string.isRequired,
   setAutoFillVariables: PropTypes.func,
-  requirements: PropTypes.array,
+  setGlossaryProjectRequirements: PropTypes.func,
+  setGlossaryVariables: PropTypes.func,
+  projectRequirements: PropTypes.array,
+  variables: PropTypes.array,
   editVariables: PropTypes.object
 };
 
-export default withStyles(styles)(Glossary);
+
+function mapStateToProps(state) {
+  const projectRequirements = state.actionsSlice.glossaryProjectRequirements;
+  const variables = state.actionsSlice.glossaryVariables;
+  return {
+    projectRequirements,
+    variables
+  };
+}
+const mapDispatchToProps = {
+  setGlossaryProjectRequirements,
+  setGlossaryVariables,
+};
+export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles)(Glossary));

@@ -31,14 +31,19 @@ To view and edit the requirements in your project in a tabular form, select the 
 
 Export and import buttons are available for saving/exporting your requirements or importing requirements written by other users in FRET.
 
-More information on how to export is available [here](./export&import/export.md).
-More information on how to import is available [here](./export&import/import.md).
+More information on how to export is available [here](./exportImport/export.md).
+More information on how to import is available [here](./exportImport/import.md).
 
 ## Connecting with external tools
 
 FRET provides the `ext`  execution mode to facilitate connection and integration into external tools. The mode, which has been implemented as a node script,  allows users to run the requirement editor, the formalization component, and the requirements simulator as a standalone tool.
 
 More information on the `ext` mode is available [here](./external/ext_tools.md).
+
+## FRET databases
+
+FRET uses a database for tracking requirements and another database for tracking model information for analysis tools.  Users can point FRET to which database locations to use.  More info on setting database locations is available [here](./dbPaths.md)
+
 
 
 [Back to FRET home page](../userManual.md)

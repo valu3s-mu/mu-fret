@@ -43,13 +43,10 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import MenuItem from '@material-ui/core/MenuItem';
 import TextField from '@material-ui/core/TextField';
+import { saveAs } from 'file-saver';
+import JSZip from "jszip";
 
-const db = require('electron').remote.getGlobal('sharedObj').db;
-const app = require('electron').remote.app;
-const dialog = require('electron').remote.dialog;
-const fs = require('fs');
-const system_dbkeys = require('electron').remote.getGlobal('sharedObj').system_dbkeys;
-const uuidv1 = require('uuid/v1');
+const {ipcRenderer} = require('electron');
 
 const styles = theme => ({
   container: {
@@ -67,12 +64,17 @@ const styles = theme => ({
   menu: {
     width: 200,
   },
+  dataTypeMenu: {
+    width: 250,
+  },
 });
 
 class ExportRequirementsDialog extends React.Component {
   state = {
     open: false,
-    projects:[]
+    projects:[],
+    project: 'All Projects',
+    dataType: 'requirements',
   };
 
   export_to_md = (R, P) => {
@@ -111,53 +113,24 @@ class ExportRequirementsDialog extends React.Component {
 
   handleExport = () => {
     const {project, output_format} = this.state;
-    const filterOff = project == "All Projects";
-    var homeDir = app.getPath('home');
-    var filepath = dialog.showSaveDialogSync(
-      {
-        defaultPath : homeDir,
-        title : 'Export Requirements',
-        buttonLabel : 'Export',
-        filters: [
-          { name: "Documents", extensions: [ output_format ] }
-        ],
-      })
-    if (filepath) {
-      db.allDocs({
-        include_docs: true,
-      }).then((result) => {
-        var filteredReqs = result.rows
-        .filter(r => !system_dbkeys.includes(r.key))
-        .filter(r => filterOff || r.doc.project == project)
-        var filteredResult = []
-        filteredReqs.forEach((r) => {
-          var doc = (({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input}) =>
-                      ({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input}))(r.doc)
-          doc._id = uuidv1()
-          filteredResult.push(doc)
-        })
-	//
-	// produce output
-	//
-	var content;
-	console.log(output_format)
-	if (output_format === "md"){
-		content=this.export_to_md(filteredResult, project)
-		}
-	else {
-      content = JSON.stringify(filteredResult, null, 4)
-		}
-        fs.writeFile(filepath, content, (err) => {
-            if(err) {
-                return console.log(err);
-            }
-            console.log("The file was saved!");
-        });
-      }).catch((err) => {
-        console.log(err);
-      });
-    }
 
+    var argList = [project, output_format ]
+    const channel = this.state.dataType === 'requirements' ? 'exportRequirements' : this.state.dataType === 'variables' ? 'exportVariables' : 'exportRequirementsAndVariables'
+    ipcRenderer.invoke(channel, argList).then((result) => {
+      result.forEach(file => {
+        //var content = JSON.stringify(file.content, null, 4);
+        const content = file.content;
+        const fileName = file.name;
+        var blob = new Blob([content],{type:"text/plain;charset=utf-8"});
+        // see FileSaver.js
+        saveAs(blob, fileName);
+      });
+
+
+
+    }).catch((err) => {
+      console.log('error in ExportRequirementsDialog:handleExport: ', err);
+    })
   }
 
   componentWillReceiveProps = (props) => {
@@ -165,13 +138,18 @@ class ExportRequirementsDialog extends React.Component {
       open: props.open,
       projects: props.fretProjects,
       dialogCloseListener : props.handleDialogClose,
-      project: '',
-      output_format: 'json'
+      project: 'All Projects',
+      output_format: 'json',
+      dataType: 'requirements',
     })
   }
 
   handleChange = name => event => {
-    this.setState({ [name]: event.target.value });
+    const { value } = event.target
+    if(name === 'dataType' && value && value.includes('variables')) {
+      this.setState({ output_format:  'json'});
+    }
+    this.setState({ [name]:  value});
   };
 
   render() {
@@ -182,6 +160,7 @@ class ExportRequirementsDialog extends React.Component {
         <Dialog
           open={this.state.open}
           onClose={this.handleClose}
+          maxWidth="md"
           aria-labelledby="alert-dialog-title"
           aria-describedby="alert-dialog-description"
         >
@@ -191,7 +170,7 @@ class ExportRequirementsDialog extends React.Component {
               Select specific project or export all requirements by selecting All Projects.
             </DialogContentText>
             <TextField
-              id="standard-select-project"
+              id="qa_export_select_project"
               select
               label="Select"
               className={classes.textField}
@@ -205,17 +184,44 @@ class ExportRequirementsDialog extends React.Component {
               helperText="Please select a project"
               margin="normal"
             >
-            <MenuItem key={"All Projects"} value={"All Projects"}>
+            <MenuItem key={"All Projects"} value={"All Projects"} id="qa_export_mi_AllProjects">
                   {<b>All Projects</b>}
                 </MenuItem>
             {this.state.projects.map(name => (
-                <MenuItem key={name} value={name}>
+                <MenuItem key={name} value={name} id={"qa_export_mi_"+name}>
                   {name}
                 </MenuItem>
               ))}
             </TextField>
             <TextField
-              id="standard-select-format"
+              id="qa_export_select_dataType"
+              select
+              label="Select data type"
+              className={classes.textField}
+              value={this.state.dataType}
+              onChange={this.handleChange('dataType')}
+              SelectProps={{
+                MenuProps: {
+                  className: classes.dataTypeMenu,
+                },
+              }}
+              //              helperText="Please select a project"
+              margin="normal"
+            >
+              <MenuItem key={"requirements"} value={"requirements"} id="qa_export_mi_requirements">
+                Requirements
+              </MenuItem>
+
+              {/* <MenuItem key={"variables"} value={"variables"} id="qa_export_mi_variables">
+                Variables
+              </MenuItem> */}
+
+              <MenuItem key={"requirements-variables"} value={"requirements-variables"} id="qa_export_mi_reqsAndVars">
+                Requirements & Variables
+              </MenuItem>
+            </TextField>
+            <TextField
+              id="qa_export_select_dataFormat"
               select
               label="Select output format"
               className={classes.textField}
@@ -229,19 +235,19 @@ class ExportRequirementsDialog extends React.Component {
 //              helperText="Please select a project"
               margin="normal"
             >
-            <MenuItem key={"JSON"} value={"json"}>
+            <MenuItem key={"JSON"} value={"json"} id="qa_export_mi_json">
                   JSON
             </MenuItem>
-            <MenuItem key={"MD"} value={"md"}>
+            <MenuItem key={"MD"} value={"md"} disabled={this.state.dataType && this.state.dataType.includes('variables')} id="qa_export_mi_md">
                   Markdown (MD)
             </MenuItem>
             </TextField>
           </DialogContent>
           <DialogActions>
-            <Button onClick={this.handleClose} color="primary">
+            <Button onClick={this.handleClose} color="primary" id="qa_export_btn_cancel">
               Cancel
             </Button>
-            <Button onClick={this.handleCloseOKtoExport} color="primary" autoFocus>
+            <Button onClick={this.handleCloseOKtoExport} color="primary"  id="qa_export_btn_ok" autoFocus>
               OK
             </Button>
           </DialogActions>
