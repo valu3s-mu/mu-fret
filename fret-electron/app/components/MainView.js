@@ -102,7 +102,6 @@ import Error from '@material-ui/icons/Error';
 const FretSemantics = require('../parser/FretSemantics');
 
 
-const app = require('electron').remote.app;
 const fs = require('fs');
 
 
@@ -509,10 +508,14 @@ class MainView extends React.Component {
 
   openVersionDialog = () => {
     console.log("Open Version Dialog pressed")
-    this.setState({
+
+    ipcRenderer.invoke('getVersion').then((result) => {
+      this.setState({
       versionDialogOpen: true,
-      anchorEl: null
-    });
+      anchorEl: null,
+      appVersion: result
+      });
+    })
   }
 
   closeVersionDialog = () => {
@@ -697,9 +700,9 @@ class MainView extends React.Component {
                                     dense>
                                     <ListItemText id={"qa_proj_select_"+name.replace(/\s+/g, '_')} primary = {name} onClick={() => this.handleSetProject(name)}/>
                                     <//Oisín: added rename buttons for projects, copied button from DisplayRequirementDialog
-                                     IconButton id={"qa_proj_rename_"+name.replace(/\s+/g, '_')} onClick={() => this.handleRenameProject(name)} size="small" color="secondary" aria-label="rename" >
+                                     IconButton id={"qa_proj_rename_"+name.replace(/\s+/g, '_')} onClick={() => this.handleRenameProject(name)} size="small" aria-label="rename" disabled={name === 'Default'}>
                                       <Tooltip id="project-tooltip-icon-rename" title="Rename Project">
-                                      <EditIcon />
+                                      <EditIcon color={name === 'Default' ? 'disabled' : "secondary"}/>
                                       </Tooltip>
                                     </IconButton>
                                     <IconButton id={"qa_proj_cal_"+name.replace(/\s+/g, '_')} onClick={() => this.handleCalculateProjectSemantics(name)} size="small" aria-label="calculate" >
@@ -851,7 +854,7 @@ class MainView extends React.Component {
           />
           <VersionDialog
             open={this.state.versionDialogOpen}
-            version={app.getVersion()}
+            version={this.state.appVersion}
             handleDialogClose={this.closeVersionDialog}
           />
           <RequirementImportDialogs

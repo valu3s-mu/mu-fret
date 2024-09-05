@@ -7,8 +7,8 @@
 
 
 // Fret's Database Stuff
-const db = require('electron').remote.getGlobal('sharedObj').db;
-const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
+//Oisín: New database import that hopefully work
+import {leveldbDB as db, modelDB as modeldb} from '../../fret-electron/model/fretDB';
 
 /**
 */
@@ -286,4 +286,79 @@ export function makeVariableTypeMap(requirement)
   ).catch((err) => {
       console.log(err);
     })
+}
+
+/** Oisín:
+ *  Takes in a variable ID and returns the docs of all the requirements that use that variable
+ * 
+ *  @param {String} variableID the full ID of the variable, of the form project+component_name+variable_name
+ * 
+ *  @returns {Object} collection of requrement objects that contain the variable (I think it's an object anyway, it's whatever the db call returns)
+ */
+export function getRequirementsWithVariable(variableID)
+{
+
+  var finalResult = modeldb.get(variableID).then(function(result){      
+    return db.allDocs({
+      include_docs: true,
+      keys: result.reqs
+
+    }).then(function(result){
+      return(result);
+    })
+
+  })
+  return finalResult;
+}
+
+
+/**Oisín:
+ * Takes in a project and a list of variable names, and returns the docs of those variables as well as a
+ * map that stores the type of each variable.
+ * 
+ * @param {Array<Object>} args An array with two elements: a String with the name of the project the variables are part of,
+ *                             and an Array<String> with the names of the variables to be compiled
+ * 
+ * @returns {Array<Object>} An array with two elements: an Array<Object> with the docs of the variables, and a Map that
+ *                          maps the variables names to a data type as a string ("undefined", "boolean" or "integer")
+ * 
+ */
+export function createVariableMap(args)
+{
+  let project = args[0];
+  let varList = args[1];
+
+  var variableTypeMap = new Map();
+  for(let variable of varList)
+  {
+    variableTypeMap.set(variable, "undefined");
+  }
+
+  let finalResult = modeldb.find({
+    selector: {
+      project : project,
+      variable_name : {$in:varList}
+    }
+  }).then(function(result)
+    {
+      var variableTypeMap = new Map();
+      for (let doc of result.docs)
+      {
+        let varName = doc.variable_name;
+        let varType = doc.dataType;
+
+        if(varType == "")
+        {
+          varType = "undefined"; // If the variable has no type in the database, set it to "undefined"
+        }
+
+        variableTypeMap.set(varName, varType); //Put the variable name and type into the map
+
+      }
+
+      let finalResult = [result.docs, variableTypeMap]; //Oisín: Return the results that we originally were adding
+      return finalResult;                               //to InlineRequirementDialog's component state
+    }
+    ).catch((err) => {console.log(err); })
+  return finalResult;
 }

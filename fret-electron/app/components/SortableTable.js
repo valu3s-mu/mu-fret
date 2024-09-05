@@ -77,8 +77,6 @@ import RefactorRequirementDialog from './refactoring/RefactorRequirementDialog';
 import BuildIcon from '@material-ui/icons/Build';
 
 import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
-const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
-//^ FOR DEBUGGING, DELETE BEFORE COMMITTING
 
 import SearchSortableTableDialog from './SearchSortableTableDialog';
 
@@ -96,8 +94,6 @@ import { changeRequirementStatus, } from '../reducers/allActionsSlice';
 
 const statusType = ['None', 'In Progress', 'Paused', 'Completed', 'Attention', 'Deprecated'];
 const {ipcRenderer} = require('electron');
-
-const db = sharedObj.db;
 
 let counter = 0;
 // status is also saved in database
@@ -582,17 +578,25 @@ class SortableTable extends React.Component {
   handleRefactorRequirement = (row) => event => {
     event.stopPropagation();
 
+    //Oisín: this is pretty much just copied from handleRequirementDialogOpen, as the old version was
     if (row.dbkey) {
-      db.get(row.dbkey).then((doc) => {
-        doc.dbkey = row.dbkey;
-        doc.rev = row.rev;
+      // context isolation
+      // 
+
+      var argList = [row];
+      // ipcRenderer call main with argLit and main returns result to update Redux store
+      ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
+        /*
+        this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
+                                        //selectedRequirement: result.selectedRequirement,
+                                        }) */
         this.setState({
-          selectedRequirement: doc,
-          refactorDialogOpen: true,
-        });
+          selectedRequirement: result.doc,
+          refactorDialogOpen: true,})        
       }).catch((err) => {
         console.log(err);
-      });
+      })
+
     }
 
     //Oisín: Closes the dropdown menu
@@ -625,16 +629,23 @@ class SortableTable extends React.Component {
     event.stopPropagation();
 
     if (row.dbkey) {
-      db.get(row.dbkey).then((doc) => {
-        doc.dbkey = row.dbkey;
-        doc.rev = row.rev;
+      // context isolation
+      // 
+
+      var argList = [row];
+      // ipcRenderer call main with argLit and main returns result to update Redux store
+      ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
+        /*
+        this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
+                                        //selectedRequirement: result.selectedRequirement,
+                                        }) */
         this.setState({
-          selectedRequirement: doc,
-          inlineDialogOpen: true,
-        });
+          selectedRequirement: result.doc,
+          inlineDialogOpen: true,})        
       }).catch((err) => {
         console.log(err);
-      });
+      })
+
     }
 
     //Oisín: Closes the dropdown menu
@@ -858,43 +869,6 @@ class SortableTable extends React.Component {
 
   handleRefactorMenuClick = (row) => event => {
     this.setState({ refactorAnchorEl: event.currentTarget, refactorMenuCurrentN: row });
-
-    db.allDocs({
-      include_docs: true,
-    }).then((result) => {
-      console.log("Full DB:");
-      result.rows.map(r => {
-        console.log(r.doc ? (r.doc.reqid || r.doc._id) : r.id);
-        console.log(r);
-      })
-    });
-    
-    db.get('FRET_PROJECTS').then((doc) => {
-      console.log("Project list object:");
-      console.log(doc);
-    });
-    
-    db.get('FRET_PROPS').then((doc) => {
-      console.log("FRET_PROPS object:");
-      console.log(doc);
-    });
-
-    db.get('REAL_TIME_CONFIG').then((doc) => {
-      console.log("REAL_TIME_CONFIG object:");
-      console.log(doc);
-    });
-    
-    modeldb.allDocs({
-      include_docs: true,
-    }).then((result => {
-      console.log("All Variable names:");
-      result.rows.map(r => {
-        console.log(r.id);
-        console.log(r);
-      })
-      console.log("End of variables list");
-    }));
-
   };
 
   handleRefactorMenuClose = () => {

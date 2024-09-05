@@ -16,9 +16,9 @@ const refactoring_utils = require('./refactoring_utils.js')
 * Finds all the requirements in the given project that contain the given fragment
 * Uses `FindRequirementsWithFragment` in refactoring_model.js
 */
-exports.requirementWithFragement = function requirementWithFragement(allRequirements, req, fragment,  destinationName)
+exports.requirementsWithFragment = function requirementsWithFragment(allRequirements, req, fragment,  destinationName)
 {
-	console.log(" +++ requirementWithFragement +++")
+	console.log(" +++ requirementsWithFragment +++")
 	console.log("req = " + req )
 	console.log("req.project = " + req.project)
 	console.log("req.reqid = " + req.reqid)
@@ -108,7 +108,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 	 newReq.fulltext = newFretish;
 	 // Compile the new semantics and add to the new req
 	 // Not sure that this is working
-	 newSemantics = fretSemantics.compile(newFretish)
+	 let newSemantics = fretSemantics.compile(newFretish)
 	 newReq.semantics = newSemantics.collectedSemantics;
 
 	// Step 3
@@ -216,7 +216,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 	 newReq.fulltext = newFretish;
 	 // Compile the new semantics and add to the new req
-	 newSemantics = fretSemantics.compile(newFretish)
+	 let newSemantics = fretSemantics.compile(newFretish)
 	 newReq.semantics = newSemantics.collectedSemantics;
 
 	console.log("Made New Requirement")
@@ -225,9 +225,8 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 	console.log("knockons");
   // Do the thing
   // Similar to this method, but the destination requirement already exists.
-	project = req.project;
 
-	let reqKnockons = exports.requirementWithFragement(allRequirements, req, fragment, fretishDestinationName);
+	let reqKnockons = exports.requirementsWithFragment(allRequirements, req, fragment, fretishDestinationName);
 
 	console.log("Lets see what requirements I've got to update...");
 	console.log(reqKnockons);
@@ -392,7 +391,7 @@ return requirement
 * other requirements that reference the requirement being inlined.
 * @todo Implement
 * 
-* @param {Object} source the requirement that is being inlined from
+* @param {Object} source the requirement (currently, specifically a fragment) that is being inlined from
 * @param {Array<Object>} destinationReqs a list of the requirements that are being inlined into
 */
 function InlineRequirement(source, destinationReqs)
@@ -419,7 +418,7 @@ function InlineRequirement(source, destinationReqs)
     currentDestination.fulltext = inlineResult;
 
     //Recompile the requirement's semantics based on the new text
-    newSemantics = fretSemantics.compile(inlineResult);
+    let newSemantics = fretSemantics.compile(inlineResult);
 		currentDestination.semantics = newSemantics.collectedSemantics;
 
 		//Remove reference to the source fragment from the destination's list of fragments

@@ -30,14 +30,12 @@ import CancelIcon from '@material-ui/icons/Cancel';
 import WarningIcon from '@material-ui/icons/Warning';
 import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
 
-
-import RefactoringController from '../../../../tools/Refactoring/refactoring_controller';
 import RefactoringUtils from '../../../../tools/Refactoring/refactoring_utils';
 
+const {ipcRenderer} = require('electron');
+import { createOrUpdateRequirement } from '../../reducers/allActionsSlice';
+import { connect } from "react-redux";
 
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const db = sharedObj.db;
-const modeldb = sharedObj.modeldb;
 /**
  * Constants for the states the application can be in.
  */
@@ -112,13 +110,6 @@ class InlineRequirementDialog extends React.Component
     });
   }
 
-  /**
-   * Opens the refactor requirements dialogue
-   */
-  handleRefactorRequirement = () => {
-    this.handleClose();
-    this.state.openRefactorDialog();
-  }
 
   /**
    * Closes the inline requirements dialogue
@@ -142,20 +133,6 @@ class InlineRequirementDialog extends React.Component
     this.state.dialogCloseListener();
   };
 
-  /**
-   * Callback, used by SortableTable.js (I think)
-   */
-  handleInlineDialogClose = () => {
-    this.setState({ inlineDialogOpen: false });
-
-  };
-
-  /**
-   * Unused draft event handler for the preview button
-   */
-  handlePreview = () => {
-    console.log('Preview Button');
-  };
 
   /**
    * Updates the (boolean) state variable applyToAll, indicates 
@@ -163,6 +140,7 @@ class InlineRequirementDialog extends React.Component
    * should check all the requirements for the fragment to extract.
    * 
    */
+  //Oisín: Not currently used
   updateApplytoAllStatus = () => event => {
 
     this.setState({applyToAll: event.target.checked});
@@ -209,25 +187,12 @@ class InlineRequirementDialog extends React.Component
       var response = semantics.post_condition_SMV_pt;
       var component_name = semantics.component_name;
 
-
       var responseID = this.state.selectedRequirement.project+component_name+response;
-      console.log(responseID)
 
-      modeldb.get(responseID).then(function(result){
-        
-        console.log(result);
-        console.log(result.reqs);
-        
-        db.allDocs({
-          include_docs: true,
-          keys: result.reqs
-        }).then(function(result){
-          console.log(result.rows);
-          self.setState({
-            requirementsWithResponse: result.rows
-          })
+      ipcRenderer.invoke('getRequirementsWithVariable', responseID).then((result) => {
+        self.setState({
+          requirementsWithResponse: result.rows
         })
-
       })
 
     }
@@ -251,58 +216,23 @@ class InlineRequirementDialog extends React.Component
 
     let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
 
-    this.createVariableMap(req);
+    let varList = RefactoringUtils.getVariableNames(req.doc);
+    let args = [req.doc.project, varList];
+    ipcRenderer.invoke('createVariableMap', args).then((result) => {
 
-    this.setState({
-      dialogState : STATE.TYPES,
-      inlinedRequirementPlaceholder: inlineResult,
-      inlinedName: req.doc.reqid,
-      destinationReqs: [req],
-    });
-  }
+      let variableDocs = result[0];
+      let variableTypeMap = result[1];
+      
+      this.setState({
+        dialogState : STATE.TYPES,
+        inlinedRequirementPlaceholder: inlineResult,
+        inlinedName: req.doc.reqid,
+        destinationReqs: [req],
+        variableDocs: variableDocs,
+        variables : variableTypeMap,
+      }); 
+    })
 
-  /*
-   * Oisín: Calls RefactoringUtils.getVariableNames to get the variables we need and creates the type map
-   * for the TYPES dialog state. Essentially refactoring out that functionality from handleInitialOK()
-   * in the Extract dialog because I might want to use it in multiple places here
-  */
-  createVariableMap = (destination) => {
-
-    let varList = RefactoringUtils.getVariableNames(destination.doc);
-
-      var variableTypeMap = new Map();
-      for(let variable of varList)
-      {
-        variableTypeMap.set(variable, "undefined");
-      }
-
-      var self = this;
-
-      modeldb.find({
-        selector: {
-          project : destination.doc.project,
-          variable_name : {$in:varList}
-        }
-      }).then(function(result)
-        {
-          var variableTypeMap = new Map();
-          for (let doc of result.docs)
-          {
-            let varName = doc.variable_name;
-            let varType = doc.dataType;
-
-            if(varType == "")
-            {
-              varType = "undefined"; // If the variable has no type in the database, set it to "undefined"
-            }
-
-            variableTypeMap.set(varName, varType); //Put the variable name and type into the map
-
-          }
-
-          self.setState({variableDocs: result.docs, variables : variableTypeMap}); // Add the map to the state
-        }
-        ).catch((err) => {console.log(err); })
   }
 
 
@@ -331,11 +261,32 @@ class InlineRequirementDialog extends React.Component
 
     this.setState({allVarsDefined : allVarsDefined, variableErrorMessages: variableErrorMessages});
 
-    let result;
     if(allVarsDefined){
-      RefactoringController.updateVariableTypes(this.state.variableDocs, this.state.variables);
 
-      result = RefactoringController.InlineRequirement(this.state.selectedRequirement, this.state.destinationReqs)
+      ipcRenderer.invoke('updateVariableTypes', [this.state.variableDocs, this.state.variables]);
+
+      ipcRenderer.invoke('inlineRequirement', [this.state.selectedRequirement, this.state.destinationReqs]).then((result) => {
+        ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
+
+          this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
+                                                requirements: result.requirements,
+                                                // analysis
+                                                components : result.components,
+                                                completedComponents : result.completedComponents,
+                                                cocospecData : result.cocospecData,
+                                                cocospecModes : result.cocospecModes,
+                                                // variables
+                                                variable_data : result.variable_data,
+                                                modelComponent : result.modelComponent,
+                                                modelVariables : result.modelVariables,
+                                                selectedVariable : result.selectedVariable,
+                                                importedComponents : result.importedComponents,
+                                                })
+
+          this.handleClose();
+        })
+        
+      })
     }
 
     this.handleClose();
@@ -354,7 +305,6 @@ class InlineRequirementDialog extends React.Component
     var requirementsWithResponse = this.state.requirementsWithResponse;
 
     var dialog_state = this.state.dialogState;
-    console.log("Inline Dialog State = " + dialog_state);
 
     //Funny placeholders
     var {inlinedRequirementPlaceholder, inlinedName} = this.state;
@@ -613,7 +563,19 @@ InlineRequirementDialog.propTypes = {
   selectedRequirement: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
   handleDialogClose: PropTypes.func.isRequired,
-  requirements: PropTypes.array
 };
 
-export default withStyles(styles)(InlineRequirementDialog);
+
+function mapStateToProps(state) {
+  const requirements = state.actionsSlice.requirements;
+  return {
+    requirements,
+  };
+}
+
+const mapDispatchToProps = {
+  createOrUpdateRequirement
+};
+
+export default withStyles(styles)
+  (connect(mapStateToProps,mapDispatchToProps)(InlineRequirementDialog));

@@ -20,8 +20,9 @@
   "dependencies": {
     "antlr4": "4.8.0",
     "child_process": "^1.0.2",
-    "nusmvparser": "file:../../../fret-electron/support/NuSMVParser",
+    "fret": "file:../../../fret-electron",
     "ltlsim_nusmvparser": "file:../../../fret-electron/support/LTLSIM_NuSMVParser",
+    "nusmvparser": "file:../../../fret-electron/support/NuSMVParser",
     "path": "^0.12.7"
   }
 }

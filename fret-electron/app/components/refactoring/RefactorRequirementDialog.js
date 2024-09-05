@@ -9,7 +9,8 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import { v4 as uuid } from 'uuid';
+//import { v4 as uuid } from 'uuid';
+import { v1 as uuidv1 } from 'uuid';
 
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -34,9 +35,10 @@ import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
 import RefactoringController from '../../../../tools/Refactoring/refactoring_controller';
 import RefactoringUtils from '../../../../tools/Refactoring/refactoring_utils';
 
+const {ipcRenderer} = require('electron');
+import { createOrUpdateRequirement } from '../../reducers/allActionsSlice';
+import { connect } from "react-redux";
 
-const sharedObj = require('electron').remote.getGlobal('sharedObj');
-const modeldb = sharedObj.modeldb;
 /**
  * Constants for the states the application can be in.
  */
@@ -174,113 +176,79 @@ handleInitialOK = () =>
   //Oisín: Reset the error messages
   this.setState({fragmentNotFoundinSelected: false, fragmentNotFoundinAll: false});
 
-  if(this.state.applyToAll == false)
+  if(this.state.applyToAll == false) //Extracting only from the selected requirement
   {
     if(this.fragmentInCurrent() == false){
       this.setState({fragmentNotFoundinSelected: true});
     }else{
-      let varList = RefactoringUtils.getVariableNames(this.state.selectedRequirement);
+      let selectedRequirement = this.state.selectedRequirement
+      let varList = RefactoringUtils.getVariableNames(selectedRequirement);
 
-      var variableTypeMap = new Map();
-      for(let variable of varList)
-      {
-        variableTypeMap.set(variable, "undefined");
-      }
+      let args = [selectedRequirement.project, varList];
+      ipcRenderer.invoke('createVariableMap', args).then((result) => {
 
-      var self = this;
+        let variableDocs = result[0];
+        let variableTypeMap = result[1];
 
-      modeldb.find({
-        selector: {
-          project : this.state.selectedRequirement.selectedProject,
-          variable_name : {$in:varList}
-        }
-      }).then(function(result)
-        {
-          var variableTypeMap = new Map();
-          for (let doc of result.docs)
-          {
-            let varName = doc.variable_name;
-            let varType = doc.dataType;
+        this.setState({
+          variableDocs: variableDocs,
+          variables : variableTypeMap,
+          dialogState: STATE.TYPES
+        }); 
+      })
 
-            if(varType == "")
-            {
-              varType = "undefined"; // If the variable has no type in the database, set it to "undefined"
-            }
-
-            variableTypeMap.set(varName, varType); //Put the variable name and type into the map
-
-          }
-
-          self.setState({variableDocs: result.docs, variables : variableTypeMap, dialogState:STATE.TYPES}); // Add the map to the state, and advance to the Types dialogue
-        }
-        ).catch((err) => {console.log(err); })
     }
   }
-  else{
+  else{ //Extracting from all applicable requirements in the project
 
     //Find the requirements that have the fragment in.
-    let applicableRequirements = RefactoringController.requirementWithFragement(this.state.requirements, this.state.selectedRequirement, this.state.extractString, this.state.newName);
+    let args = [this.state.requirements, this.state.selectedRequirement, this.state.extractString, this.state.newName]
+    ipcRenderer.invoke('requirementsWithFragment', args).then((applicableRequirements) => {
 
-    let applicableRequirementsNames = [];
+      let applicableRequirementsNames = [];
 
-    //If we have some requirements that contain the fragment we're extracting
-    if (applicableRequirements.length >0)
-  	{
+      //If we have some requirements that contain the fragment we're extracting
+      if (applicableRequirements.length >0)
+    	{
 
-      var variableTypeMap = new Map(); // map to hold varname |-> type
-      var varList = [];
+        var variableTypeMap = new Map(); // map to hold varname |-> type
+        var varList = [];
 
-      // For each requirement that has the fragment in...
-  		for (var i = 0; i < applicableRequirements.length; i++)
-  		{
-        let this_req = applicableRequirements[i];
-        // Get the variable names embedded in this requirement...
-        let varNames = RefactoringUtils.getVariableNames(this_req);
-        let newVarList = varList.concat(varNames); // Javascript is a silly language
-        varList = newVarList;
+        // For each requirement that has the fragment in...
+    		for (var i = 0; i < applicableRequirements.length; i++)
+    		{
+          let this_req = applicableRequirements[i];
+          // Get the variable names embedded in this requirement...
+          let varNames = RefactoringUtils.getVariableNames(this_req);
+          let newVarList = varList.concat(varNames); // Javascript is a silly language
+          varList = newVarList;
 
-        //Oisín: Add the requirement names to a list, so we can display them to the user
-        applicableRequirementsNames.push(" " + this_req.reqid);
-      }
-      applicableRequirementsNames.sort();
-      this.setState({applicableRequirementsNames: applicableRequirementsNames.toString()})
-
-
-      // ... and add them to the map, mapping varname |-> "undefined" (for now)
-      for(let variable of varList)
-      {
-        variableTypeMap.set(variable, "undefined");
-      }
-
-      // Now get the variable types (if they exist) from ModelDB
-
-      var self = this; // Javascript is a silly lanauge
-      var thisProject = this.state.selectedRequirement.selectedProject;
-      modeldb.find({
-        selector: {
-          project : thisProject,
-          variable_name : {$in:varList}
+          //Oisín: Add the requirement names to a list, so we can display them to the user
+          applicableRequirementsNames.push(" " + this_req.reqid);
         }
-      }).then(function(result)
-        {
-          for (let doc of result.docs)
-          {
-            let varName = doc.variable_name;
-            let varType = doc.dataType;
+        applicableRequirementsNames.sort();
 
-            if(varType == "")
-            {
-              varType = "undefined";
-            }
 
-            variableTypeMap.set(varName, varType);
-          }
-          self.setState({variableDocs: result.docs, variables : variableTypeMap, dialogState:STATE.TYPES});
-        }
-        ).catch((err) => { console.log(err); })
-    }else{
-      this.setState({fragmentNotFoundinAll: true});
-    }
+        let selectedRequirement = this.state.selectedRequirement
+        let args = [selectedRequirement.project, varList];
+        ipcRenderer.invoke('createVariableMap', args).then((result) => {
+
+          let variableDocs = result[0];
+          let variableTypeMap = result[1];
+
+          this.setState({
+            variableDocs: variableDocs,
+            variables : variableTypeMap,
+            dialogState: STATE.TYPES,
+            applicableRequirementsNames: applicableRequirementsNames.toString()
+          }); 
+        })
+
+      }else{
+        this.setState({fragmentNotFoundinAll: true});
+      }
+    })
+
   }
 }
 
@@ -302,7 +270,7 @@ fragmentInCurrent = () => {
 * Calls the requested extract requirement method
 */
 handleOk = () => {
-  var newID = uuid.v1();
+  var newID = uuidv1();
   var result;
   var varTypeMap = this.state.variables;
 
@@ -326,31 +294,43 @@ handleOk = () => {
   {
 
     //Update ModelDB
-    RefactoringController.updateVariableTypes(this.state.variableDocs, this.state.variables);
+    //RefactoringController.updateVariableTypes(this.state.variableDocs, this.state.variables);
+    ipcRenderer.invoke('updateVariableTypes', [this.state.variableDocs, this.state.variables]);
 
-    // Both calls below use varTypeMap, just in case unisgned ints have been replaced by ints
-    if (this.state.applyToAll == true)
-    {
-      result = RefactoringController.extractRequirement_ApplyAll(
-        this.state.selectedRequirement, this.state.variables, this.state.extractString,
-        this.state.newName, newID, this.state.requirements);
-    }
-    else {
-      // Now this needs all the requirements too, to pass to the compare method
-        result = RefactoringController.extractRequirement(
-          this.state.selectedRequirement, this.state.variables, this.state.extractString, this.state.newName, newID, this.state.requirements);
-    }
 
-    if(result == true)
-    {
-      this.setState({dialogState:STATE.RESULT_TRUE, refactoringCheckresult: result});
-      return;
-    }
-    else
-    {
-      this.setState({dialogState:STATE.RESULT_FALSE, refactoringCheckresult: result});
-      return;
-    }
+    let args = [this.state.selectedRequirement, this.state.variables, this.state.extractString, this.state.newName, newID, this.state.requirements]
+    ipcRenderer.invoke('extractRequirement', args, this.state.applyToAll).then((result) => {
+      if(result == true)
+      {
+
+        ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
+
+          this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
+                                                requirements: result.requirements,
+                                                // analysis
+                                                components : result.components,
+                                                completedComponents : result.completedComponents,
+                                                cocospecData : result.cocospecData,
+                                                cocospecModes : result.cocospecModes,
+                                                // variables
+                                                variable_data : result.variable_data,
+                                                modelComponent : result.modelComponent,
+                                                modelVariables : result.modelVariables,
+                                                selectedVariable : result.selectedVariable,
+                                                importedComponents : result.importedComponents,
+                                                })
+
+          this.setState({dialogState:STATE.RESULT_TRUE, refactoringCheckresult: result});
+          
+        })
+        
+      }
+      else
+      {
+        this.setState({dialogState:STATE.RESULT_FALSE, refactoringCheckresult: result});
+      }
+    })
+
   }
   else
   {
@@ -432,7 +412,6 @@ getType = (variableName) =>
     var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext } = this.state.selectedRequirement
 
     var dialog_state = this.state.dialogState;
-    console.log("New Dialog State = " + dialog_state);
 
     switch(dialog_state)
     {
@@ -735,7 +714,19 @@ RefactorRequirementDialog.propTypes = {
   selectedRequirement: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
   handleDialogClose: PropTypes.func.isRequired,
-  requirements: PropTypes.array
+  //requirements: PropTypes.array
 };
 
-export default withStyles(styles)(RefactorRequirementDialog);
+function mapStateToProps(state) {
+  const requirements = state.actionsSlice.requirements;
+  return {
+    requirements,
+  };
+}
+
+const mapDispatchToProps = {
+  createOrUpdateRequirement
+};
+
+export default withStyles(styles)
+  (connect(mapStateToProps,mapDispatchToProps)(RefactorRequirementDialog));

@@ -366,7 +366,7 @@ function getVars(originalReq, originalReqVars, newReq, fragList)
       console.log("making smv variable: " + value );
       console.log(originalReqVars);
       console.log(typeof(originalReqVars));
-      type = originalReqVars.get(value); // Big assumption here is that the new requirement doesn't have new variables...
+      let type = originalReqVars.get(value); // Big assumption here is that the new requirement doesn't have new variables...
       // Assumes the types are right, UI should prevent incorrect types from coming through.
       if (type == "integer")
       {
@@ -402,6 +402,7 @@ function callNuSMV (checkName, file_name)
     console.log(NuSMV_command);
     
     var nu_command = NuSMV_command;
+    let NuSMV_output;
     try {
     NuSMV_output = execSync(nu_command).toString();
     } catch (error) { console.log(error); }
@@ -409,7 +410,7 @@ function callNuSMV (checkName, file_name)
     if (verboseNuSMV) { console.log('NuSMV output: ' + NuSMV_output); }
 
     const regexp = /\[LTL\s+(True|False)/g;
-    matches = NuSMV_output.match(regexp);
+    let matches = NuSMV_output.match(regexp);
     if (verboseNuSMV) console.log('smv results: ' + JSON.stringify(matches));
     let boolResults = [];
     for (let m of (matches==null ? [] : matches)) {

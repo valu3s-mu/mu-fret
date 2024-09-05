@@ -48,6 +48,11 @@ require('@electron/remote/main').initialize()
 import MenuBuilder from './menu';
 import FretModel from '../model/FretModel';
 
+//Mu-FRET: Refactoring Tools
+const refactoringModel = require("../../tools/Refactoring/refactoring_model");
+const refactoringController = require("../../tools/Refactoring/refactoring_controller");
+
+
 // console.log('main.dev __dirname: ', __dirname)
 const path = require('path');
 const fs = require("fs");
@@ -265,6 +270,60 @@ ipcMain.handle('diagnoseUnrealizableRequirements', async (evt, args) => {
 ipcMain.handle('calculateProjectSemantics', async(evt, projectName) => {
   return fretModel.calculateProjectSemantics(projectName);
 })
+
+//Mu-FRET additions:
+
+//Oisín: Added in a Mu-FRET update to get VersionDialog working with the new IPC paradigm
+ipcMain.handle('getVersion', async(evt) => {
+  const result = app.getVersion();
+  return result;
+})
+
+//Oisín: used in InlineRequirementDialog
+ipcMain.handle('getRequirementsWithVariable', async(evt, variableID) => {
+  const result = await refactoringModel.getRequirementsWithVariable(variableID);
+  return result;
+})
+//Oisín: used in RefactorRequirementDialog for ApplyToAll
+//  args for this one are: [allRequirements, req, fragment,  destinationName]
+ipcMain.handle('requirementsWithFragment', async(evt, args) => {
+  const result = await refactoringController.requirementsWithFragment(...args);
+  return result;
+})
+
+//Oisín: used in InlineRequirementDialog and RefactorRequirementDialog
+// args for this one are [projectName, variableNameList]
+ipcMain.handle('createVariableMap', async(evt, args) => {
+  const result = await refactoringModel.createVariableMap(args);
+  return result;
+})
+
+//Oisín: Used for refactoring to add the selected variable types to the
+// variables in the database.
+ipcMain.handle('updateVariableTypes', async(evt, args) => {
+  return refactoringController.updateVariableTypes(...args);
+})
+
+
+ipcMain.handle('extractRequirement', async(evt, args, applyToAll) => {
+  let result;
+  if (applyToAll == true)
+  {
+    result = await refactoringController.extractRequirement_ApplyAll(...args);
+  }
+  else {
+    // Now this needs all the requirements too, to pass to the compare method
+    result = await refactoringController.extractRequirement(...args);
+  }
+
+  return result;
+
+})
+
+ipcMain.handle('inlineRequirement', async(evt, args) => {
+  return refactoringController.InlineRequirement(...args);
+})
+
 
 /**
  * Add event listeners...

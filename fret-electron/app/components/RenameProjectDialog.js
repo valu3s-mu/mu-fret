@@ -15,13 +15,9 @@ import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
-const modelDbSupport = require('../../support/modelDbSupport/deleteVariables.js');
-const dbSupport = require('../../support/fretDbSupport/deleteRequirements.js');
 
-import { setChangeRequirementFlag } from "../../support/fretDbSupport/changeRequirementFlag.js";
-
-const db = require('electron').remote.getGlobal('sharedObj').db;
-const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
+//const db = require('electron').remote.getGlobal('sharedObj').db;
+//const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
 
 class RenameProjectDialog extends React.Component {
   state = {
