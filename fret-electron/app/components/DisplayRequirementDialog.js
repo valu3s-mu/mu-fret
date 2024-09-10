@@ -97,6 +97,15 @@ class DisplayRequirementDialog extends React.Component {
     this.state.openCreateDialog();
   }
 
+  handleDeleteRequirement = () => {
+    this.handleClose();
+    this.state.openDeleteDialog();
+  }
+
+
+  /*
+  ******Refactoring:
+  */
   handleRefactorMenuClick = (event) => {
     this.setState({ refactorAnchorEl: event.currentTarget});
   };
@@ -119,11 +128,6 @@ class DisplayRequirementDialog extends React.Component {
     //Oisín: I don't think there's any actual need to set the function to a state variable
     //(calling it as a prop seems to work fine), but I think it's best to follow
     //the existing format
-  }
-
-  handleDeleteRequirement = () => {
-    this.handleClose();
-    this.state.openDeleteDialog();
   }
 
   componentWillReceiveProps = (props) => {

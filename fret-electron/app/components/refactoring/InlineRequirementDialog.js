@@ -430,7 +430,7 @@ class InlineRequirementDialog extends React.Component
         })
 
         let {allVarsDefined, variableErrorMessages} = this.state;
-        console.log("Error prints:");
+        console.log("InlineRequirementDialog Error prints:");
         console.log(allVarsDefined);
         console.log(variableErrorMessages);
 

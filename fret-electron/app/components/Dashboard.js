@@ -129,12 +129,14 @@ class Dashboard extends React.Component {
             <CirclePacking selectedProject={selectedProject} projects={listOfProjects} requirements={requirements}/>
             {//Legend for the colours for the circle diagram, done by Cathal
             }
+            <List>
             <ListSubheader style={{padding:"0px"}}>
-              <span style={{"font-weight":"bold"}}>Legend:</span>
-              <span class="req-leaf" style={{padding:"5px", margin:"5px", color:"black"}}>Passing Requirement,</span> 
-              <span class="node--fragment" style={{padding:"5px", color: "black"}}>Fragment,</span>
-              <span class="req-unformalized" style={{padding:"5px", margin:"5px", color:"black"}}>Failing Requirement</span>
+              <span style={{"fontWeight":"bold"}}>Legend:</span>
+              <span className="req-leaf" style={{padding:"5px", margin:"5px", color:"black"}}>Passing Requirement,</span> 
+              <span className="node--fragment" style={{padding:"5px", color: "black"}}>Fragment,</span>
+              <span className="req-unformalized" style={{padding:"5px", margin:"5px", color:"black"}}>Failing Requirement</span>
             </ListSubheader>
+            </List>
           </ImageListItem>
           <ImageListItem cols={2} rows={6}>
             <List>

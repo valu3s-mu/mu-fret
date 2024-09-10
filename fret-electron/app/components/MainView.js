@@ -236,6 +236,7 @@ class MainView extends React.Component {
     missingExternalImportDialogOpen: false,
     missingExternalImportDialogReason: 'unknown',
     warningDialogOpen: false,
+    appVersion: null,
     };
 
   constructor(props) {

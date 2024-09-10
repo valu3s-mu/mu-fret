@@ -56,8 +56,9 @@ class RequirementDialogs extends React.Component {
     createDialogOpen: false,
     deleteDialogOpen: false,
     snackbarOpen: false,
+    snackBarDisplayInfo: {},
     refactorDialogOpen: false,
-    snackBarDisplayInfo: {}
+    inlineDialogOpen: false,
   };
 
   constructor(props){
@@ -68,23 +69,6 @@ class RequirementDialogs extends React.Component {
     this.setState({
       createDialogOpen: true
     });
-  }
-
-  handleRefactorDialogOpen = () => {
-    console.log('handleRefactorDialogOpen');
-    this.setState({ refactorDialogOpen: true });
-  }
-
-  handleRefactorDialogClose = () => {
-    this.setState({refactorDialogOpen: false});
-  }
-
-  handleInlineDialogOpen = () => {
-    this.setState({inlineDialogOpen: true });
-  }
-
-  handleInlineDialogClose = () => {
-    this.setState({inlineDialogOpen: false});
   }
 
   handleDeleteDialogClose = () => {
@@ -117,6 +101,26 @@ class RequirementDialogs extends React.Component {
 
     this.setState({ snackbarOpen: false });
   };
+
+  /*
+  ****Refactoring:
+  */
+  handleRefactorDialogOpen = () => {
+    console.log('handleRefactorDialogOpen');
+    this.setState({ refactorDialogOpen: true });
+  }
+
+  handleRefactorDialogClose = () => {
+    this.setState({refactorDialogOpen: false});
+  }
+
+  handleInlineDialogOpen = () => {
+    this.setState({inlineDialogOpen: true });
+  }
+
+  handleInlineDialogClose = () => {
+    this.setState({inlineDialogOpen: false});
+  }
 
 
   render() {
