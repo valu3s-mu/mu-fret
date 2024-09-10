@@ -50,8 +50,10 @@ import ImageListItem from '@material-ui/core/ImageListItem';
 import ImageListItemBar from '@material-ui/core/ImageListItemBar';
 import Tooltip from '@material-ui/core/Tooltip';
 
-import RefactorRequirementDialog from './refactoring/RefactorRequirementDialog';
 import BuildIcon from '@material-ui/icons/Build';
+import Menu from '@material-ui/core/Menu';
+import ListItemText from '@material-ui/core/ListItemText';
+import MenuItem from '@material-ui/core/MenuItem';
 
 const styles = theme => ({
   formula: {
@@ -80,11 +82,12 @@ const styles = theme => ({
 class DisplayRequirementDialog extends React.Component {
   state = {
     open: false,
-    selectedRequirement: {}
+    selectedRequirement: {},
+    refactorAnchorEl: null,
   };
 
   handleClose = () => {
-    this.setState({ open: false });
+    this.setState({ open: false, refactorAnchorEl: null});
     this.state.dialogCloseListener();
   };
 
@@ -94,13 +97,25 @@ class DisplayRequirementDialog extends React.Component {
     this.state.openCreateDialog();
   }
 
+  handleRefactorMenuClick = (event) => {
+    this.setState({ refactorAnchorEl: event.currentTarget});
+  };
+
+  handleRefactorMenuClose = () => {
+    this.setState({refactorAnchorEl: null});
+  };
+
   handleRefactorRequirement = () => {
-    console.log('Handle Refactor requirement');
-    console.log(this.state.openRefactorDialog);
-    //console.log(this.props.handleRefactorDialogOpen);
     this.handleClose();
-    //this.props.handleRefactorDialogOpen();
     this.state.openRefactorDialog();
+    //Oisín: I don't think there's any actual need to set the function to a state variable
+    //(calling it as a prop seems to work fine), but I think it's best to follow
+    //the existing format
+  }
+
+  handleInlineRequirement = () => {
+    this.handleClose();
+    this.state.openInlineDialog();
     //Oisín: I don't think there's any actual need to set the function to a state variable
     //(calling it as a prop seems to work fine), but I think it's best to follow
     //the existing format
@@ -120,6 +135,7 @@ class DisplayRequirementDialog extends React.Component {
       openCreateDialog: props.handleCreateDialogOpen,
       openDeleteDialog: props.handleDeleteDialogOpen,
       openRefactorDialog: props.handleRefactorDialogOpen,
+      openInlineDialog: props.handleInlineDialogOpen,
     })
   }
 
@@ -201,7 +217,7 @@ class DisplayRequirementDialog extends React.Component {
                     <EditIcon />
                     </Tooltip>
                   </IconButton>
-                  <IconButton id="qa_disReq_ic_refactor" onClick={this.handleRefactorRequirement} size="small" color="default" aria-label="refactor" >
+                  <IconButton id="qa_disReq_ic_refactor" onClick={this.handleRefactorMenuClick} size="small" color="default" aria-label="refactor" >
                     <Tooltip id="tooltip-icon-build" title="Refactor Requirement">
                     <BuildIcon />
                     </Tooltip>
@@ -218,6 +234,28 @@ class DisplayRequirementDialog extends React.Component {
             </ImageListItem>
           </ImageList>
           </DialogTitle>
+          <//Oisín: Menu to select refactoring method to be applied
+             Menu
+              id="refactor-menu"
+              anchorEl={this.state.refactorAnchorEl}
+              open={Boolean(this.state.refactorAnchorEl)}
+              onClose={this.handleRefactorMenuClose}
+            >
+              <MenuItem
+                onClick={this.handleRefactorRequirement}
+                dense
+                >
+                <ListItemText primary = "Extract Requirement" />
+              </MenuItem>
+
+              <MenuItem
+                onClick={this.handleInlineRequirement}
+                dense
+                >
+                <ListItemText primary = "Inline Requirement" />
+              </MenuItem>
+
+            </Menu>
           <Divider />
           <DialogContent>
             <br />
@@ -252,7 +290,8 @@ DisplayRequirementDialog.propTypes = {
   handleDialogClose: PropTypes.func.isRequired,
   handleCreateDialogOpen: PropTypes.func.isRequired,
   handleDeleteDialogOpen: PropTypes.func.isRequired,
-  handleRefactorDialogOpen: PropTypes.func.isRequired
+  handleRefactorDialogOpen: PropTypes.func.isRequired,
+  handleInlineDialogOpen: PropTypes.func.isRequired,
 };
 
 export default withStyles(styles)(DisplayRequirementDialog);

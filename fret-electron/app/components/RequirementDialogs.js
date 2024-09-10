@@ -45,6 +45,7 @@ import CreateRequirementDialog from './CreateRequirementDialog';
 import DeleteRequirementDialog from './DeleteRequirementDialog';
 
 import RefactorRequirementDialog from './refactoring/RefactorRequirementDialog';
+import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
 
 
 const styles = theme => ({
@@ -76,6 +77,14 @@ class RequirementDialogs extends React.Component {
 
   handleRefactorDialogClose = () => {
     this.setState({refactorDialogOpen: false});
+  }
+
+  handleInlineDialogOpen = () => {
+    this.setState({inlineDialogOpen: true });
+  }
+
+  handleInlineDialogClose = () => {
+    this.setState({inlineDialogOpen: false});
   }
 
   handleDeleteDialogClose = () => {
@@ -125,6 +134,7 @@ class RequirementDialogs extends React.Component {
           handleDeleteDialogClose={this.handleDeleteDialogClose}
           handleDeleteDialogOpen={this.handleDeleteDialogOpen}
           handleRefactorDialogOpen={this.handleRefactorDialogOpen}
+          handleInlineDialogOpen={this.handleInlineDialogOpen}
         />
         <CreateRequirementDialog
           open={this.state.createDialogOpen}
@@ -145,6 +155,12 @@ class RequirementDialogs extends React.Component {
           selectedRequirement={selectedRequirement}
           open={this.state.refactorDialogOpen}
           handleDialogClose={this.handleRefactorDialogClose}
+          requirements={this.props.requirements}
+        />
+        <InlineRequirementDialog
+          selectedRequirement={selectedRequirement}
+          open={this.state.inlineDialogOpen}
+          handleDialogClose={this.handleInlineDialogClose}
           requirements={this.props.requirements}
         />
 

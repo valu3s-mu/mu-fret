@@ -652,6 +652,16 @@ class SortableTable extends React.Component {
     this.setState({refactorAnchorEl: null, refactorMenuCurrentN: null})
   }
 
+  //Oisín: This simpler method gets passed to DisplayRequirementDialog to
+  //allow inlining from there.
+  //(We already know which requirement we want, so we just need to show the
+  // inline dialog).
+  handleInlinefromDialog = () => {
+    this.setState({
+      inlineDialogOpen: true
+    })
+  }
+
   handleInlineDialogClose = () => {
     this.setState({
       inlineDialogOpen: false
@@ -977,11 +987,19 @@ class SortableTable extends React.Component {
                         </TableCell>
 
                         <TableCell>
-                          <Tooltip id="tooltip-icon-refactor" title="Refactor Requirement">
-                            <IconButton onClick={this.handleRefactorRequirement(n)} size="small" color="default" aria-label="refactor" >
-                            <BuildIcon />
-                            </IconButton>
-                          </Tooltip>
+                          <Tooltip id="tooltip-icon-refactor-menu" title="Refactor Requirement">
+                              <IconButton
+                                onClick={this.handleRefactorMenuClick(n)}
+                                size="small"
+                                color="default"
+                                aria-label="refactor menu button"
+                                aria-owns={refactorAnchorEl ? 'refactor-menu' : null}
+                                aria-haspopup="true"
+
+                              >
+                              <BuildIcon />
+                              </IconButton>
+                            </Tooltip>
                         </ TableCell>
                         <TableCell>{n.summary}</TableCell>
                         <TableCell>{projectLabel}</TableCell>
@@ -1036,12 +1054,6 @@ class SortableTable extends React.Component {
                           </TableCell>
 
                           <TableCell>
-                            <Tooltip id="tooltip-icon-refactor" title="Refactor Requirement">
-                              <IconButton onClick={this.handleRefactorRequirement(n)} size="small" color="default" aria-label="refactor" >
-                              <BuildIcon />
-                              </IconButton>
-                            </Tooltip>
-
                             <Tooltip id="tooltip-icon-refactor-menu" title="Refactor Requirement">
                               <IconButton
                                 onClick={this.handleRefactorMenuClick(n)}
@@ -1135,6 +1147,7 @@ class SortableTable extends React.Component {
         handleDeleteDialogOpen={this.handleDeleteDialogOpen}
         //Oisín: added this so we can refactor straight from the dialog
         handleRefactorDialogOpen={this.handleRefactorfromDialog}
+        handleInlineDialogOpen={this.handleInlinefromDialog}
         />
       <CreateRequirementDialog
         open={this.state.createDialogOpen}
