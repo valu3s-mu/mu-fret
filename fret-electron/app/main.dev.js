@@ -324,6 +324,12 @@ ipcMain.handle('inlineRequirement', async(evt, args) => {
   return refactoringController.InlineRequirement(...args);
 })
 
+//Oisín: Added for debugging, since it's impossible to parse anything printed from the
+// main process (gets put in the command line rather than the electron console)
+ipcMain.handle('fetchModelDatabase', async() => {
+  return refactoringModel.fetchModelDatabase();
+})
+
 
 /**
  * Add event listeners...

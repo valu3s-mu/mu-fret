@@ -21,24 +21,35 @@ import {leveldbDB as db, modelDB as modeldb} from '../../fret-electron/model/fre
  * @param {String?} fragmentName 
  * @param {String?} component 
  * @param {String?} project 
+ * @param {Array<String>} dbIDList List of the database IDs for all the requirements now containing the variable (including the new fragment)
  */
-export function UpdateFragmentVariable(fragmentName, component, project)
+export function UpdateFragmentVariable(fragmentName, component, project, dbIDList)
 {
   //This feels kinda hacky, but it seems to work ok.
-  console.log("Update Fragement Variable")
+  console.log("Update Fragment Variable")
   console.log("1 -> " + fragmentName)
   console.log("2 -> " + component)
   console.log("3 -> " + project)
 
   var doc = {
-    _id : project+component+fragmentName,
-    variable_name : fragmentName,
-    project : project,
-    component_name	: component,
+    _id: project+component+fragmentName,
+    project: project,
+    component_name: component,
+    variable_name: fragmentName,
+    reqs: [dbIDList],
+    dataType: "boolean",
     description : "Variable Type added by Mu-FRET Refactoring Dialogue. (refactoring_model.UpdateFragmentVariable())",
-    dataType : "boolean"
-   }
-
+    idType: '',
+    moduleName:'',
+    description: '',
+    assignment: '',
+    copilotAssignment: '',
+    modeRequirement: '',
+    modeldoc: false,
+    modelComponent: '', //Oisín: Making this just be blank for now, hopefully that's fine (it seems to try and get copied from somewhere in modelDBSetters, but just ends up blank anyway)
+    modeldoc_id: '',
+    completed: false,
+  };
 
   modeldb.put(doc).then(function(response){ console.log("modeldb response -> "); console.log(response); }).catch((err) => {console.log(err); })
 
@@ -361,4 +372,12 @@ export function createVariableMap(args)
     }
     ).catch((err) => {console.log(err); })
   return finalResult;
+}
+
+//Oisín: Exists purely for debugging purposes, so I can print the variables database to the electron console
+export function fetchModelDatabase()
+{
+  return modeldb.allDocs({
+      include_docs: true,
+    })
 }

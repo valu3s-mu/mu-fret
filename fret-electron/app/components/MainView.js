@@ -510,6 +510,18 @@ class MainView extends React.Component {
   openVersionDialog = () => {
     console.log("Open Version Dialog pressed")
 
+    console.log("Requirements object from the state:");
+    console.log(this.props.requirements);
+
+    ipcRenderer.invoke('fetchModelDatabase').then((result) => {
+      console.log("All Variable names:");
+      result.rows.map(r => {
+        console.log(r.id);
+        console.log(r);
+      })
+      console.log("End of variables list");
+    })
+
     ipcRenderer.invoke('getVersion').then((result) => {
       this.setState({
       versionDialogOpen: true,

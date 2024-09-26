@@ -30,8 +30,6 @@ import CancelIcon from '@material-ui/icons/Cancel';
 import WarningIcon from '@material-ui/icons/Warning';
 import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
 
-
-import RefactoringController from '../../../../tools/Refactoring/refactoring_controller';
 import RefactoringUtils from '../../../../tools/Refactoring/refactoring_utils';
 
 const {ipcRenderer} = require('electron');
@@ -292,42 +290,44 @@ handleOk = () => {
   if(allVarsDefined)
   {
 
+    let extractArgs = [this.state.selectedRequirement, this.state.variables, this.state.extractString, this.state.newName, newID, this.state.requirements]
+    let applyToAll = this.state.applyToAll;
+
     //Update ModelDB
     //RefactoringController.updateVariableTypes(this.state.variableDocs, this.state.variables);
-    ipcRenderer.invoke('updateVariableTypes', [this.state.variableDocs, this.state.variables]);
+    ipcRenderer.invoke('updateVariableTypes', [this.state.variableDocs, this.state.variables]).then((result) => {
 
+      ipcRenderer.invoke('extractRequirement', extractArgs, applyToAll).then((result) => {
+        if(result == true)
+        {
 
-    let args = [this.state.selectedRequirement, this.state.variables, this.state.extractString, this.state.newName, newID, this.state.requirements]
-    ipcRenderer.invoke('extractRequirement', args, this.state.applyToAll).then((result) => {
-      if(result == true)
-      {
+          ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
 
-        ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
+            this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
+                                                  requirements: result.requirements,
+                                                  // analysis
+                                                  components : result.components,
+                                                  completedComponents : result.completedComponents,
+                                                  cocospecData : result.cocospecData,
+                                                  cocospecModes : result.cocospecModes,
+                                                  // variables
+                                                  variable_data : result.variable_data,
+                                                  modelComponent : result.modelComponent,
+                                                  modelVariables : result.modelVariables,
+                                                  selectedVariable : result.selectedVariable,
+                                                  importedComponents : result.importedComponents,
+                                                  })
 
-          this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
-                                                requirements: result.requirements,
-                                                // analysis
-                                                components : result.components,
-                                                completedComponents : result.completedComponents,
-                                                cocospecData : result.cocospecData,
-                                                cocospecModes : result.cocospecModes,
-                                                // variables
-                                                variable_data : result.variable_data,
-                                                modelComponent : result.modelComponent,
-                                                modelVariables : result.modelVariables,
-                                                selectedVariable : result.selectedVariable,
-                                                importedComponents : result.importedComponents,
-                                                })
-
-          this.setState({dialogState:STATE.RESULT_TRUE, refactoringCheckresult: result});
+            this.setState({dialogState:STATE.RESULT_TRUE, refactoringCheckresult: result});
+            
+          })
           
-        })
-        
-      }
-      else
-      {
-        this.setState({dialogState:STATE.RESULT_FALSE, refactoringCheckresult: result});
-      }
+        }
+        else
+        {
+          this.setState({dialogState:STATE.RESULT_FALSE, refactoringCheckresult: result});
+        }
+      })
     })
 
   }
@@ -713,7 +713,6 @@ RefactorRequirementDialog.propTypes = {
   selectedRequirement: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
   handleDialogClose: PropTypes.func.isRequired,
-  //requirements: PropTypes.array
 };
 
 function mapStateToProps(state) {

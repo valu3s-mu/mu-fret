@@ -107,8 +107,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 
 	 newReq.fulltext = newFretish;
 	 // Compile the new semantics and add to the new req
-	 // Not sure that this is working
-	 let newSemantics = fretSemantics.compile(newFretish)
+	 let newSemantics = fretSemantics.compile(newFretish);
 	 newReq.semantics = newSemantics.collectedSemantics;
 
 	// Step 3
@@ -127,9 +126,6 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 
 
 
-	  console.log("extractRequirement allRequirements -> ");
-	  console.log(allRequirements);
-
   // Step 4
   // Verify
 	var result = compare.compareRequirements(req, reqVars, dummyUpdatedReq, allRequirements);
@@ -145,13 +141,16 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 		// Replace fragment in original requirement with reference to new requirement
 		model.ReplaceFragment(req, fragment, fretishDestinationName);
 
+		//Oisín: Recompile the semantics for the source requirement
+		let recompiledSemantics = fretSemantics.compile(req.fulltext);
+		req.semantics = recompiledSemantics.collectedSemantics;
 
 		model.AddRequirementToDB(req);
 
-	 // Adding extracted requirement
-		 model.AddRequirementToDB(newReq);
+	 	//Adding extracted requirement
+		model.AddRequirementToDB(newReq);
 
-		 model.UpdateFragmentVariable(fretishDestinationName, component, req.project)
+		model.UpdateFragmentVariable(fretishDestinationName, component, req.project, [req._id, newReq._id])
 	}
 	else
 	{
@@ -256,9 +255,6 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 			// Step 4
 			// Verify
 
-		  console.log("extractRequirement_ApplyAll allRequirements -> ");
-		  console.log(allRequirements);
-
 			// This call to compareRequirements can reuse reqVars because if we are doing extract all
 			// then `reqvars` will contain all the variables (and types) for all the requirements that
 			// contain the fragment being extracted.
@@ -276,6 +272,8 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 		}
 
+		let dbIDList = [newReq._id]
+
 		if(result)
 		{
 			console.log("+++ adding requirements to the database +++")
@@ -287,16 +285,21 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 				kreq.fragments = [newReq.reqid]
 				model.ReplaceFragment(kreq, fragment, fretishDestinationName);
+
+				let recompiledSemantics = fretSemantics.compile(kreq.fulltext);
+				kreq.semantics = recompiledSemantics.collectedSemantics;
+				dbIDList.concat(kreq._id);
+
 				model.AddRequirementToDB(kreq);
 
 			}
 
 			console.log("+++ Adding Extracted Requirement +++")
-		// Adding extracted requirement
+			//Adding extracted requirement
 			model.AddRequirementToDB(newReq);
 
 		}
-		 model.UpdateFragmentVariable(fretishDestinationName, component, req.project)
+		 model.UpdateFragmentVariable(fretishDestinationName, component, req.project, dbIDList);
 	}
 	return result;
 }
