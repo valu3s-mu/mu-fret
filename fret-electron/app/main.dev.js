@@ -324,12 +324,21 @@ ipcMain.handle('inlineRequirement', async(evt, args) => {
   return refactoringController.InlineRequirement(...args);
 })
 
+ipcMain.handle('renameRequirement', async(evt, args) => {
+  return refactoringController.RenameRequirement(...args);
+})
+
 //Oisín: Added for debugging, since it's impossible to parse anything printed from the
 // main process (gets put in the command line rather than the electron console)
 ipcMain.handle('fetchModelDatabase', async() => {
   return refactoringModel.fetchModelDatabase();
 })
 
+//Oisín: Takes in a requirement and returns the docs of its children, i.e. requirements
+//in the same project that have that requirement's reqid in their "parent_reqid" field
+ipcMain.handle('getChildRequirements', async(evt, requirement) => {
+  return refactoringModel.getChildRequirements(requirement);
+})
 
 /**
  * Add event listeners...

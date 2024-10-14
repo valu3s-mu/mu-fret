@@ -187,16 +187,18 @@ export function RequirementsInProject(project_name)
  * @param {String} fragment the fragement to be searched for
  * @param {String} reqName the name of the requirement currently being refactored
  * @param {String} destinationName the name of the newly created requirement
+ * @param {String} component the name of the component in the source requirement
  * @returns {Array<Object>} collection of requrement objects that contain the fragment
  */
-export function FindRequirementsWithFragment(allRequirements, project_name, fragment, reqName, destinationName)
+export function FindRequirementsWithFragment(allRequirements, project_name, fragment, reqName, destinationName, component)
 {
   console.log("+++ Find Requirements with Fragment +++")
-  console.log("1. allRequirements = " + allRequirements);
+  //console.log("1. allRequirements = " + allRequirements);
   console.log("2. project_name = " + project_name);
   console.log("3. fragment = " + fragment);
   console.log("4. reqName = " + reqName);
   console.log("5. destinationName = " + destinationName);
+  console.log("6. component = " + component);
 
   let reqsWithFrag = [];
 
@@ -218,6 +220,10 @@ export function FindRequirementsWithFragment(allRequirements, project_name, frag
           else if(this_req.project != project_name) //Oisín: I don't like this bracketing style, but consistency (:
           {
             console.log("Different project, skip")
+          }
+          else if(this_req.semantics.component != component)
+          {
+            console.log("Different component, skip")
           }
           else if(this_req.req_id == destinationName)
           {
@@ -373,6 +379,20 @@ export function createVariableMap(args)
     ).catch((err) => {console.log(err); })
   return finalResult;
 }
+
+
+export function getChildRequirements(requirement)
+{
+
+  let project = requirement.project;
+  let reqid = requirement.reqid;
+
+  return db.find({
+    selector: {project: project, parent_reqid: reqid}
+  });
+
+}
+
 
 //Oisín: Exists purely for debugging purposes, so I can print the variables database to the electron console
 export function fetchModelDatabase()

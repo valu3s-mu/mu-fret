@@ -409,6 +409,8 @@ getType = (variableName) =>
   {
     
     var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext } = this.state.selectedRequirement
+    let req_component_name = semantics ? semantics.component : "";
+    console.log(req_component_name);
 
     var dialog_state = this.state.dialogState;
 
@@ -472,7 +474,7 @@ getType = (variableName) =>
                           </Grid>
 
                           <Grid style={{ textAlign: 'right' }} item xs={3}>
-                            Apply to all Requirements in {this.state.selectedRequirement.project}:
+                            Apply to all {req_component_name} Requirements in {project}:
                           </Grid>
                           <Grid item xs={9}>
                             <Checkbox

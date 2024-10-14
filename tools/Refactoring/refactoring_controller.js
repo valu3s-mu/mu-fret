@@ -23,7 +23,7 @@ exports.requirementsWithFragment = function requirementsWithFragment(allRequirem
 	console.log("req.project = " + req.project)
 	console.log("req.reqid = " + req.reqid)
 
-	return model.FindRequirementsWithFragment(allRequirements, req.project, fragment, req.reqid, destinationName);
+	return model.FindRequirementsWithFragment(allRequirements, req.project, fragment, req.reqid, destinationName, req.semantics.component);
 };
 
 
@@ -136,7 +136,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 		//Updating original requirement and adding to database
 
 		// New Field to list the fragments that this requirement depends on
-		req.fragments = [newReq.reqid]
+		req.fragments = [newReq._id]
 
 		// Replace fragment in original requirement with reference to new requirement
 		model.ReplaceFragment(req, fragment, fretishDestinationName);
@@ -244,7 +244,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 			// Dummy Run on the Dummy Req
 			model.ReplaceFragment(dummyUpdatedReq, fragment, fretishDestinationName);
-			dummyUpdatedReq.fragments = [newReq.reqid]
+			dummyUpdatedReq.fragments = [newReq._id]
 
 			console.log("~~~~~")
 			console.log("checking what two reqs I'm comparing...")
@@ -283,7 +283,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 				let kreq = reqKnockons[i];
 
-				kreq.fragments = [newReq.reqid]
+				kreq.fragments = [newReq._id]
 				model.ReplaceFragment(kreq, fragment, fretishDestinationName);
 
 				let recompiledSemantics = fretSemantics.compile(kreq.fulltext);
@@ -363,11 +363,11 @@ model.MoveFragment(sourceReq, definition, destinationReq) // Not yet working
 
 
 /**
-* Handles on request to rename a requirement, including the knock-on effect to
+* Handles one request to rename a requirement, including the knock-on effect to
 * other requirements that reference this requirement
 * @todo Implement
 */
-function Rename(requirement, newName)
+function RenameRequirement(requirement, newName, childRequirements)
 {
   // Ramos
   // 1. Select the requirement you want to rename.
@@ -384,10 +384,19 @@ function Rename(requirement, newName)
 //update the knockons
 
 
-return requirement
+	requirement.reqid = newName;
+	model.AddRequirementToDB(requirement);
+
+	childRequirements.map(kreq => {
+		kreq.parent_reqid = newName;
+		model.AddRequirementToDB(kreq)
+	})
+
+
+	return true;
 
 }
-
+exports.RenameRequirement = RenameRequirement;
 
 /**
 * Handles one request to inline a requirement, including the knock-on effects to
@@ -426,7 +435,7 @@ function InlineRequirement(source, destinationReqs)
 
 		//Remove reference to the source fragment from the destination's list of fragments
 		if(currentDestination.fragments){
-			let fragIndex = currentDestination.fragments.indexOf(source.reqid);
+			let fragIndex = currentDestination.fragments.indexOf(source._id);
 			if(fragIndex > -1){
 				currentDestination.fragments.splice(fragIndex, 1);
 			}

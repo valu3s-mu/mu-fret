@@ -46,6 +46,7 @@ import DeleteRequirementDialog from './DeleteRequirementDialog';
 
 import RefactorRequirementDialog from './refactoring/RefactorRequirementDialog';
 import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
+import RenameRequirementDialog from './refactoring/RenameRequirementDialog';
 
 
 const styles = theme => ({
@@ -59,6 +60,7 @@ class RequirementDialogs extends React.Component {
     snackBarDisplayInfo: {},
     refactorDialogOpen: false,
     inlineDialogOpen: false,
+    renameDialogOpen: false,
   };
 
   constructor(props){
@@ -122,6 +124,13 @@ class RequirementDialogs extends React.Component {
     this.setState({inlineDialogOpen: false});
   }
 
+  handleRenameDialogOpen = () => {
+    this.setState({renameDialogOpen: true });
+  }
+
+  handleRenameDialogClose = () => {
+    this.setState({renameDialogOpen: false});
+  }
 
   render() {
     const {
@@ -139,6 +148,7 @@ class RequirementDialogs extends React.Component {
           handleDeleteDialogOpen={this.handleDeleteDialogOpen}
           handleRefactorDialogOpen={this.handleRefactorDialogOpen}
           handleInlineDialogOpen={this.handleInlineDialogOpen}
+          handleRenameDialogOpen={this.handleRenameDialogOpen}
         />
         <CreateRequirementDialog
           open={this.state.createDialogOpen}
@@ -165,6 +175,12 @@ class RequirementDialogs extends React.Component {
           selectedRequirement={selectedRequirement}
           open={this.state.inlineDialogOpen}
           handleDialogClose={this.handleInlineDialogClose}
+          requirements={this.props.requirements}
+        />
+        <RenameRequirementDialog
+          selectedRequirement={selectedRequirement}
+          open={this.state.renameDialogOpen}
+          handleDialogClose={this.handleRenameDialogClose}
           requirements={this.props.requirements}
         />
 
