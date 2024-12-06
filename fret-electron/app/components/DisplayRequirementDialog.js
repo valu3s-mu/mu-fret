@@ -132,7 +132,12 @@ class DisplayRequirementDialog extends React.Component {
 
   handleRenameRequirement = () => {
     this.handleClose();
-    this.state.openRenameDialog();
+    this.state.openRenameRequirementDialog();
+  }
+
+  handleRenameVariable = () => {
+    this.handleClose();
+    this.state.openRenameVariableDialog();
   }
 
   componentWillReceiveProps = (props) => {
@@ -145,7 +150,8 @@ class DisplayRequirementDialog extends React.Component {
       openDeleteDialog: props.handleDeleteDialogOpen,
       openRefactorDialog: props.handleRefactorDialogOpen,
       openInlineDialog: props.handleInlineDialogOpen,
-      openRenameDialog: props.handleRenameDialogOpen,
+      openRenameRequirementDialog: props.handleRenameRequirementDialogOpen,
+      openRenameVariableDialog: props.handleRenameVariableDialogOpen,
     })
   }
 
@@ -272,6 +278,13 @@ class DisplayRequirementDialog extends React.Component {
                 <ListItemText primary = "Rename Requirement" />
               </MenuItem>
 
+              <MenuItem
+                onClick={this.handleRenameVariable}
+                dense
+                >
+                <ListItemText primary = "Rename Variable" />
+              </MenuItem>
+
             </Menu>
           <Divider />
           <DialogContent>
@@ -309,7 +322,8 @@ DisplayRequirementDialog.propTypes = {
   handleDeleteDialogOpen: PropTypes.func.isRequired,
   handleRefactorDialogOpen: PropTypes.func.isRequired,
   handleInlineDialogOpen: PropTypes.func.isRequired,
-  handleRenameDialogOpen: PropTypes.func.isRequired,
+  handleRenameRequirementDialogOpen: PropTypes.func.isRequired,
+  handleRenameVariableDialogOpen: PropTypes.func.isRequired,
 };
 
 export default withStyles(styles)(DisplayRequirementDialog);

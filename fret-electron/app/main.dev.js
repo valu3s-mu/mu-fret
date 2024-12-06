@@ -328,6 +328,11 @@ ipcMain.handle('renameRequirement', async(evt, args) => {
   return refactoringController.RenameRequirement(...args);
 })
 
+ipcMain.handle('renameVariable', async(evt, args) => {
+  return refactoringController.RenameVariable(...args);
+})
+
+
 //Oisín: Added for debugging, since it's impossible to parse anything printed from the
 // main process (gets put in the command line rather than the electron console)
 ipcMain.handle('fetchModelDatabase', async() => {

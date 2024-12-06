@@ -398,6 +398,35 @@ function RenameRequirement(requirement, newName, childRequirements)
 }
 exports.RenameRequirement = RenameRequirement;
 
+
+function RenameVariable(variableOldName, variableDBID, newVariableName, targetRequirements)
+{
+	model.FetchVariableFromDB(variableDBID).then((variableDBObject) => {
+		
+		variableDBObject._id = newVariableName;
+		variableDBObject.variable_name = newVariableName;
+
+		model.ReplaceVariableInDB(variableDBID, variableDBObject);
+	})
+
+
+	targetRequirements.map((req) => {
+
+		let reqDoc = req.doc;
+
+		let replacedFulltext = refactoring_utils.replaceVariableName(reqDoc, variableOldName, newVariableName);
+		reqDoc.fulltext = replacedFulltext;
+
+		let newSemantics = fretSemantics.compile(replacedFulltext);
+		reqDoc.semantics = newSemantics.collectedSemantics;
+
+		model.AddRequirementToDB(reqDoc);
+	})
+
+	return true;
+}
+exports.RenameVariable = RenameVariable;
+
 /**
 * Handles one request to inline a requirement, including the knock-on effects to
 * other requirements that reference the requirement being inlined.

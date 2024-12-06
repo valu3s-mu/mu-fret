@@ -401,3 +401,23 @@ export function fetchModelDatabase()
       include_docs: true,
     })
 }
+
+/**
+ * Oisín: Honestly suprised we didn't have a function for this until now
+ */
+export function FetchVariableFromDB(variableID)
+{
+  return modeldb.get(variableID);
+}
+
+/**
+ * Removes the variable with ID oldVariableID from ModelDB and inserts newVariableObject.
+ * 
+ * The main idea for this is that newVariableObject is a new version of the old variable, but with
+ * a different name and thus a differed ID.
+ */
+export function ReplaceVariableInDB(oldVariableID, newVariableObject)
+{
+  modeldb.remove(oldVariableID);
+  modeldb.put(newVariableObject);
+}

@@ -47,6 +47,7 @@ import DeleteRequirementDialog from './DeleteRequirementDialog';
 import RefactorRequirementDialog from './refactoring/RefactorRequirementDialog';
 import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
 import RenameRequirementDialog from './refactoring/RenameRequirementDialog';
+import RenameVariableDialog from './refactoring/RenameVariableDialog';
 
 
 const styles = theme => ({
@@ -60,7 +61,8 @@ class RequirementDialogs extends React.Component {
     snackBarDisplayInfo: {},
     refactorDialogOpen: false,
     inlineDialogOpen: false,
-    renameDialogOpen: false,
+    renameRequirementDialogOpen: false,
+    renameVariableDialogOpen: false,
   };
 
   constructor(props){
@@ -124,12 +126,20 @@ class RequirementDialogs extends React.Component {
     this.setState({inlineDialogOpen: false});
   }
 
-  handleRenameDialogOpen = () => {
-    this.setState({renameDialogOpen: true });
+  handleRenameRequirementDialogOpen = () => {
+    this.setState({renameRequirementDialogOpen: true });
   }
 
-  handleRenameDialogClose = () => {
-    this.setState({renameDialogOpen: false});
+  handleRenameRequirementDialogClose = () => {
+    this.setState({renameRequirementDialogOpen: false});
+  }
+
+  handleRenameVariableDialogOpen = () => {
+    this.setState({renameVariableDialogOpen: true });
+  }
+
+  handleRenameVariableDialogClose = () => {
+    this.setState({renameVariableDialogOpen: false});
   }
 
   render() {
@@ -148,7 +158,8 @@ class RequirementDialogs extends React.Component {
           handleDeleteDialogOpen={this.handleDeleteDialogOpen}
           handleRefactorDialogOpen={this.handleRefactorDialogOpen}
           handleInlineDialogOpen={this.handleInlineDialogOpen}
-          handleRenameDialogOpen={this.handleRenameDialogOpen}
+          handleRenameRequirementDialogOpen={this.handleRenameRequirementDialogOpen}
+          handleRenameVariableDialogOpen={this.handleRenameVariableDialogOpen}
         />
         <CreateRequirementDialog
           open={this.state.createDialogOpen}
@@ -179,8 +190,14 @@ class RequirementDialogs extends React.Component {
         />
         <RenameRequirementDialog
           selectedRequirement={selectedRequirement}
-          open={this.state.renameDialogOpen}
-          handleDialogClose={this.handleRenameDialogClose}
+          open={this.state.renameRequirementDialogOpen}
+          handleDialogClose={this.handleRenameRequirementDialogClose}
+          requirements={this.props.requirements}
+        />
+        <RenameVariableDialog
+          selectedRequirement={selectedRequirement}
+          open={this.state.renameVariableDialogOpen}
+          handleDialogClose={this.handleRenameVariableDialogClose}
           requirements={this.props.requirements}
         />
 
