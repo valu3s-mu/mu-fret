@@ -83,6 +83,8 @@ class RenameRequirementDialog extends React.Component
     variableDocs : {},
     newName: '',
     childRequirements: [],
+    //Variable for an invalid entered name
+    invalidNewName: false,
   };
 
   componentWillReceiveProps = (props) => {
@@ -110,6 +112,7 @@ class RenameRequirementDialog extends React.Component
       refactoringCheckresult: null,
       variableDocs : {},
       newName: '',
+      invalidNewName: false,
     });
     this.state.dialogCloseListener();
   };
@@ -160,13 +163,26 @@ class RenameRequirementDialog extends React.Component
   //This will eventually be more elaborate, placeholder for now
   handleInitialOK = () => {
 
-    ipcRenderer.invoke('getChildRequirements', this.state.selectedRequirement).then((result) => {
-      this.setState({
-        childRequirements: result.docs,
-        dialogState : STATE.TYPES,
-      });
-    });
+    const validNameRegex = /^[A-Za-z0-9]([A-Za-z0-9_.-])*$/;
+    let newName = this.state.newName;
+    let found = newName.match(validNameRegex);
+    let testResult = validNameRegex.test(newName);
+    console.log("Regex check for valid new requirement name:");
+    console.log(found);
+    console.log(testResult);
 
+    if(testResult == false){
+      this.setState({invalidNewName: true})
+    }
+    else{
+      ipcRenderer.invoke('getChildRequirements', this.state.selectedRequirement).then((result) => {
+        this.setState({
+          invalidNewName: false,
+          childRequirements: result.docs,
+          dialogState : STATE.TYPES,
+        });
+      });
+    }
     
   }
 
@@ -291,10 +307,14 @@ class RenameRequirementDialog extends React.Component
 
               </Grid>
 
+              {this.state.invalidNewName == true &&
+                <p style={{ color: "red" }}>Invalid new name; IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, or dots</p>
+              }
+
               {isFragment ? 
 
                 <DialogContentText>
-                  This is a fragment. Would you like to also rename the corresponding variable, {semantics.post_condition_SMV_pt}?
+                  This is a fragment. Would you like to also rename the corresponding variable, {semantics ? semantics.post_condition_SMV_pt : ""}?
                   
                   <Button
                     onClick={this.handleClose}

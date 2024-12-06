@@ -106,7 +106,9 @@ class RefactorRequirementDialog extends React.Component
     fragmentNotFoundinSelected: false,
     fragmentNotFoundInAll: false,
     //String with the IDs of any requirements to be refactored
-    applicableRequirementsNames: "",    
+    applicableRequirementsNames: "",
+    //Variable for an invalid entered name
+    invalidNewName: false,
   };
 
   componentWillReceiveProps = (props) => {
@@ -131,7 +133,7 @@ class RefactorRequirementDialog extends React.Component
    */
   handleClose = () => {
     // Reset the state
-    this.setState({ open: false, dialogState: STATE.INITIAL, selectedRequirement: {}, requirements: [], refactoringCheckresult: null, applyToAll: false, refactoringType: '', newName: '', refactoringContent: '', fragmentNotFoundinSelected: false, fragmentNotFoundinAll: false, applicableRequirementsNames: ""});
+    this.setState({ open: false, dialogState: STATE.INITIAL, selectedRequirement: {}, requirements: [], refactoringCheckresult: null, applyToAll: false, refactoringType: '', newName: '', refactoringContent: '', fragmentNotFoundinSelected: false, fragmentNotFoundinAll: false, applicableRequirementsNames: "", invalidNewName: false});
     this.state.dialogCloseListener();
   };
 
@@ -171,9 +173,22 @@ handleInitialOK = () =>
    */
 
   //Oisín: Reset the error messages
-  this.setState({fragmentNotFoundinSelected: false, fragmentNotFoundinAll: false});
+  this.setState({fragmentNotFoundinSelected: false, fragmentNotFoundinAll: false, invalidNewName: false});
 
-  if(this.state.applyToAll == false) //Extracting only from the selected requirement
+  const validNameRegex = /^[A-Za-z]([A-Za-z0-9_])*$/;
+  let newName = this.state.newName;
+  let found = newName.match(validNameRegex);
+  let testResult = validNameRegex.test(newName);
+  //console.log("Regex check for valid fragment name (requirement and variable):");
+  //console.log(found);
+  //console.log(testResult);
+
+  if(testResult == false){
+    this.setState({
+      invalidNewName: true
+    });
+  }
+  else if(this.state.applyToAll == false) //Extracting only from the selected requirement
   {
     if(this.fragmentInCurrent() == false){
       this.setState({fragmentNotFoundinSelected: true});
@@ -410,7 +425,6 @@ getType = (variableName) =>
     
     var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext } = this.state.selectedRequirement
     let req_component_name = semantics ? semantics.component : "";
-    console.log(req_component_name);
 
     var dialog_state = this.state.dialogState;
 
@@ -484,6 +498,9 @@ getType = (variableName) =>
                           </Grid>
                     </Grid>
 
+            {this.state.invalidNewName == true &&
+              <p style={{ color: "red" }}>Invalid new name; IDs must start with a letter and include only letters, numbers, and underscores</p>
+            }
             {this.state.fragmentNotFoundinSelected == true &&
               <p style={{ color: "red" }}>Specified fragment not found in selected requirement</p>
             }

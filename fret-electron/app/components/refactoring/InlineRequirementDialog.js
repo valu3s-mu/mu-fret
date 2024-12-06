@@ -351,7 +351,7 @@ class InlineRequirementDialog extends React.Component
               {isFragment ? 
 
                 <DialogContentText>
-                  This is a fragment. Would you like to inline it in place of the variable {semantics.post_condition_SMV_pt}?
+                  This is a fragment. Would you like to inline it in place of the variable {semantics ? semantics.post_condition_SMV_pt : ""}?
                   
                   <Button
                     onClick={this.getRequirementsWithResponse}
