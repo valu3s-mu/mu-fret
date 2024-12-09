@@ -82,21 +82,32 @@ const booleanSimplifications = [
 ];
 
 const pastTimeSimplifications = [
+  ['FTP', trueFn, 'Z FALSE'],
+  ['! (Y TRUE)', trueFn, 'Z FALSE'],
+  ['! (Z FALSE)', trueFn, 'Y TRUE'],
   ['O FALSE',trueFn,'FALSE'], ['O TRUE', trueFn, 'TRUE'],
+  ['O[__l,__r] TRUE', trueFn, 'TRUE'],
+  ['O Z __p', trueFn, 'TRUE'],
   ['H FALSE',trueFn,'FALSE'], ['H TRUE', trueFn, 'TRUE'],
-  [ '! H ! __p', trueFn, 'O __p'],
-  [ '! O ! __p', trueFn, 'H __p'],
-  [ 'TRUE S __p', trueFn, 'O __p'],
-  ['__p S (__p & FTP)', trueFn, 'H __p'],
+  ['H (Z FALSE)', trueFn, 'Z FALSE'],
+  ['H (__p & __q)', trueFn, '(H __p) & (H __q)'],
+  ['H (O __p)', trueFn, 'H ((Y TRUE) | __p)'], // p only needs to hold at FTP
+  ['H (H[0, __r] __p)', trueFn, 'H __p'],
+  ['H (Y TRUE)', trueFn, 'FALSE'],
+  ['! H ! __p', trueFn, 'O __p'],
+  ['! O ! __p', trueFn, 'H __p'],
+  ['TRUE S __p', trueFn, 'O __p'],
   ['__p S (__p & Z FALSE)', trueFn, 'H __p'],
-  ['__p S (__p & ! Y TRUE)', trueFn, 'H __p'],
-  ['__p S (FTP & __p)', trueFn, 'H __p'],
-  ['! ((! __p) S (! __p))', trueFn, '__p'],
+  ['__p S ((Z FALSE) & __p)', trueFn, 'H __p'],
+  ['__p S __p', trueFn, '__p'],
   ['((Y TRUE) & __p) S __q', trueFn, '__p S __q'],
+  ['(Y TRUE) S __q', trueFn, 'O __q'],
   ['(Y TRUE) & (Y __p)', trueFn, '(Y __p)'],
-  ['(! (Y TRUE)) | (Y __p)', trueFn, '(Z __p)'],
-  ['(Y __p) | (! (Y TRUE))', trueFn, '(Z __p)'],
-  ['O Z __p', trueFn, 'TRUE']
+  ['(Z FALSE) | (Y __p)', trueFn, '(Z __p)'],
+  ['(Y __p) | (Z FALSE)', trueFn, '(Z __p)'],
+  ['HTimed(__l,__r,__p)', trueFn,'H[__l,__r] __p'],
+  ['OTimed(__l,__r,__p)', trueFn,'O[__l,__r] __p'],
+  ['STimed(__l,__r,__p,__q)',trueFn,'__p S[__l,__r] __q']  
 
           // -xtltl flag given to SALT does this: [ '__p | <| [] __p', trueFn, 'O __p']
 	  // For "regular,within":
@@ -109,14 +120,28 @@ const futureTimeSimplifications = [
     ['! (((! __p) & (! __q)) U (! __r))',trueFn, '(__p | __q) V __r'],
     ['TRUE U __p', trueFn, 'F __p'],
     ['FALSE V __p', trueFn, 'G __p'], ['TRUE V __p', trueFn, '__p'],
+    ['__p V TRUE', trueFn, 'TRUE'],
     // The next one is a fact about weak until (SMV doesn't have weak until)
     ['((__p V (__q | __p)) | (G __q))', trueFn, '__p V (__q | __p)'],
     ['F FALSE',trueFn,'FALSE'], ['F TRUE', trueFn, 'TRUE'],
     ['G FALSE',trueFn,'FALSE'], ['G TRUE', trueFn, 'TRUE'],
     ['G[__l,__h] TRUE', trueFn, 'TRUE'],
+    ['G (G[0,__h] __r)', trueFn, 'G __r'],
+    ['G (G __r)', trueFn, 'G __r'],
     ['X TRUE', trueFn, 'TRUE'], ['X FALSE', trueFn, 'FALSE'],
-    ['F[< __p] FALSE',trueFn,'FALSE'], ['F[<= __p] FALSE',trueFn,'FALSE']
+    ['F[< __p] FALSE',trueFn,'FALSE'], ['F[<= __p] FALSE',trueFn,'FALSE'],
+
+  // This next one (commented out) is true but causes past
+  // formalizations to be inconsistent with their future counterpart
+  // for some reason, maybe finitizing?
+  //['(G[__l,__r] __p) | G __p', trueFn, 'G[__l,__r] __p'],
+
+    ['FTimed(__l,__r,__p)', trueFn,'F[__l,__r] __p'],
+    ['GTimed(__l,__r,__p)', trueFn,'G[__l,__r] __p'],
+    ['UTimed(__l,__r,__p,__q)',trueFn,'__p U[__l,__r] __q'],
+    ['WeakUntl(__p,__q)', trueFn, '(__p U __q) | G __p']
 ];
+
 
 const finitizeFuture = [
     ['G __p', trueFn, 'LAST V __p'],
@@ -143,7 +168,7 @@ function nonBoolConstant(v) {
 */
 
 const pastTemporalConditions = [
-  ['FTP', trueFn, '(! (Y TRUE))'],
+  ['FTP', trueFn, '(Z FALSE)'],
   //These special cases are unnecessary due to booleanSimplifications
   //['preBool(FALSE,__p)',trueFn,'((! $Left$) & (Y __p))'],
   //['preBool(TRUE,__p)',trueFn,'($Left$ | (Y __p))'],
@@ -258,9 +283,23 @@ function applyTriple(term,triple) {
     else return null;
 }
 
+function extractIndex(term) {
+  if (isArray(term)) {
+    const hd = term[0]
+    if (isArray(hd)) return hd[0]
+    else return hd
+  } return term // this may be a number or boolean or variable but there will be no rules applicable to numbers or booleans
+}
+
+function getApplicableTriples(indexedTriples,ind) {
+  const triples = indexedTriples[ind];
+  return (triples === undefined ? [] : triples);
+}
+
 // If a triple in the array of triples applies to term, return its result, otherwise null.
-function applyTriples(term,triples) {
+function applyTriples(term,indexedTriples) {
     let r = null;
+    const triples = getApplicableTriples(indexedTriples,extractIndex(term))
     for (let triple of triples) {
 	let result = applyTriple(term,triple);
 	if (result !== null) {
@@ -278,21 +317,32 @@ function parseit(triple) {
     return [pat,fn,replacement]
 }
 
+function indexTriples(triples) {
+  let index = {};
+  for (const triple of triples) {
+    const pat = triple[0]
+    const ind = extractIndex(pat)
+    if (index[ind] === undefined) index[ind] = [];
+    index[ind].push(triple);
+  }
+  return index;
+}
+
 const ptSimplifications =
-      pastTimeSimplifications.concat(booleanSimplifications).map(parseit);
+      indexTriples(pastTimeSimplifications.concat(booleanSimplifications).map(parseit));
 
 const ftSimplifications =
-      futureTimeSimplifications.concat(booleanSimplifications).map(parseit);
+      indexTriples(futureTimeSimplifications.concat(booleanSimplifications).map(parseit));
 
-const finitizingFuture = finitizeFuture.map(parseit);
+const finitizingFuture = indexTriples(finitizeFuture.map(parseit));
 
-const parsedPastTemporalConditions = pastTemporalConditions.map(parseit)
-const parsedFutureTemporalConditions = futureTemporalConditions.map(parseit)
-const parsedTemporalConditions = temporalConditions.map(parseit);
+const parsedPastTemporalConditions = indexTriples(pastTemporalConditions.map(parseit))
+const parsedFutureTemporalConditions = indexTriples(futureTemporalConditions.map(parseit)) 
+const parsedTemporalConditions = indexTriples(temporalConditions.map(parseit));
 
-const parsedPastTemporalConditionsNoBounds = pastTemporalConditionsNoBounds.map(parseit)
-const parsedFutureTemporalConditionsNoBounds = futureTemporalConditionsNoBounds.map(parseit)
-const parsedTemporalConditionsNoBounds = temporalConditionsNoBounds.map(parseit);
+const parsedPastTemporalConditionsNoBounds = indexTriples(pastTemporalConditionsNoBounds.map(parseit))
+const parsedFutureTemporalConditionsNoBounds = indexTriples(futureTemporalConditionsNoBounds.map(parseit))
+const parsedTemporalConditionsNoBounds = indexTriples(temporalConditionsNoBounds.map(parseit));
 
 
 function applyPtSimplifications (term) {
@@ -352,7 +402,7 @@ function rewrite_bottomup(term,rules) {
 }
 
 function rule_SinceInclusive (term) {
-  let sbst = ustils.matchAST(['Since','__p',['And','__p','__q']],term);
+  let sbst = utils.matchAST(['Since','__p',['And','__p','__q']],term);
   if (sbst !== null) return ['SinceInclusive',sbst['__p'], sbst['__q']];
   else { let sbst = utils.matchAST(['Since','__p',['And','__q','__p']]);
 	 if (sbst !== null) return ['SinceInclusive',sbst['__p'], sbst['__q']];
@@ -575,9 +625,36 @@ function optimizeSemantics() {
     }
 }
 optimizeSemantics()
+
+
+console.log('ptSimplifications = ', JSON.stringify(ptSimplifications))
+
+console.log(transform('((H ((((FALSE & (Z (! FALSE))) & (Z (H (! FALSE)))) & (Y TRUE)) -> (Y r))) & ((H (! ((FALSE & (Z (! FALSE))) & (Z (H (! FALSE)))))) -> r))',optimizePT))
+
 */
 
 /*
+
+let xx = 'persists(3,p)'
+let yy = '((G[<=3] p) & (G[<3] (! LAST)))'
+let x3 = '((LAST V ((! ((((! TRUE) & (! LAST)) & (X TRUE)) & (! LAST))) | (X ((G[0,3] r) & (G[0,2] (! ((TRUE & (! LAST)) & (X (! TRUE))))))))) & (TRUE -> ((G[0,3] r) & (G[0,2] (! ((TRUE & (! LAST)) & (X (! TRUE))))))))'
+
+
+function testapply(form) {
+  const expform = transformFutureTemporalConditions(form)
+  console.log('Transformed ' + form + ' into ' + expform)
+  console.log('Simplify "' + expform + '" to ' + transform(expform,optimizePT))
+  console.log
+}
+testapply(xx)
+testapply(yy)
+testapply(x3)
+
+*/
+
+/*
+console.log(transform('((((((! FALSE) & (! LAST)) & (X FALSE)) | LAST) V (((((! FALSE) & (! LAST)) & (X FALSE)) | LAST) -> r)) | FALSE)',optimizeFT))
+
 console.log(optimizeFT(astsem.LTLtoAST('FALSE | ite(safe,green,red)')))
 console.log(transformTemporalConditions("persisted(3,!p) & occurred(4,p)"))
 console.log(transformTemporalConditionsNoBounds("persisted(3,!p) & occurred(4,p)"))
@@ -587,6 +664,7 @@ console.log(transformFutureTemporalConditions("persists(3,!p) & occurs(4,p)"))
 console.log(transformFutureTemporalConditionsNoBounds("persists(3,!p) & occurs(4,p)"))
 console.log(transformTemporalConditions("m"))
 
+*/
 
 /*
 console.log(transform('persisted(3,temp>100)',expandTemporalConditions));

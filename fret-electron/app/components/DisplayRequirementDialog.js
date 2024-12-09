@@ -223,33 +223,37 @@ class DisplayRequirementDialog extends React.Component {
           aria-labelledby="form-dialog-title"
           maxWidth="md"
         >
-
-          <DialogTitle id="form-dialog-title">
-          <ImageList rowHeight="auto" cols={2}>
+        <DialogTitle>
+          <ImageList rowHeight='auto' cols={2}>
             <ImageListItem>
-                <DialogTitle id="qa_disReq_dt_reqId">{reqidLabel}
-                  <IconButton id="qa_disReq_ic_edit" onClick={this.handleUpdateRequirement} size="small" color="secondary" aria-label="edit" >
-                    <Tooltip id="tooltip-icon-edit" title="Edit Requirement">
+              <div style={{display:'flex'}}>
+                <Tooltip title={reqidLabel} id="qa_disReq_dt_reqId">
+                  <Typography noWrap variant='h6' id="qa_disReq_dt_reqId">{reqidLabel}</Typography>
+                </Tooltip>
+                <IconButton id="qa_disReq_ic_edit" onClick={this.handleUpdateRequirement} size="small" color="secondary" aria-label="edit" >
+                  <Tooltip id="tooltip-icon-edit" title="Edit Requirement">
                     <EditIcon />
-                    </Tooltip>
-                  </IconButton>
-                  <IconButton id="qa_disReq_ic_refactor" onClick={this.handleRefactorMenuClick} size="small" color="default" aria-label="refactor" >
-                    <Tooltip id="tooltip-icon-build" title="Refactor Requirement">
+                  </Tooltip>
+                </IconButton>
+                <IconButton id="qa_disReq_ic_refactor" onClick={this.handleRefactorMenuClick} size="small" color="default" aria-label="refactor" >
+                  <Tooltip id="tooltip-icon-build" title="Refactor Requirement">
                     <BuildIcon />
-                    </Tooltip>
-                  </IconButton>
-                  <IconButton id="qa_disReq_ic_delete" onClick={this.handleDeleteRequirement} size="small" aria-label="delete" >
-                    <Tooltip id="tooltip-icon-delete" title="Delete Requirement">
+                  </Tooltip>
+                </IconButton>
+                <IconButton id="qa_disReq_ic_delete" onClick={this.handleDeleteRequirement} size="small" aria-label="delete" >
+                  <Tooltip id="tooltip-icon-delete" title="Delete Requirement">
                     <DeleteIcon color='error'/>
-                    </Tooltip>
-                  </IconButton>
-                </DialogTitle>
+                  </Tooltip>
+                </IconButton>
+              </div>
             </ImageListItem>
             <ImageListItem>
-              <DialogTitle style={{textAlign: 'right'}} id="qa_disReq_dt_project">{projectLabel}</DialogTitle>
+              <Tooltip title={projectLabel} id="qa_disReq_dt_project">
+                <Typography noWrap variant='h6' style={{textAlign: 'right'}}>{projectLabel}</Typography>
+              </Tooltip>
             </ImageListItem>
           </ImageList>
-          </DialogTitle>
+        </DialogTitle>
           <//Oisín: Menu to select refactoring method to be applied
              Menu
               id="refactor-menu"
@@ -284,9 +288,9 @@ class DisplayRequirementDialog extends React.Component {
                 >
                 <ListItemText primary = "Rename Variable" />
               </MenuItem>
-
             </Menu>
-          <Divider />
+          
+          <Divider/>
           <DialogContent>
             <br />
             <ImageList cols={1} rowHeight="auto"  gap={10}>

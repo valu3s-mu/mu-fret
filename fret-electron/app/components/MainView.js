@@ -72,7 +72,6 @@ import NotesIcon from "@material-ui/icons/Notes";
 import DeleteIcon from '@material-ui/icons/Delete';
 import LoopIcon from '@material-ui/icons/Loop';
 import Tooltip from '@material-ui/core/Tooltip';
-import EditIcon from '@material-ui/icons/Edit';
 
 import css from './MainView.css';
 import CreateRequirementDialog from './CreateRequirementDialog';
@@ -83,7 +82,6 @@ import RequirementImportDialogs from './RequirementImportDialogs';
 import MissingExternalImportDialog from './MissingExternalImportDialog';
 import ExportRequirementsDialog from './ExportRequirementsDialog';
 import VersionDialog from './VersionDialog';
-import RenameProjectDialog from './RenameProjectDialog';
 
 import { connect } from "react-redux";
 import {
@@ -98,6 +96,8 @@ import ImportedVariablesWarningDialog from "./ImportedVariablesWarningDialog";
 import csv from 'csv';
 import { readAndParseCSVFile, readAndParseJSONFile } from '../utils/utilityFunctions';
 import Error from '@material-ui/icons/Error';
+import EditIcon from "@material-ui/icons/Edit";
+import FileCopyOutlinedIcon from '@material-ui/icons/FileCopyOutlined';
 
 const FretSemantics = require('../parser/FretSemantics');
 
@@ -216,6 +216,7 @@ class MainView extends React.Component {
   state = {
     drawerOpen: false,
     snackbarOpen: false,
+    errorSnackbarOpen: false,
     createDialogOpen: false,
     createProjectDialogOpen: false,
     lastCreatedRequirementId: undefined,
@@ -236,6 +237,8 @@ class MainView extends React.Component {
     missingExternalImportDialogOpen: false,
     missingExternalImportDialogReason: 'unknown',
     warningDialogOpen: false,
+    editedProject: null,
+    copiedProject: null,
     appVersion: '',
     };
 
@@ -305,8 +308,13 @@ class MainView extends React.Component {
         this.openRequirementImportDialog()
       } else if('json' === fileExtension) {
         const replaceString = false;
-        const data = await readAndParseJSONFile(file, replaceString);
-        this.handleJSONImport(data)
+        try {
+          const data = await readAndParseJSONFile(file, replaceString);
+          this.handleJSONImport(data)
+        } catch(err) {
+          console.log('err', err)
+          this.setState({errorSnackbarOpen: true})
+        }
       } else {
         console.log('We do not support yet this file import')
       }
@@ -425,6 +433,8 @@ class MainView extends React.Component {
     this.setState(
       {
         createProjectDialogOpen: false,
+        editedProject: null,
+        copiedProject: null,
       });
   }
 
@@ -453,6 +463,14 @@ class MainView extends React.Component {
     this.setState({ snackbarOpen: false });
   };
 
+  handleErrorSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    this.setState({ errorSnackbarOpen: false });
+  };
+
   setMainContent = (content) => {
       this.setState(
         {
@@ -471,6 +489,14 @@ class MainView extends React.Component {
     this.openDeleteProjectDialog(name)
   }
 
+  handleRenameProject = (name) => {
+    this.setState({ createProjectDialogOpen: true, editedProject: name });
+  }
+
+  handleCopyProject = (name) => {
+    this.setState({ createProjectDialogOpen: true, copiedProject: name });
+  }
+
   openDeleteProjectDialog = (name) => {
     this.setState({
       deleteProjectDialogOpen: true,
@@ -483,26 +509,6 @@ class MainView extends React.Component {
     this.setState({
       deleteProjectDialogOpen: false,
       projectTobeDeleted: '',
-      anchorEl: null
-    })
-  }
-
-  handleRenameProject = (name) => {
-    this.openRenameProjectDialog(name)
-  }
-
-  openRenameProjectDialog = (name) => {
-    this.setState({
-      renameProjectDialogOpen: true,
-      projectTobeRenamed: name,
-      anchorEl: null
-    })
-  }
-
-  closeRenameProjectDialog = () => {
-    this.setState({
-      renameProjectDialogOpen: false,
-      projectTobeRenamed: '',
       anchorEl: null
     })
   }
@@ -600,9 +606,9 @@ class MainView extends React.Component {
         } else {
           try {
             let data = JSON.parse(buffer);
-            //console.log('data in JSON.parse: ', data)
-            if(!data.requirement && !data.variables){
-              //  invalid file  
+            // console.log('data in JSON.parse: ', data)
+            if(!data.requirement & !data.variables){
+              //  invalid file
               //console.log('setting missingExternalImportDialogReason to invalid')
               self.setState({
                 missingExternalImportDialogOpen: true,
@@ -651,7 +657,7 @@ class MainView extends React.Component {
 
   render() {
     const { classes, theme, listOfProjects, requirements } = this.props;
-    const { anchorEl, warningDialogOpen } = this.state;
+    const { anchorEl, warningDialogOpen, editedProject, copiedProject } = this.state;
 
     return (
       <div className={classes.root}>
@@ -712,12 +718,6 @@ class MainView extends React.Component {
                                     key={name}
                                     dense>
                                     <ListItemText id={"qa_proj_select_"+name.replace(/\s+/g, '_')} primary = {name} onClick={() => this.handleSetProject(name)}/>
-                                    <//Oisín: added rename buttons for projects, copied button from DisplayRequirementDialog
-                                     IconButton id={"qa_proj_rename_"+name.replace(/\s+/g, '_')} onClick={() => this.handleRenameProject(name)} size="small" aria-label="rename" disabled={name === 'Default'}>
-                                      <Tooltip id="project-tooltip-icon-rename" title="Rename Project">
-                                      <EditIcon color={name === 'Default' ? 'disabled' : "secondary"}/>
-                                      </Tooltip>
-                                    </IconButton>
                                     <IconButton id={"qa_proj_cal_"+name.replace(/\s+/g, '_')} onClick={() => this.handleCalculateProjectSemantics(name)} size="small" aria-label="calculate" >
                                       <Tooltip id="project-tooltip-icon-calculate" title="Calculate Semantics">
                                       <LoopIcon/>
@@ -726,6 +726,11 @@ class MainView extends React.Component {
                                     <IconButton id={"qa_proj_del_"+name.replace(/\s+/g, '_')} onClick={() => this.handleDeleteProject(name)} size="small" aria-label="delete" disabled={name === 'Default'} >
                                       <Tooltip id="project-tooltip-icon-delete" title="Delete Project">
                                       <DeleteIcon color={name === 'Default' ? 'disabled': 'error'}/>
+                                      </Tooltip>
+                                    </IconButton>
+                                    <IconButton id={"qa_proj_copy_"+name.replace(/\s+/g, '_')} onClick={() => this.handleCopyProject(name)} size="small" aria-label="delete" disabled={name === 'Default'} >
+                                      <Tooltip id="project-tooltip-icon-copy" title="copy Project">
+                                      <FileCopyOutlinedIcon/>
                                       </Tooltip>
                                     </IconButton>
                                   </MenuItem>
@@ -758,21 +763,27 @@ class MainView extends React.Component {
               <List>
               <div>
                 <ListItem id="qa_db_li_dashboard" button onClick={() => this.setMainContent('dashboard')}>
+                  <Tooltip id="qa_db_li_dashboard_tooltip" title={!this.state.drawerOpen ? 'Dashboard' : ''}>
                   <ListItemIcon>
                     <DashboardIcon />
                   </ListItemIcon>
+                  </Tooltip>
                   <ListItemText primary="Dashboard" />
                 </ListItem>
                 <ListItem id="qa_db_li_table" button onClick={() => this.setMainContent('requirements')}>
+                  <Tooltip id="qa_db_li_table_tooltip" title={!this.state.drawerOpen ? 'Requirements' : ''}>
                   <ListItemIcon>
                     <ListIcon />
                   </ListItemIcon>
+                  </Tooltip>
                   <ListItemText primary="Requirements" />
                 </ListItem>
                 <ListItem id="qa_db_li_analysis" button onClick={() => this.setMainContent('analysis')}>
+                  <Tooltip id="qa_db_li_analysis_tooltip"  title={!this.state.drawerOpen ? 'Analysis Portal' : ''}>
                   <ListItemIcon>
                     <CodeIcon />
                   </ListItemIcon>
+                  </Tooltip>
                   <ListItemText id="qa_db_li_analysis_portal_text" primary="Analysis Portal" />
                 </ListItem>
               </div>
@@ -783,9 +794,11 @@ class MainView extends React.Component {
                   <ListItem id="qa_db_li_import" button onClick={() => {
                     this.requirementsFileInput.current.click()
                   }}>
+                    <Tooltip id="qa_db_li_import_tooltip" title={!this.state.drawerOpen ? 'Import' : ''}>
                     <ListItemIcon>
                       <ImportIcon />
                     </ListItemIcon>
+                    </Tooltip>
                     <ListItemText primary="Import" />
                     <input
                       id="qa_db_li_import_input"
@@ -800,9 +813,11 @@ class MainView extends React.Component {
                     />
                   </ListItem>
                   <ListItem id="qa_db_li_export" button onClick={() => this.openExportRequirementsDialog()}>
+                    <Tooltip id="qa_db_li_export_tooltip" title={!this.state.drawerOpen ? 'Export' : ''}>
                     <ListItemIcon>
                       <ExportIcon />
                     </ListItemIcon>
+                    </Tooltip>
                     <ListItemText primary="Export" />
                   </ListItem>
                 </div>
@@ -811,9 +826,11 @@ class MainView extends React.Component {
               <List>
               <div>
               <ListItem id="qa_db_li_help" button onClick={() => this.setMainContent('help')}>
+                <Tooltip title={!this.state.drawerOpen ? 'Help' : ''}>
                 <ListItemIcon>
                   <HelpIcon />
                 </ListItemIcon>
+                </Tooltip>
                 <ListItemText primary="Help" />
               </ListItem>
               </div>
@@ -845,18 +862,13 @@ class MainView extends React.Component {
               open={this.state.createProjectDialogOpen}
               handleDialogClose={this.handleCreateProjectDialogClose}
               listOfProjects={listOfProjects}
+              oldName={editedProject}
+              copiedProject={copiedProject}
           />
           <DeleteProjectDialog
             open={this.state.deleteProjectDialogOpen}
             projectTobeDeleted={this.state.projectTobeDeleted}
             handleDialogClose={this.closeDeleteProjectDialog}
-            selectedProject={this.props.selectedProject}
-            initializeSelectedProject={this.initializeSelectedProject}
-          />
-          <RenameProjectDialog
-            open={this.state.renameProjectDialogOpen}
-            projectTobeRenamed={this.state.projectTobeRenamed}
-            handleDialogClose={this.closeRenameProjectDialog}
             selectedProject={this.props.selectedProject}
             initializeSelectedProject={this.initializeSelectedProject}
           />
@@ -908,6 +920,32 @@ class MainView extends React.Component {
               color="inherit"
               className={classes.snackbarClose}
               onClick={this.handleSnackbarClose}
+            >
+              <CloseIcon />
+            </IconButton>,
+          ]}
+        />
+        <Snackbar
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'center',
+          }}
+
+          open={this.state.errorSnackbarOpen}
+          autoHideDuration={6000}
+          onClose={this.handleErrorSnackbarClose}
+          snackbarcontentprops={{
+            'aria-describedby': 'message-id',
+          }}
+          message={<span id="message-id">The imported json file is invalid</span>}
+          action={[
+            <IconButton
+              id="qa_db_snackbar_close"
+              key="close"
+              aria-label="Close"
+              color="inherit"
+              className={classes.snackbarClose}
+              onClick={this.handleErrorSnackbarClose}
             >
               <CloseIcon />
             </IconButton>,

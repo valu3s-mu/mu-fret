@@ -39,8 +39,8 @@ const formalizations_past = require(fretSupportPath + 'formalizations_past');
 const formalization_descriptions = require(fretSupportPath + 'formalization-descriptions');
 const nonsense_patterns = [
     '-,!regular,always|eventually|within|never|immediately,order|not_order',
-    '-,regular,-,order|not_order',
-    'before,-,immediately|within|after,-'
+    '-,regular,-,order|not_order'
+  //,'before,-,immediately|within|after,-'
 ]
 
 const high_level_unhandled = [
@@ -159,6 +159,16 @@ exports.EndPointsRewrite = (type, formula, format = 'salt') => {
     return formalizations_past.EndPointsRewrite(formula, format);
   return ('Undefined type of formula for rewriting... '); // if no ft and no pt
 }
+
+// format is 'salt' or 'smv'
+exports.EndPointsRewrite2 = (type, formula, format = 'salt') => {
+  if (type == 'ft')
+    return formalizations_future.EndPointsRewrite2(formula, format);
+  if (type == 'pt')
+    return formalizations_past.EndPointsRewrite(formula, format);
+  return ('Undefined type of formula for rewriting... '); // if no ft and no pt
+}
+
 
 exports.getDescription = (key, options = {sem:'finite', in:'afterUntil'}) => {
   if (utilities.matchesStrings(nonsense_arrays, key).length != 0) {// there was a match

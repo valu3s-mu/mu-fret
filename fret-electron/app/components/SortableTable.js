@@ -367,7 +367,8 @@ const styles = theme => ({
     borderRadius: 5,
     width: 45,
     height: 30,
-  }
+  },
+  lowerCaseButton: {textTransform: 'none'}
 });
 
 // color to match select background to requirement bubble color
@@ -386,7 +387,7 @@ class SortableTable extends React.Component {
     page: 0,
     rowsPerPage: 10,
     displayRequirementOpen: false,
-    selectedRequirement: {}, 
+    selectedRequirement: {},
     selectionBulkChange: [],
     snackBarDisplayInfo: {},
     addChildRequirementMode: undefined,
@@ -535,7 +536,7 @@ class SortableTable extends React.Component {
     event.stopPropagation();
     if (row.dbkey) {
       // context isolation
-      // 
+      //
 
       var argList = [row];
       // ipcRenderer call main with argLit and main returns result to update Redux store
@@ -546,7 +547,7 @@ class SortableTable extends React.Component {
                                         }) */
         this.setState({
           selectedRequirement: result.doc,
-          displayRequirementOpen: true,})        
+          displayRequirementOpen: true,})
       }).catch((err) => {
         console.log(err);
       })
@@ -864,6 +865,7 @@ class SortableTable extends React.Component {
   // user select a status option from menu item
   handleChange = (event, row) => {
     event.stopPropagation();
+    const {page} = this.state
 
     if (row.dbkey) {
 
@@ -872,12 +874,12 @@ class SortableTable extends React.Component {
       ipcRenderer.invoke('changeRequirementStatus',args).then((result) => {
         this.props.changeRequirementStatus({  type: 'actions/requirementChangedStatus',
                                               // requirements
-                                              requirements : result.requirements, 
+                                              requirements : result.requirements,
                                             })
+        this.setState({ page });
       }).catch((err) => {
         console.log(err);
       })
-
       this.setState({ projectName: '' });
     }
   };
@@ -1064,7 +1066,7 @@ class SortableTable extends React.Component {
                           </Select>
                         </TableCell>
                         <TableCell>
-                        <Button id={"qa_tbl_btn_bulk_id_"+label}  color='secondary' onClick={this.handleRequirementDialogOpen(n)}>
+                        <Button className={classes.lowerCaseButton} id={"qa_tbl_btn_bulk_id_"+label}  color='secondary' onClick={this.handleRequirementDialogOpen(n)}>
                             {label}
                           </Button>
                         </TableCell>
@@ -1131,7 +1133,7 @@ class SortableTable extends React.Component {
                           </Select>
                         </TableCell>
                         <TableCell>
-                        <Button id={"qa_tbl_btn_not_bulk_id_"+label} color='secondary' onClick={this.handleRequirementDialogOpen(n)}>
+                        <Button className={classes.lowerCaseButton} id={"qa_tbl_btn_not_bulk_id_"+label} color='secondary' onClick={this.handleRequirementDialogOpen(n)}>
                               {label}
                             </Button>
                           </TableCell>

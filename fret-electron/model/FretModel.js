@@ -35,7 +35,7 @@ import {leveldbDB, modelDB, system_DBkeys} from './fretDB'
 import {removeVariablesInBulk, removeVariables } from './modelDbSupport/deleteVariables_main'
 import {removeReqsInBulk} from './fretDbSupport/deleteRequirements_main'
 import {getContractInfo, getPropertyInfo, getDelayInfo, getMappingInfo,
-  synchFRETvariables} from './modelDbSupport/variableMappingSupports'
+  synchFRETvariables, variableIdentifierReplacement} from './modelDbSupport/variableMappingSupports'
 //import FretSemantics from './../app/parser/FretSemantics'
 import {export_to_md} from "../app/utils/utilityFunctions";
 import {synchAnalysisWithDB, } from './fretDbSupport/analysisTabSupport'
@@ -54,6 +54,9 @@ const fs = require('fs');
 import { v1 as uuidv1 } from 'uuid';
 import FretSemantics from "../app/parser/FretSemantics";
 import {Default_Project_name} from "./requirementsImport/convertAndImportRequirements_main";
+import {createRequirements} from "./fretDbSupport/fretDbSetters_main";
+import {createVariables} from "./modelDbSupport/modelDbSetters_main";
+import {getProjectVariables} from "./modelDbSupport/modelDbGetters_main";
 const utilities = require('../support/utilities');
 export default class FretModel {
   constructor(){
@@ -268,6 +271,15 @@ export default class FretModel {
     }
   }
 
+  async renameProject(oldName, newName){
+    const newProjectsList = await fretDbSetters.renameProject(oldName, newName)
+    this.listOfProjects = [Default_Project_name, ...newProjectsList];
+
+
+    return {listOfProjects: this.listOfProjects, }
+
+  }
+
   async deleteProject(evt,args){
 
     var project = args[0]
@@ -424,6 +436,95 @@ export default class FretModel {
     return states
 
   }
+
+  async copyProject(projectName, newProjectName) {
+    await this.addProject(null, [newProjectName]);
+    await this.copyProjectRequirements(projectName, newProjectName);
+
+    await this.synchStatesWithDB()
+    var result =  this.getAllStates()
+    return result
+
+  }
+
+
+  async copyProjectModelDb(projectName, newProjectName, mapOldReqIdToNewReqId) {
+    //console.log('copyProjectModelDb: entering')
+    const variables = await getProjectVariables(projectName)
+    const newProjectVariables = []
+    for(let i = 0; i < variables.docs.length; i++){
+      const v = variables.docs[i];
+      var componentName = v.component_name;
+      var variableName = v.variable_name;
+      var modeldbid = newProjectName + componentName + variableName;
+      var reqs = v.reqs.map(function(dbid){
+        return mapOldReqIdToNewReqId[dbid]
+      })
+      //console.log('copyProjectModelDb  v: ',v)
+
+      const newVariable = {
+        _id: modeldbid,
+        project: newProjectName,
+        component_name: componentName,
+        variable_name: variableName,
+        reqs: reqs,
+        dataType: v.dataType,
+        idType: v.idType,
+        moduleName:v.moduleName,
+        description: v.description,
+        assignment: v.assignment,
+        copilotAssignment: v.copilotAssignment,
+        modeRequirement: v.modeRequirement,
+        modeldoc: v.modeldoc,
+        modelComponent: v.modelComponent,
+        modeldoc_id: v.modeldoc_id,
+        completed: v.completed,
+      }
+      newProjectVariables.push(newVariable)
+      //console.log('copyProjectModelDb newVariable: ',newVariable)
+    }
+
+    return createVariables(newProjectVariables);
+
+  }
+
+  async copyProjectRequirements(projectName, newProjectName) {
+    // copy requirements
+    const requirements = await this.selectProjectRequirements(projectName)
+    const newProjectRequirements = []
+    const mapOldReqIdToNewReqId = {};
+    for(let i = 0; i < requirements.docs.length; i++){
+      const r = requirements.docs[i];
+      //console.log('copyProjectRequirements  before r: ',r)
+      const newRequirement = {
+        _id: uuidv1(),
+        reqid : r.reqid,
+        parent_reqid : r.parent_reqid,
+        project : newProjectName,
+        rationale : r.rationale,
+        comments : r.comments,
+        status: r.status,
+        fulltext : r.fulltext,
+        semantics : r.semantics,
+        template : r.template,
+        input : r.input
+      }
+      newProjectRequirements.push(newRequirement);
+      mapOldReqIdToNewReqId[r._id] = newRequirement._id;
+
+    }
+    const newRequirements = createRequirements(newProjectRequirements);
+
+    // copy variables
+    // console.log('copyProjectRequirements: before calling copyProjectModelDb')
+    const newVariables = await this.copyProjectModelDb(projectName, newProjectName, mapOldReqIdToNewReqId);
+
+    return newRequirements;
+
+  }
+
+
+
 
   async retrieveRequirement(evt,arg){
     //console.log('FretModel retrieveRequirement arg: ', arg)
@@ -689,8 +790,8 @@ export default class FretModel {
           .filter(r => !system_DBkeys.includes(r.key))
           .filter(r => filterOff || r.doc.project == project)
         filteredReqs.forEach((r) => {
-          var doc = (({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input}) =>
-            ({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input}))(r.doc)
+          var doc = (({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input, status}) =>
+            ({reqid, parent_reqid, project, rationale, comments, fulltext, semantics, input, status}))(r.doc)
           doc._id = uuidv1()
           filteredResult.push(doc)
         })
@@ -709,7 +810,7 @@ export default class FretModel {
     var dbkey = args[0]
     var statusValue = args[1]
 
-    leveldbDB.get(dbkey).then(function (doc) {
+    await leveldbDB.get(dbkey).then(function (doc) {
       return leveldbDB.put({ ...doc, status: statusValue }, err => {
         if (err) {
           return console.log(err);
@@ -725,7 +826,7 @@ export default class FretModel {
     return states
   }
 
-  selectProjectRequirements(projectName) {
+  async selectProjectRequirements(projectName) {
 
     return leveldbDB.find({
       selector: {

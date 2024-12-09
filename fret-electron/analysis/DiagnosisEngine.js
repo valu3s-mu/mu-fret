@@ -115,7 +115,7 @@ class DiagnosisEngine {
 
   registerPartitionProcess(contract) {
     this.optLog("\nRegistering query for requirements:\n\n"+JSON.stringify(contract.properties.map(p => p.reqid)));
-    contract.componentName = this.contract.componentName+'_'+'diagnosticQuery'+'_'+this.diagnosticQueryIndex; 
+    contract.componentName = this.contract.componentName+'_'+'diagnosticQuery'+'_'+this.diagnosticQueryIndex;
     this.diagnosticQueryIndex++;
     this.engines.push(contract);
   }
@@ -129,7 +129,12 @@ class DiagnosisEngine {
       for (let eng in this.engines) {
         var propertyList = this.engines[eng].properties.map(p => p.reqid).filter(id => !id.toLowerCase().includes('assumption'));
         this.optLog("\nRunning query for properties:\n\n"+propertyList);
-        var filePath = this.tmppath+this.engines[eng].componentName+(minimal ? '_minimal' : '')+'.lus';
+
+        //the file's name is the components name, minus the 'Spec' suffix.
+        var fileName = this.engines[eng].componentName + (minimal ? '_minimal' : '') + 'Spec';        
+        var filePath = this.tmppath+fileName+'.lus';
+        this.engines[eng].componentName = fileName;
+        
         var output = fs.openSync(filePath, 'w');      
         var lustreContract = ejsCache_realize.renderRealizeCode(this.engineName).component.complete(this.engines[eng]);
         fs.writeSync(output, lustreContract);
@@ -146,7 +151,7 @@ class DiagnosisEngine {
             let jsonOutput = checkOutput.output;
 
             if (this.engineName === 'kind2') {
-              let kind2JsonResult = jsonOutput.filter(e => e.objectType === "realizabilityCheck")[0];
+              let kind2JsonResult = jsonOutput[jsonOutput.findLastIndex(e => e.objectType === "realizabilityCheck")];
               let newJsonOutput = {
                 "Runtime": {
                   "unit": kind2JsonResult.runtime['unit'],
@@ -297,12 +302,15 @@ class DiagnosisEngine {
 
       if (Array.from(partitionMap.values()).includes("UNREALIZABLE")) {
         var unrealMap = new Map();
-        for (let [partKey, partValue] in partitionMap) {
+        for (let [partKey, partValue] of partitionMap.entries()) {
+          this.optLog('\n Partition spec: '+partKey+', result: '+partValue);
           if (partValue === "UNREALIZABLE") {
             unrealMap.set(partKey, partValue);
+            this.optLog("\n Current Map of unrealizable subspecifications:\n\n")
+            this.optLog(unrealMap)
           }
         }
-
+        
         for (const [unrealKey, unrealValue] of unrealMap.entries()) {
           if (unrealKey.length > 1) {          
             var slicedContract = JSON.parse(JSON.stringify(this.contract));
@@ -328,7 +336,6 @@ class DiagnosisEngine {
 
       if (Array.from(complementsMap.values()).includes("UNREALIZABLE") && n !== 2) {
         var unrealMap = new Map();
-
         for (const [partKey, partValue] of complementsMap.entries()) {      
           if (partValue === "UNREALIZABLE") {
             unrealMap.set(partKey, partValue);
@@ -418,7 +425,7 @@ class DiagnosisEngine {
 
   labelRootNode() {
     try {
-      var conflicts = this.deltaDebug(this.contract, 2);
+      var conflicts = this.deltaDebug(this.contract, 2);      
       if (conflicts.toString().startsWith("UNKNOWN")) {
         return conflicts;
       }
@@ -530,7 +537,7 @@ class DiagnosisEngine {
       var rootResult = this.labelRootNode();
       if (rootResult && rootResult.toString().startsWith("UNKNOWN")) {
         return callback("Something went wrong during diagnosis.\n" + rootResult);
-      } else {
+      } else {        
         while(this.unlabeled.length !== 0) {
           var hsNode = this.reuseLabelorCloseNode(this.unlabeled[0]);
           if (hsNode.getLabel().length === 0) {

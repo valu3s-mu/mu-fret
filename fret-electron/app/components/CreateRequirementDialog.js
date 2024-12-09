@@ -88,6 +88,7 @@ const fs = require('fs');
 const path = require('path');
 import { saveAs } from 'file-saver';
 
+
 const formStyles = theme => ({
   accordion: {
     width: '98%',
@@ -144,7 +145,7 @@ class CreateRequirementDialog extends React.Component {
     status: '',
     selectedTemplate: -1,
     tabValue: 0,
-    editor: withFields(withReact(createEditor())),
+    editor: withReact(withFields(createEditor())),
     dialogTop: 0,
     dialogLeft: 0,
     autoFillVariables: [],
@@ -154,7 +155,7 @@ class CreateRequirementDialog extends React.Component {
 
   componentDidUpdate(prevProps, prevState, snapshot) {
     if (prevProps.open !== this.props.open && this.props.open) {
-      const editor = withFields(withReact(createEditor()));
+      const editor = withReact(withFields(createEditor()));
       this.setState({ editor })
     }
     this.setDialogPosition();
