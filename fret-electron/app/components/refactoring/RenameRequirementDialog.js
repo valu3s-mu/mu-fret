@@ -30,6 +30,8 @@ import CancelIcon from '@material-ui/icons/Cancel';
 import WarningIcon from '@material-ui/icons/Warning';
 import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
 
+import RefactoringUtils from '../../../../tools/Refactoring/refactoring_utils';
+
 const {ipcRenderer} = require('electron');
 import { createOrUpdateRequirement } from '../../reducers/allActionsSlice';
 import { connect } from "react-redux";
@@ -85,6 +87,10 @@ class RenameRequirementDialog extends React.Component
     childRequirements: [],
     //Variable for an invalid entered name
     invalidNewName: false,
+    //If renaming a fragment, this is the corresponding variable
+    fragmentVariable: '',
+    reqsWithVariable: [],
+    dummyUpdatedReqs: [],
   };
 
   componentWillReceiveProps = (props) => {
@@ -113,6 +119,9 @@ class RenameRequirementDialog extends React.Component
       variableDocs : {},
       newName: '',
       invalidNewName: false,
+      fragmentVariable: '',
+      reqsWithVariable: [],
+      dummyUpdatedReqs: [],
     });
     this.state.dialogCloseListener();
   };
@@ -127,6 +136,14 @@ class RenameRequirementDialog extends React.Component
 
     this.setState({ newName: event.target.value });
   };
+
+  handleVariableRenaming = (fragmentVariable) => event => {
+
+    this.setState({
+      fragmentVariable: fragmentVariable,
+    })
+
+  }
 
   /**
    * Updates the type of a variable in the states variables map
@@ -160,25 +177,56 @@ class RenameRequirementDialog extends React.Component
   };
 
 
-  //This will eventually be more elaborate, placeholder for now
   handleInitialOK = () => {
 
-    const validNameRegex = /^[A-Za-z0-9]([A-Za-z0-9_.-])*$/;
+    let fragmentVariable = this.state.fragmentVariable;//Check if the user wants to rename the variable as well
+
+    //                           | Regex for a requirement and a variable | Regex for only a requirement name
+    const validNameRegex = fragmentVariable ? /^[A-Za-z]([A-Za-z0-9_])*$/ : /^[A-Za-z0-9]([A-Za-z0-9_.-])*$/;
     let newName = this.state.newName;
-    let found = newName.match(validNameRegex);
     let testResult = validNameRegex.test(newName);
-    console.log("Regex check for valid new requirement name:");
-    console.log(found);
-    console.log(testResult);
 
     if(testResult == false){
       this.setState({invalidNewName: true})
     }
     else{
-      ipcRenderer.invoke('getChildRequirements', this.state.selectedRequirement).then((result) => {
+
+      let getChildRequirementsPromise = ipcRenderer.invoke('getChildRequirements', this.state.selectedRequirement);
+
+
+      let reqsWithVariablePromise = [[], []];//Initialised to the default values for reqsWithVariable and dummyUpdatedReqs, i.e. two empty arrays
+      if(fragmentVariable){
+
+        let semantics = this.state.selectedRequirement.semantics;
+        let component_name = semantics.component_name;
+        let varNameID = this.state.selectedRequirement.project+component_name+fragmentVariable;
+
+        reqsWithVariablePromise = ipcRenderer.invoke('getRequirementsWithVariable', varNameID).then((reqsWithVariableResult) => {
+
+          //Rename the variable in the retrieved requirements, to provide a preview
+          let dummyUpdatedReqs = reqsWithVariableResult.rows.map((req) => {
+              
+            let replacedFulltext = RefactoringUtils.replaceVariableName(req, fragmentVariable, newName);
+
+            let updatedReqObject = {
+              dbid: req.id,
+              reqid: req.doc.reqid,
+              fulltext: replacedFulltext,
+            };
+            return updatedReqObject;
+          });
+
+          return [reqsWithVariableResult, dummyUpdatedReqs]
+        });
+      }
+
+      //If we aren't renaming a variable, reqsWithVariablePromise stays as just an empty 2D array and is thus effectively ignored.
+      Promise.all([getChildRequirementsPromise, reqsWithVariablePromise]).then((values) => {
         this.setState({
           invalidNewName: false,
-          childRequirements: result.docs,
+          childRequirements: values[0].docs,
+          reqsWithVariable: values[1][0].rows,
+          dummyUpdatedReqs: values[1][1],
           dialogState : STATE.TYPES,
         });
       });
@@ -218,9 +266,19 @@ class RenameRequirementDialog extends React.Component
 
       //ipcRenderer.invoke('updateVariableTypes', [this.state.variableDocs, this.state.variables]);
 
-      let renameArgs = [this.state.selectedRequirement, this.state.newName, this.state.childRequirements];
+      let renameRequirementArgs = [this.state.selectedRequirement, this.state.newName, this.state.childRequirements];
+      let renameRequirementPromise = ipcRenderer.invoke('renameRequirement', renameRequirementArgs);
 
-      ipcRenderer.invoke('renameRequirement', renameArgs).then((result) => {
+
+      let renameVariablePromise;
+      if(this.state.fragmentVariable){
+        let varNameID = this.state.selectedRequirement.project+this.state.selectedRequirement.semantics.component_name+this.state.fragmentVariable;
+        let renameVariableArgs = [this.state.fragmentVariable, varNameID, this.state.newName, this.state.reqsWithVariable];
+      
+        let renameVariablePromise = ipcRenderer.invoke('renameVariable', renameVariableArgs);
+      }
+
+      Promise.all([renameRequirementPromise, renameVariablePromise]).then((results) => {
         ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
 
           this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
@@ -254,9 +312,10 @@ class RenameRequirementDialog extends React.Component
   {
   
 
-    var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext, _id } = this.state.selectedRequirement
+    var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext, _id } = this.state.selectedRequirement;
 
-    var isFragment = (this.state.selectedRequirement.isFragment | (rationale && rationale.includes("EXTRACT REQUIREMENT: ") ))
+    var isFragment = (this.state.selectedRequirement.isFragment | (rationale && rationale.includes("EXTRACT REQUIREMENT: ") ));
+    let response = semantics ? semantics.post_condition_SMV_pt : "";
 
     var dialog_state = this.state.dialogState;
 
@@ -308,23 +367,26 @@ class RenameRequirementDialog extends React.Component
               </Grid>
 
               {this.state.invalidNewName == true &&
-                <p style={{ color: "red" }}>Invalid new name; IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, or dots</p>
+                <p style={{ color: "red" }}>Invalid new name
+                  <br/>
+                  Requirement IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, or dots
+                  <br/>
+                  Variable IDs cannot start with numbers, and cannot include hyphens or dots.
+                </p>
               }
 
               {isFragment ? 
-
                 <DialogContentText>
-                  This is a fragment. Would you like to also rename the corresponding variable, {semantics ? semantics.post_condition_SMV_pt : ""}?
+                  This is a fragment. Would you like to also rename the corresponding variable, {response}?
                   
                   <Button
-                    onClick={this.handleClose}
+                    onClick={this.handleVariableRenaming(response)}
                     color="secondary"
                   >
                     Yes  
                   </Button>
 
                 </DialogContentText>
-
                 : 
                 <DialogContentText>
                 This is not a fragment. Don't worry about this for now!
@@ -358,7 +420,9 @@ class RenameRequirementDialog extends React.Component
       
       case STATE.TYPES:
 
+        let fragmentVariable = this.state.fragmentVariable;
         let childRequirements = this.state.childRequirements;
+        let dummyUpdatedReqs = this.state.dummyUpdatedReqs;
 
         return (
         <div>
@@ -403,8 +467,11 @@ class RenameRequirementDialog extends React.Component
 
               </Grid>
 
-              <Grid container spacing={2}>
+              {/*Displaying any child requirements of the selected requirement, that are going to be updated*/}
+              <br/>
+              Child requirements to be updated:
 
+              <Grid container spacing={2}>
               {childRequirements.map(req => {
 
                 return(//React yells at you if the items don't have unique keys
@@ -425,11 +492,29 @@ class RenameRequirementDialog extends React.Component
                 }
 
               )}
-
               </Grid>
 
-
-
+              <br/>
+              <br/>
+              {fragmentVariable ? <div>Requirements including the fragment variable:</div> : <div></div>}
+              <Grid container spacing={2}>
+              {dummyUpdatedReqs.map(req => {
+                return(//React yells at you if the items don't have unique keys
+                  <Grid item xs={3} key={req.dbid}>
+                    {req.reqid}
+                    <br/>
+                    <TextField
+                      id="definition"
+                      multiline
+                      fullWidth
+                      label="Definition"
+                      value={req.fulltext}
+                    />
+                  </Grid>
+                  )
+                }
+              )}
+              </Grid>
 
 
             </DialogContent>

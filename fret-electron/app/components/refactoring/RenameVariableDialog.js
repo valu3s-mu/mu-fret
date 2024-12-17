@@ -192,11 +192,7 @@ class RenameVariableDialog extends React.Component
     const validNameRegex = /^[A-Za-z]([A-Za-z0-9_.%])*$/;
     const quotedStringRegex = /^".*"$/
     let newName = this.state.newName;
-    let found = newName.match(validNameRegex);
     let testResult = validNameRegex.test(newName) | quotedStringRegex.test(newName);
-    console.log("Regex check for valid variable name:");
-    console.log(found);
-    console.log(testResult);
 
     if(testResult == false){//If NewName is found to be invalid, we do not progress and instead display an error message.
       this.setState({
@@ -204,7 +200,6 @@ class RenameVariableDialog extends React.Component
       });
     }
     else{
-      //this.getRequirementsWithVariable();
 
       let semantics = this.state.selectedRequirement.semantics;
       let chosenOriginalName = this.state.chosenOriginalName;
@@ -231,6 +226,7 @@ class RenameVariableDialog extends React.Component
           });
 
           self.setState({
+            invalidNewName: false,
             requirementsWithVariable: result.rows,
             dummyUpdatedReqs: dummyUpdatedReqs,
             dialogState: STATE.TYPES,
