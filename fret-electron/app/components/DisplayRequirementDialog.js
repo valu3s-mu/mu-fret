@@ -55,6 +55,8 @@ import Menu from '@material-ui/core/Menu';
 import ListItemText from '@material-ui/core/ListItemText';
 import MenuItem from '@material-ui/core/MenuItem';
 
+import FRETtoWESTConverter from '../../../tools/FRET to WEST Conversion/JS_FRET_to_WEST_MLTL_Converter_beta';
+
 const styles = theme => ({
   formula: {
     color: theme.palette.primary.main,
@@ -84,10 +86,11 @@ class DisplayRequirementDialog extends React.Component {
     open: false,
     selectedRequirement: {},
     refactorAnchorEl: null,
+    MLTLObjectForWEST: null,
   };
 
   handleClose = () => {
-    this.setState({ open: false, refactorAnchorEl: null});
+    this.setState({ open: false, refactorAnchorEl: null, MLTLObjectForWEST: null});
     this.state.dialogCloseListener();
   };
 
@@ -103,9 +106,9 @@ class DisplayRequirementDialog extends React.Component {
   }
 
 
-  /*
-  ******Refactoring:
-  */
+  /**
+   * Refactoring:
+   */
   handleRefactorMenuClick = (event) => {
     this.setState({ refactorAnchorEl: event.currentTarget});
   };
@@ -138,6 +141,15 @@ class DisplayRequirementDialog extends React.Component {
   handleRenameVariable = () => {
     this.handleClose();
     this.state.openRenameVariableDialog();
+  }
+
+
+  /**
+   * Conversion to WEST
+   */
+  handleWESTConversion = (ltlFormula) => {
+    let result = FRETtoWESTConverter.fretToMltlConverter(ltlFormula);
+    this.setState({MLTLObjectForWEST: result});
   }
 
   componentWillReceiveProps = (props) => {
@@ -215,6 +227,7 @@ class DisplayRequirementDialog extends React.Component {
     if (!rationale) rationale = 'Not specified'
     if (!parent_reqid) parent_reqid = 'Not specified'
     fulltext += '.'
+    let MLTLObjectForWEST = this.state.MLTLObjectForWEST;
     return (
       <div>
         <Dialog
@@ -306,6 +319,74 @@ class DisplayRequirementDialog extends React.Component {
                 {this.renderFormula(ltlFormula, ltlDescription, ltlFormulaPt, diagramVariables, path)}
               </ImageListItem>
             </ImageList>
+
+            {ltlFormula ? //This ternary statement prevents the button from appearing for an empty or invalid requirement
+              <Button
+                onClick={(event) => this.handleWESTConversion(ltlFormula)}
+                color="secondary"
+              >
+                Convert to WEST
+              </Button>
+              :
+              <div></div>
+            }
+            {//Pressing the button above updates MTLObjectForWEST, which allows this section to render
+              MLTLObjectForWEST ?
+              <div>
+                <Typography variant='button' color='primary'>
+                MLTL OUTPUT
+                </Typography>
+                <br/>
+                {MLTLObjectForWEST.formula}
+                <br/>
+                <br/>
+                <Typography variant='button' color='primary'>
+                Variable Mapping
+                </Typography>
+                <br/>
+                {Object.entries(MLTLObjectForWEST.variableMap).map(mapPair => {
+                    return(
+                      <div key={mapPair}>
+                      {mapPair[1] + ": " + mapPair[0]}
+                      <br/>
+                      </div>
+                      )
+                  })
+                }
+                <br/>
+                <Typography variant='button' color='primary'>
+                Ignored Time Operators
+                </Typography>
+                <br/>
+                {MLTLObjectForWEST.ignoredSymbols.map(symbolsObject => {
+                  return(
+                    <div key={symbolsObject.symbol}>
+                    {symbolsObject.symbol + ": "} {symbolsObject.meaning}
+                    <br/>
+                    </div>
+                    )
+                  })
+                }
+                <br/>
+                <Typography variant='button' color='primary'>
+                Conversion Steps
+                </Typography>
+                <br/>
+                {MLTLObjectForWEST.steps.map(stepObject => {
+                  return(
+                    <div key={stepObject.step}>
+                    <i>{stepObject.step + ": "}</i> {stepObject.formula}
+                    <br/>
+                    </div>
+                    )
+                  })
+                }
+              </div>
+              :
+              <div></div>
+            }
+
+
           </DialogContent>
           <DialogActions>
             <Button id="qa_disReq_btn_close" onClick={this.handleClose} color="secondary">
