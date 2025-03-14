@@ -34,7 +34,8 @@ Our team have given several presentations about both FRET and Mu-FRET as part of
 
 * [_FRETing about Requirements: Formalised Requirements for an Aircraft Engine Controller_](mu-fret-docs/presentations/refsq2022-fret.pdf) (slides PDF): conference presentation about our work using FRET to formalise the requirements of an aircraft engine controller, provided by our Use Case 5 partner. The accompanying publication can be found on the [publisher's page](https://doi.org/10.1007/978-3-030-98464-9_9) or Open Access on [arXiv](https://arxiv.org/abs/2112.04251).
 * [Demonstration Session slides](mu-fret-docs/presentations/goteburg-nuim.pdf) (PDF) from the General Assembly meeting in Gothenburg. These high-level slides gave us a visual aid while we were demonstrating progress using FRET and Mu-FRET in the VALU3S project. 
-* [Demonstration Session slides](mu-fret-docs/presentations/hamburg-nuim.pdf) (PDF) from the General Assembly meeting in Hamburg, providing an update on the slides from the Gothenburg meeting. These high-level slides gave us a visual aid while we were demonstrating progress using FRET and Mu-FRET in the VALU3S project. 
+* [Demonstration Session slides](mu-fret-docs/presentations/hamburg-nuim.pdf) (PDF) from the General Assembly meeting in Hamburg, providing an update on the slides from the Gothenburg meeting. These high-level slides gave us a visual aid while we were demonstrating progress using FRET and Mu-FRET in the VALU3S project.
+* [_FRETting and Formal Modelling: A Mechanical Lung Ventilator_](https://github.com/valu3s-mu/mu-fret/blob/master/mu-fret-docs/presentations/ABZ-2024-MuFret-Presentation.pdf) (PDF) Conference presentation summarising our formalisation of the Mechanical Lung Ventilator requirements for the ABZ 2024 case study, as well as our Event-B model of the system. Full paper can be found on the [publisher's page](https://link.springer.com/chapter/10.1007/978-3-031-63790-2_28).
 
 ### Posters
 
@@ -58,7 +59,12 @@ Our team has written several papers about our work for the VALU3S project using 
 
 * _FRETting about Requirements: Formalised Requirements for an Aircraft Engine Controller_: A paper published at the REFSQ conference that describes our work using FRET to formalise the requirements of an aircraft engine controller, provided by our Use Case 5 partner. Available: [https://link.springer.com/chapter/10.1007/978-3-030-98464-9_9](https://link.springer.com/chapter/10.1007/978-3-030-98464-9_9) and [https://arxiv.org/abs/2112.04251](https://arxiv.org/abs/2112.04251). The [presentation](mu-fret-docs/presentations/refsq2022-fret.pdf) is also available.
 
-* _A Requirements-Driven Methodology: Formal Modelling and Verification of an Aircraft Engine Controller_: a paper describing using Event-B to formalise and verify systems described using Simulink models, and how we can link this to requirements captured in FRET. Available: [https://link.springer.com/chapter/10.1007/978-3-031-07727-2_21](https://link.springer.com/chapter/10.1007/978-3-031-07727-2_21)
+* _A Requirements-Driven Methodology: Formal Modelling and Verification of an Aircraft Engine Controller_: A paper describing using Event-B to formalise and verify systems described using Simulink models, and how we can link this to requirements captured in FRET. Available: [https://link.springer.com/chapter/10.1007/978-3-031-07727-2_21](https://link.springer.com/chapter/10.1007/978-3-031-07727-2_21)
+
+* _FRETting and Formal Modelling: A Mechanical Lung Ventilator_: This paper presents our work on formalising the requirements for a Mechanical Lung Ventilator system in FRETish, which were provided in the ABZ 2024 case study. We also modelled the system in Event-B. Available: [https://link.springer.com/chapter/10.1007/978-3-031-63790-2_28](https://link.springer.com/chapter/10.1007/978-3-031-63790-2_28)
+
+* _Adventures in FRET and Specification_: A paper giving an overview of a number of case studies that have been formalised in FRET, and providing analysis and lessons learned from the formalisation process. Available: [https://link.springer.com/chapter/10.1007/978-3-031-75380-0_7](https://link.springer.com/chapter/10.1007/978-3-031-75380-0_7)
+
 
 
 ## The VALU3S Project
