@@ -1,35 +1,8 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 import React from 'react';
 import { withStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
@@ -40,6 +13,7 @@ import Tab from '@material-ui/core/Tab';
 import Tooltip from '@material-ui/core/Tooltip';
 import VariablesView from './VariablesView';
 import RealizabilityView from './RealizabilityView';
+import TestGenView from './TestGenView';
 import { connect } from "react-redux";
 
 const process = require('process');
@@ -125,16 +99,8 @@ class AnalysisTabs extends React.Component {
 
   render() {
     const {classes, selectedProject, listOfProjects,components,
-      completedComponents, cocospecData, cocospecModes} = this.props;
+      completedComponents, cocospecData, cocospecModes, smvCompletedComponents, booleanOnlyComponents} = this.props;
     const {value} = this.state;
-
-    // console.log('AnalysisTabs.render, value: ',value)
-    // console.log('AnalysisTabs.render, components: ',components)
-    // console.log('AnalysisTabs.render, completedComponents: ',completedComponents)
-    // console.log('AnalysisTabs.render, cocospecData: ',cocospecData)
-    // console.log('AnalysisTabs.render, cocospecModes: ',cocospecModes)
-
-
 
     return (
       <div>
@@ -151,11 +117,12 @@ class AnalysisTabs extends React.Component {
             {process.platform === "win32" ?
               <Tooltip title={'Realizability checking is currently not supported in Windows OS'}>
                 <span>
-                  <Tab id="qa_rlz_tab_win" disabled label="Realizability" />
+                  <Tab id="qa_rlz_tab_win" disabled label="Realizability Checking" />
                 </span>
               </Tooltip> :
-              <Tab id="qa_rlz_tab" label="Realizability"/>
+              <Tab id="qa_rlz_tab" label="Realizability Checking"/>
             }
+            <Tab id="qa_testgen_tab" label="Test Case Generation"/>
           </Tabs>
         </AppBar>
         {value === 0 &&
@@ -163,7 +130,7 @@ class AnalysisTabs extends React.Component {
             <VariablesView selectedProject={selectedProject} listOfProjects={listOfProjects}
             components={components.map(e => e.component_name)} completedComponents={completedComponents}
             cocospecData={cocospecData} cocospecModes={cocospecModes}
-            variableIdentifierReplacement={this.variableIdentifierReplacement}/>
+            variableIdentifierReplacement={this.variableIdentifierReplacement} smvCompletedComponents={smvCompletedComponents} booleanOnlyComponents={booleanOnlyComponents}/>
           </TabContainer>
         }
         {value === 1 &&
@@ -172,6 +139,11 @@ class AnalysisTabs extends React.Component {
             components={components} completedComponents={completedComponents}
             cocospecData={cocospecData} cocospecModes={cocospecModes}
             />
+          </TabContainer>
+        }
+        {value === 2 &&          
+          <TabContainer>
+            <TestGenView selectedProject={selectedProject} listOfProjects={listOfProjects} components={components} completedComponents={{completedComponents, smvCompletedComponents}} cocospecData={cocospecData} cocospecModes={cocospecModes} booleanOnlyComponents={booleanOnlyComponents}/>
           </TabContainer>
         }
       </div>
@@ -188,15 +160,19 @@ AnalysisTabs.propTypes = {
 
 
 function mapStateToProps(state) {
-  const completedComponents = state.actionsSlice.completedComponents;
+  const completedComponents = state.actionsSlice.completedComponents;  
   const cocospecData = state.actionsSlice.cocospecData;
   const cocospecModes = state.actionsSlice.cocospecModes;
   const components = state.actionsSlice.components;
+  const smvCompletedComponents = state.actionsSlice.smvCompletedComponents;
+  const booleanOnlyComponents = state.actionsSlice.booleanOnlyComponents;
   return {
     completedComponents,
     cocospecData,
     cocospecModes,
-    components
+    components,
+    smvCompletedComponents,
+    booleanOnlyComponents
   };
 }
 

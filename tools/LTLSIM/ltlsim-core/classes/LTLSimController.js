@@ -1,35 +1,8 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 const LTLSimModel =require('./LTLSimModel');
 const Atomic = require('./Atomic');
 const Formula = require('./Formula');
@@ -226,7 +199,15 @@ module.exports = class LTLSimController {
 		var c=0;
 		var NL=[];
 		for (c=0; c<V.length; c++){
-		    NL.push(LTLSimController.getAtomic(model,V[c]).trace[i]);
+		    // NL.push(LTLSimController.getAtomic(model,V[c]).trace[i]);
+		    var val = LTLSimController.getAtomic(model,V[c]).trace[i];
+		    if (val == false){
+			val = 0;
+			}
+		    else if (val == true){
+			val = 1;
+			}
+		    NL.push(val);
 		    }
 
 	try {
@@ -252,11 +233,35 @@ module.exports = class LTLSimController {
 	for (i=0; i < model.traceLength; i++){
 		var c=0;
 		for (c=0; c<V.length; c++){
-		    NL.push(LTLSimController.getAtomic(model,V[c]).trace[i]);
+		    // NL.push(LTLSimController.getAtomic(model,V[c]).trace[i]);
+		    var val = LTLSimController.getAtomic(model,V[c]).trace[i];
+		    if (val == false){
+			val = 0;
+			}
+		    else if (val == true){
+			val = 1;
+			}
+		    NL.push(val);
 		    }
 		}
+	var TL=[];
+	var CCL=[];
+	var MINL=[];
+	var MAXL=[];
+	for (i=0; i < V.length; i++){
+	    TL.push(LTLSimController.getAtomic_type(model,V[i]));
+	    CCL.push(LTLSimController.getAtomic_canChange(model,V[i]));
+	    MINL.push(LTLSimController.getAtomic_minval(model,V[i]));
+	    MAXL.push(LTLSimController.getAtomic_maxval(model,V[i]));
+	    }
+
 	return {
+		traceLength: model.traceLength,
 		keys: model.atomics.keys.slice(),
+		type: TL,
+		canChange: CCL,
+		minval: MINL,
+		maxval: MAXL,
 		values: NL
 		};
     }
@@ -264,6 +269,7 @@ module.exports = class LTLSimController {
     //------------------------------------------------------------
     // add trace to the controller from object
     // NOTE: do not add LAST or FTP
+    // * fill up or truncate to currently set traceLength
     //------------------------------------------------------------
     static setTrace(model, trace) {
 			//
@@ -272,10 +278,40 @@ module.exports = class LTLSimController {
 			//
             trace.keys.forEach((a) => {
 	      if (a != "LAST" && a != "FTP"){
+			//
+			// we need to define a new variable (key)
+			//
         	if (model.atomics.keys.indexOf(a) === -1) {
+
             		model.atomics.keys.push(a);
             		model.atomics.values[a] = 
 				new Atomic(a, model.traceLength);
+
+			var idx = trace.keys.indexOf(a);
+            		if ('type' in trace){
+				model.atomics.type[a] = trace.type[idx];
+				}
+			else {
+				model.atomics.type[a] = 'category';  // set later
+				}
+            		if ('canChange' in trace){ 
+				model.atomics.canChange[a] = trace.canChange[idx];
+				}
+			else {
+				model.atomics.canChange[a] = true;
+				}
+            		if ('minval' in trace){ 
+				model.atomics.minval[a] = trace.minval[idx];
+				}
+			else {
+				model.atomics.minval[a] = 0;
+				}
+            		if ('maxval' in trace){ 
+				model.atomics.maxval[a] = trace.maxval[idx];
+				}
+			else {
+				model.atomics.maxval[a] = 10;
+				}
 			}
 		}
 	       });
@@ -297,18 +333,78 @@ module.exports = class LTLSimController {
 		};
 
 		
+		//
+		// load values
+		//   they are stored in temporal order
+		//
             let idx=0;
 	    let i = 0;
-    	    while (i < model.traceLength){
+            let tracelength = trace.values.length / trace.keys.length;
+	    let trace_min_vals = [];
+	    let trace_max_vals = [];
+      	    	trace.keys.forEach((a) => {
+			if (trace.type && trace.type[a] == "number") {
+				trace_min_vals[a] = 9e99;
+				trace_max_vals[a] = -9e99;
+				}
+			else {
+				trace_min_vals[a] = 0;
+				trace_max_vals[a] = 1;
+				}
+			});
+			
+	    if ('traceLength' in trace){
+		let trace_tracelength = trace.traceLength;
+		if (trace_tracelength != tracelength){
+			console.log("trace-length calculation not matching....");
+			}
+		}
+//console.log("setTrace 2")
+//console.log(trace_min_vals)
+//console.log(trace_max_vals)
+//console.log("/setTrace 2")
+    	    while (i < trace.traceLength){
+//console.log("setTrace: time i ",i);
       	    	trace.keys.forEach((a) => {
 	          if (a != "LAST" && a != "FTP"){
 			var val = trace.values[idx];
-			model.atomics.values[a].trace[i] = val;
+//console.log("setTrace: val",val);
+//console.log("setTrace: a",a);
+		        if (i < model.traceLength){
+				model.atomics.values[a].trace[i] = val;
+				if (trace_min_vals[a] > val){
+					trace_min_vals[a] = val;
+					}
+				if (trace_max_vals[a] < val){
+					trace_max_vals[a] = val;
+					}
+				}
 		        }
+//console.log(trace_min_vals)
+//console.log(trace_max_vals)
 		  idx = idx+1;
 		    });
 		i = i+1;
 		};
+    	trace.keys.forEach((a) => {
+//console.log("min-max vals")
+//console.log(trace_min_vals[a]);
+//console.log(trace_max_vals[a]);
+//console.log("/min-max vals")
+
+		if (trace_min_vals[a] < model.atomics.minval[a]){
+			model.atomics.minval[a] = trace_min_vals[a];
+			}
+		if (trace_max_vals[a] < model.atomics.maxval[a]){
+			model.atomics.maxval[a] = trace_max_vals[a];
+			}
+		if ((trace_min_vals[a] != 0) || (trace_max_vals[a] != 1)){
+			model.atomics.type[a] = 'number';
+			}
+			
+		});
+		
+	
         return true;
     }
 
@@ -392,21 +488,11 @@ module.exports = class LTLSimController {
 			// might need to re-evaluate
 			// V0: re-evaluate all
 			// !!!!!!!! newvalue and dataIDX is not set....
-//JSC-0415
   			let result = LTLAEX.parse(a, model);
 			let newtrace = result.trace;
-//			var newtrace;
-//			newtrace = model.atomics.values[a].trace
-//			newtrace[0] =1;
 			model.atomics.values[a].trace = newtrace;
 			}
 		});
-//if (id == "state")
-//	if (newValue == 2)
-//		model.atomics.values["state_eq_2"].trace[dataIdx] = 1;
-// var a="state_eq_2"
-// 		console.log("eval. type="+model.atomics.type[a]);
-// 		console.log("eval. canchange="+model.atomics.canChange[a]);
             return true;
         }
         return false;

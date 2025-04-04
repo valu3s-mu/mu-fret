@@ -20,6 +20,7 @@ FRET is a framework for the elicitation, specification, formalization and unders
     * [Using the simulator](./UsingTheSimulator/ltlsim.md)
     * [Exporting for analysis](./ExportingForAnalysis/analysis.md)
     * [Realizability checking](./exports/realizabilityManual.md)
+    * [Test Case Generation](./exports/testgenManual.md)
 * [FRET Command Line Interface (CLI)](./cli/cli.md)
     * [Generating Formalizations](./cli/cli.md#Generating-formalizations)
     * [Realizability checking](./cli/cli.md#Realizability-checking)
@@ -35,8 +36,6 @@ We provide a set of example requirements that can be directly
 
 [Andreas Katis](https://andreaskatis.github.io/),
 [Anastasia Mavridou](http://amavridou.com/),
-[Tom Pressburger](https://www.researchgate.net/profile/T-Pressburger),
-[Johann Schumann](https://ti.arc.nasa.gov/profile/schumann/),
-[Khanh Trinh](https://www.researchgate.net/profile/Khanh-Trinh-3).
+[Johann Schumann](https://ti.arc.nasa.gov/profile/schumann/).
 
-*Alumni and Interns*: Milan Bhandari, David Bushnell, Tanja de Jong, Dimitra Giannakopoulou, Kelly Ho, George (Yorgo) Karamanolis, David Kooi, Jessica Phelan, Julian Rhein, Daniel Riley, Nija Shi, Gricel Vazquez.
+*Alumni and Interns*: Milan Bhandari, David Bushnell, Tanja de Jong, Dimitra Giannakopoulou, Kelly Ho, George (Yorgo) Karamanolis, David Kooi, Daniel Mendoza, Jessica Phelan, Thomas Pressburger, Julian Rhein, Daniel Riley, Nija Shi, Khanh Trinh, Gricel Vazquez.

@@ -1,38 +1,9 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 import React from 'react';
-import ReactDOM from 'react-dom';
-import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
@@ -49,6 +20,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import ExportIcon from '@material-ui/icons/ArrowUpward';
 import ImportIcon from '@material-ui/icons/ArrowDownward';
 import { saveAs } from 'file-saver';
+
 /* Accordion Imports */
 import Accordion from '@material-ui/core/Accordion';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
@@ -58,14 +30,13 @@ import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 
 import VariablesSortableTable from './VariablesSortableTable';
-import ejsCache from '../../support/CoCoSpecTemplates/ejsCache';
-import ejsCacheCoPilot from '../../support/CoPilotTemplates/ejsCacheCoPilot';
-
-import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import InputLabel from '@material-ui/core/InputLabel';
+import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
+import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
+import Snackbar from '@material-ui/core/Snackbar';
 
 const {ipcRenderer} = require('electron');
 
@@ -125,6 +96,7 @@ let VariablesViewHeader = props => {
            }}>
            <MenuItem id="qa_var_mi_cocospec" value="cocospec">CoCoSpec</MenuItem>
            <MenuItem id="qa_var_mi_copilot" value="copilot">CoPilot</MenuItem>
+           <MenuItem id="qa_var_mi_smv" value="smv">SMV</MenuItem>
          </Select>
        </FormControl>
      </div>
@@ -160,6 +132,13 @@ const componentStyles = theme => ({
 
 class ComponentSummary extends React.Component {
 
+  state = {
+    actionsMenuOpen: false,
+    snackbarOpen: false,
+    numberOfObligations: 0
+  }
+
+  anchorRef = React.createRef();
   getMappingInfo(result, contractName) {
     var mapping = {};
     var componentMapping = {};
@@ -188,6 +167,7 @@ class ComponentSummary extends React.Component {
 
   exportComponentCode = event => {
     event.stopPropagation();
+    this.setState({actionsMenuOpen: false})
 
     const {component, selectedProject, language} = this.props;
     var args = [component, selectedProject, language]
@@ -201,19 +181,63 @@ class ComponentSummary extends React.Component {
 
       zip.generateAsync({type:"blob"}).then(function(content) {
         // see FileSaver.js
-        saveAs(content, 'components.zip');
+        saveAs(content, component+'.zip');
       });
     }).catch((err) => {
       console.log(err);
     })
+  }
 
-    this.setState({ projectName: '' });
+  exportTestObligations = fragment => event => {
+    event.stopPropagation();
+    this.setState({actionsMenuOpen: false})
+    const {component, selectedProject, language} = this.props;
+    var args = [component, selectedProject, language, fragment];
 
+    ipcRenderer.invoke('exportTestObligations', args).then((result) => {
+      this.setState({snackbarOpen: true, numberOfObligations: result.numOfObligations});
+
+      const zip = new JSZip();
+      result.files.forEach(file => {
+        zip.file(file.name, file.content)
+      })
+
+      zip.generateAsync({type:"blob"}).then(function(content) {
+        saveAs(content, component+'.zip');
+      });
+
+    }).catch((err) => {
+      console.log(err);
+    })
+  }
+
+  handleActionsClick = (event) => {
+    event.stopPropagation();
+    this.setState({actionsMenuOpen: !this.state.actionsMenuOpen})
+  };
+
+  handleActionsMenuClose = (event) => {
+    if (this.anchorRef.current && this.anchorRef.current.contains(event.target)) {
+      return;
+    }
+    this.setState({actionsMenuOpen: false})
+  }
+
+  handleSnackbarClose = (event) => {
+    this.setState({snackbarOpen: false});
+  }
+
+  determineIncompleteComponentTooltipTitle(language) {
+    if (language === 'smv') {
+      return 'To export verification code or test obligations, please complete mandatory variable fields and export language first. For SMV export, only variables of Boolean data type are supported.'
+    } else {
+      return 'To export verification code or test obligations, please complete mandatory variable fields and export language first.'
+    }
   }
 
   render() {
-    const {classes, component, completed, language} = this.props;
-    if ((completed && language)|| language === 'copilot'){
+    const {classes, component, completed, language, smvCompleted, isBooleanComponent} = this.props;
+    if (language === 'copilot'){
       return (
         <Tooltip title='Export verification code.'>
         <span>
@@ -225,9 +249,105 @@ class ComponentSummary extends React.Component {
           </span>
         </Tooltip>
       );
+    } else if (completed && language && language === 'cocospec') {
+      return (
+        <div className={classes.wrapper}>
+          <Button
+            id={"qa_var_btn_export_"+component}
+            ref={this.anchorRef}
+            size="small" variant="contained" color="secondary"
+            endIcon={<KeyboardArrowDownIcon />}
+            onClick={(event) => this.handleActionsClick(event)}>
+            Export
+          </Button>
+          <Menu anchorEl={this.anchorRef.current} open={this.state.actionsMenuOpen} onClose={(event) => this.handleActionsMenuClose(event)}>
+            <div>
+              <MenuItem onClick={this.exportComponentCode}>Verification Code</MenuItem>
+              <MenuItem onClick={this.exportTestObligations('ptLTL')}>Test Obligations</MenuItem>
+            </div>
+          </Menu>
+          <Snackbar
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'center',
+          }}
+          open={this.state.snackbarOpen}
+          autoHideDuration={6000}
+          onClose={this.handleSnackbarClose}
+          snackbarcontentprops={{
+            'aria-describedby': 'message-id',
+          }}
+          message={<span id="message-id">{'Generated '+this.state.numberOfObligations+' test obligations.'}</span>}
+          action={[
+            <IconButton
+              key="close"
+              aria-label="Close"
+              color="inherit"
+              onClick={this.handleSnackbarClose}
+            >
+              <CloseIcon />
+            </IconButton>
+          ]} />
+        </div>
+      )
+    } else if (smvCompleted && language && language === 'smv') {
+      if (language === 'smv' && !isBooleanComponent) {
+        return (
+          <Tooltip title='SMV obligation export is available for components that only contain boolean variables.'>
+            <span>
+              <Button id={"qa_var_btn_export_"+component}
+                 size="small" color="secondary" disabled variant='contained' className={classes.buttonControl}>
+                  Export
+              </Button>
+            </span>
+          </Tooltip>
+        )
+      } else {
+        return (
+          <div className={classes.wrapper}>
+            <Button
+              id={"qa_var_btn_export_"+component}
+              ref={this.anchorRef}
+              size="small" variant="contained" color="secondary"
+              endIcon={<KeyboardArrowDownIcon />}
+              onClick={(event) => this.handleActionsClick(event)}>
+              Export
+            </Button>
+            <Menu anchorEl={this.anchorRef.current} open={this.state.actionsMenuOpen} onClose={(event) => this.handleActionsMenuClose(event)}>
+              <div>
+                <MenuItem onClick={this.exportTestObligations('ftLTL')}>Test Obligations (Future Time LTL - Infinite trace)</MenuItem>
+                <MenuItem onClick={this.exportTestObligations('ftLTL-fin')}>Test Obligations (Future Time LTL - Finite trace)</MenuItem>
+                <MenuItem onClick={this.exportTestObligations('ptLTL')}>Test Obligations (Past Time LTL)</MenuItem>
+              </div>
+            </Menu>
+            <Snackbar
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'center',
+            }}
+            open={this.state.snackbarOpen}
+            autoHideDuration={6000}
+            onClose={this.handleSnackbarClose}
+            snackbarcontentprops={{
+              'aria-describedby': 'message-id',
+            }}
+            message={<span id="message-id">{'Generated '+this.state.numberOfObligations+' test obligations.'}</span>}
+            action={[
+              <IconButton
+                key="close"
+                aria-label="Close"
+                color="inherit"
+                onClick={this.handleSnackbarClose}
+              >
+                <CloseIcon />
+              </IconButton>
+            ]} />
+          </div>
+        )
+      }
     } else {
       return (
-          <Tooltip title='To export verification code, please complete mandatory variable fields and export language first.'>
+          <Tooltip title={this.determineIncompleteComponentTooltipTitle(language)}>
             <span>
               <Button id={"qa_var_btn_export_"+component}
                  size="small" color="secondary" disabled variant='contained' className={classes.buttonControl}>
@@ -246,7 +366,9 @@ ComponentSummary.propTypes = {
   completed: PropTypes.bool.isRequired,
   selectedProject: PropTypes.string.isRequired,
   language: PropTypes.string.isRequired,
-  variableIdentifierReplacement: PropTypes.func.isRequired
+  variableIdentifierReplacement: PropTypes.func.isRequired,
+  smvCompleted: PropTypes.bool.isRequired,
+  isBooleanComponent: PropTypes.bool.isRequired
 };
 
 ComponentSummary = withStyles(componentStyles)(ComponentSummary);
@@ -286,7 +408,7 @@ class VariablesView extends React.Component {
 
   render() {
     const self = this;
-    const {classes, selectedProject, listOfProjects, components, completedComponents, cocospecData, cocospecModes} = this.props;
+    const {classes, selectedProject, listOfProjects, components, completedComponents, cocospecData, cocospecModes, smvCompletedComponents, booleanOnlyComponents} = this.props;
     const{language}= this.state;
     components.sort();
 
@@ -329,6 +451,8 @@ class VariablesView extends React.Component {
                   selectedProject={selectedProject}
                   language={language}
                   variableIdentifierReplacement={this.props.variableIdentifierReplacement}
+                  smvCompleted={smvCompletedComponents.includes(component)}
+                  isBooleanComponent={booleanOnlyComponents.includes(component)}
                 />
               </AccordionSummary>
               <Divider />
@@ -337,6 +461,7 @@ class VariablesView extends React.Component {
                   <VariablesSortableTable
                     selectedProject={selectedProject}
                     selectedComponent={component}
+                    language={language}
                   />
                 </div>
                 </AccordionDetails>
@@ -357,7 +482,9 @@ VariablesView.propTypes = {
   cocospecModes: PropTypes.object.isRequired,
   components: PropTypes.array.isRequired,
   completedComponents: PropTypes.array.isRequired,
-  variableIdentifierReplacement: PropTypes.func.isRequired
+  smvCompletedComponents: PropTypes.array.isRequired,
+  variableIdentifierReplacement: PropTypes.func.isRequired,
+  booleanOnlyComponents: PropTypes.array.isRequired
 };
 
 export default withStyles(styles)(VariablesView);

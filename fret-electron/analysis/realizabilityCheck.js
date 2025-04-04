@@ -1,35 +1,8 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 const fs = require('fs');
 const path = require('path');
 const exec = require('child_process').exec;
@@ -63,38 +36,73 @@ export function checkRealizability(filePath, engine, options, callback) {
         var logResults = kind2Output.filter(e => ((e.objectType === "log") && (e.level === "error")))[0];
         err.message = err.message + '\n' + logResults.value.toString();
       }
-      callback(err);
+      var errorMessage = 'Error: ' + (engine === 'jkind' ? 'JKind' : 'Kind 2') + ' call terminated unexpectedly.'
+      callback(errorMessage);
     } else {
-      let result, time, traceInfo;
+      let result, time, realizableTraceInfo, jsonOutput;
       if (engine === 'jkind') {
         result = stdout.match(new RegExp('(?:\\+\\n)' + '(.*?)' + '(?:\\s\\|\\|\\s(K|R|S|T))'))[1];
         time = stdout.match(new RegExp('(Time = )(.*?)\\n'))[2];        
         
-        if (options.includes('json') && result === "REALIZABLE"){
+        if (options.includes('json')) {
           var fileContent = fs.readFileSync(filePath+'.json', 'utf8');
-          let output = JSON.parse(fileContent);
-          traceInfo = {K: Object.keys(output.Counterexample[0]).length - 2, Trace: output.Counterexample};
-        } else {          
-          traceInfo = null;
-        }  
-        callback(null, result, time, traceInfo);
+          jsonOutput = JSON.parse(fileContent);
+          if (result === "REALIZABLE") {
+            realizableTraceInfo = {K: Object.keys(jsonOutput.Counterexample[0]).length - 2, Trace: jsonOutput.Counterexample};
+          } else {
+            realizableTraceInfo = null;
+          }
+        } else {
+          jsonOutput = null;
+        }
+        callback(null, result, time, realizableTraceInfo, jsonOutput);
       } else {
         var kind2Output = JSON.parse(stdout);
-        var realizabilityResults = kind2Output[kind2Output.findLastIndex(e => e.objectType === "realizabilityCheck")];
-        var consistencyResults = kind2Output[kind2Output.findLastIndex(e => e.objectType === "satisfiabilityCheck")];
-        var logResultsArray = kind2Output.filter(e => e.objectType === "log");
-        var logResults = logResultsArray[logResultsArray.length-1];
-        result = (logResults && logResults.value === "Wallclock timeout.") ? "UNKNOWN" : ((consistencyResults && consistencyResults.result === "unsatisfiable") ? "UNREALIZABLE" : realizabilityResults.result.toUpperCase());
-        if (consistencyResults) {
-          time = (realizabilityResults.runtime['value'] + consistencyResults.runtime['value']).toString() + realizabilityResults.runtime['unit'];
-        } else if (realizabilityResults) {
-          time = (realizabilityResults.runtime['value'] + (consistencyResults ? consistencyResults.runtime['value'] : 0)).toString() + realizabilityResults.runtime['unit'];
-        } else {
-          time = "Wallclock timeout."
+        var analysisElement = []
+        var inAnalysisBlock = false;
+        for (const elem of kind2Output.filter(e => e.objectType)) {
+          if (elem.objectType === 'analysisStart') {
+            var contractContext = elem.context ? elem.context === 'contract' : true;
+            if (contractContext) {
+              inAnalysisBlock = true;
+              analysisElement.push(elem)
+            }            
+          } else if (inAnalysisBlock && elem.objectType === 'analysisStop') {
+            analysisElement.push(elem)
+            break;
+          } else if (inAnalysisBlock) {
+            analysisElement.push(elem)
+          }
         }
 
-        traceInfo = (realizabilityResults && realizabilityResults.deadlockingTrace) ? realizabilityResults.deadlockingTrace : null;
-        callback(null, result, time, traceInfo);
+        var realizabilityResults = analysisElement.find(e => e.objectType === 'realizabilityCheck');
+        var consistencyResults = analysisElement.find(e => e.objectType === 'satisfiabilityCheck')
+        // var kind2OutputReverse = kind2Output.reverse();
+        // var realizabilityResults = kind2OutputReverse.find(e => e.objectType === "realizabilityCheck");
+        // var consistencyResults = kind2OutputReverse.find(e => e.objectType === "satisfiabilityCheck");
+        if (realizabilityResults) {
+          var logResultsArray = kind2Output.filter(e => e.objectType === "log");
+          var logResults = logResultsArray[logResultsArray.length-1];
+          result = (logResults && logResults.value === "Wallclock timeout.") ? "UNKNOWN" : (consistencyResults ? (consistencyResults.result === "unsatisfiable" ? "UNREALIZABLE" : realizabilityResults.result.toUpperCase()) : realizabilityResults.result.toUpperCase());
+          if (consistencyResults) {
+            time = (realizabilityResults.runtime['value'] + consistencyResults.runtime['value']).toString() + realizabilityResults.runtime['unit'];
+          } else if (realizabilityResults) {
+            time = (realizabilityResults.runtime['value'] + (consistencyResults ? consistencyResults.runtime['value'] : 0)).toString() + realizabilityResults.runtime['unit'];
+          } else {
+            time = "Wallclock timeout."
+          }
+
+          realizableTraceInfo = (realizabilityResults && realizabilityResults.deadlockingTrace) ? realizabilityResults.deadlockingTrace : null;
+          callback(null, result, time, realizableTraceInfo, kind2Output);
+        } else {
+          var logResultsArray = kind2Output.filter(e => e.objectType === "log");
+          var logResults = logResultsArray[logResultsArray.length-1];
+          if (logResults && logResults.value === "Wallclock timeout.") {
+            callback(null, "UNKNOWN", "Wallclock timeout.", null, kind2Output)
+          } else {
+            callback('Error: Kind 2 call terminated unexpectedly.')
+          }
+        }
       }
       
     }
@@ -110,8 +118,9 @@ export function checkReal(filePath, engine, options) {
   //having to handle the lack of the environment check option elsewhere in the code.
   
   function retrieveKind2Result(output) {    
-    var realizabilityResults = output[output.findLastIndex(e => e.objectType === "realizabilityCheck")];      
-    var consistencyResults = output[output.findLastIndex(e => e.objectType === "satisfiabilityCheck")];
+    var reverseOutput = output.reverse();
+    var realizabilityResults = reverseOutput.find(e => e.objectType === "realizabilityCheck");
+    var consistencyResults = reverseOutput.find(e => e.objectType === "satisfiabilityCheck");
     var logResultsArray = output.filter(e => e.objectType === "log");
     var logResults = logResultsArray[logResultsArray.length-1];
     let result = (logResults && logResults.value === "Wallclock timeout.") ? "UNKNOWN" : ((consistencyResults && consistencyResults.result === "unsatisfiable") ? "UNREALIZABLE" : realizabilityResults.result.toUpperCase());

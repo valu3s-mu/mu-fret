@@ -1,35 +1,8 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 const antlr4 = require('antlr4/index');
 const RequirementLexer = require('./RequirementLexer');
 const RequirementParser = require('./RequirementParser');
@@ -70,16 +43,23 @@ function do_not_formalize(text) {
   return do_not;
 }
 
-// Check for uses of reserved words and trailing unparsed input.
+// Check for uses of reserved words, trailing unparsed input,
+// and invalid probabilities.
 // Assumes the parse tree has been walked.
 function checkReqt(trimmedText) {
-  let reqtErrors = []; 
-  const {conds,responseEnd} = semanticsAnalyzer.conditions();
+  let reqtErrors = [];
+  const {conds,responseEnd,probability} = semanticsAnalyzer.conditions();
   const reserved = findReservedWords(conds.join(" "));
-  if (reserved.length > 0) 
+  if (reserved.length > 0)
     reqtErrors.push(reserved)
   if (responseEnd !== 0 && trimmedText.length - 1 !== responseEnd)
     reqtErrors.push("Trailing unparsed input: '" + trimmedText.slice(responseEnd + 1) + "'")
+  if (probability) {
+    const {op,p} = probability;
+    const x = Number(p)
+    if (x < 0 || x > 1 || (op === '>' && x >= 1) || (op === '<' && x <= 0))
+      reqtErrors.push("Illegal probability: " + p)
+  }
   return reqtErrors.join('; ')
 }
 
@@ -134,7 +114,7 @@ exports.compilePartialText = (text) => {
   parser.addErrorListener(listener);
   var tree = parser[REQ_BODY_CTX_RULE]();
   antlr4.tree.ParseTreeWalker.DEFAULT.walk(semanticsAnalyzer, tree);
-  
+
   let r = {}
   if (do_not_formalize(trimmedText)) {
     semanticsAnalyzer.clearResult();
@@ -192,7 +172,7 @@ exports.parseByCtxRule = (text, ctxRule) => {
   return result
 }
 
-// Like parseByCtxRule but checks for uses of reserved words in conditions and 
+// Like parseByCtxRule but checks for uses of reserved words in conditions and
 // trailing unparsed input
 exports.parseByCtxRuleAndAnalyze = (text, ctxRule) => {
   let trimmedText = trimReqtText(text)
@@ -214,7 +194,7 @@ exports.parseByCtxRuleAndAnalyze = (text, ctxRule) => {
     result.parseErrors = annotations.map(a => a.text).join('; ')
   else {
     antlr4.tree.ParseTreeWalker.DEFAULT.walk(semanticsAnalyzer, tree);
-    const reqtErrors = checkReqt(trimmedText) 
+    const reqtErrors = checkReqt(trimmedText)
     if (reqtErrors.length > 0) result.parseErrors = reqtErrors
     else result.parseTree = tree;
   }
@@ -233,15 +213,15 @@ exports.parseAndAnalyze = (text) => {
 }
 
 /*
-// 
+// tests
 console.log('compile: ' + JSON.stringify(this.compile('the sw shall satisfy p:q')))
 console.log('compilePartialText: ' + JSON.stringify(this.compilePartialText('the sw shall satisfy p:q')))
 
 console.log('parseAndAnalyze: ' + JSON.stringify(this.parseAndAnalyze('the sw shall satisfy p:q')))
-*/
 
-/*
-// tests
+console.log(JSON.stringify(this.compile('whenever p the sw shall with probability <= 0.5 eventually satisfy q')))
+
+console.log(JSON.stringify(this.compile('whenever p the sw shall with what probability eventually satisfy q')))
 
 // fails, needs a space before -
 console.log(JSON.stringify(this.compile('the sw shall satisfy x-y>0')))

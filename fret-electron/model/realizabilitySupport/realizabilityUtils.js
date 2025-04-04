@@ -1,35 +1,8 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 import { modelDB, system_DBkeys } from '../fretDB'
 import { getContractInfo, getPropertyInfo, getDelayInfo, variableIdentifierReplacement } from '../modelDbSupport/variableMappingSupports'
 import * as cc_analysis from '../../analysis/connected_components';
@@ -46,7 +19,7 @@ const constants = require('../../app/parser/Constants');
 var analysisPath = require("os").homedir() + '/Documents/fret-analysis/';
 
 export {
-    retrieveRlzRequirements as retrieveRlzRequirements,
+    retrieveRequirementsFromComponent as retrieveRequirementsFromComponent,
     computeConnectedComponents as computeConnectedComponents,
     checkRealizability as checkRealizability,
     diagnoseSpec as diagnoseSpec,
@@ -132,7 +105,7 @@ function checkDependenciesExist() {
   }
 }
 
-async function retrieveRlzRequirements (selectedProject, selectedComponent) {
+async function retrieveRequirementsFromComponent (selectedProject, selectedComponent) {
     const filterOff = selectedProject == "All Projects";
     return getAllDocs().then((result) => {
         let dbData = result.rows
@@ -368,11 +341,11 @@ function checkRealizability(selectedProject, components, rlzState, selectedReqs)
             var lustreContract = ejsCache_realize.renderRealizeCode(engineName).component.complete(contract);
 
             fs.writeSync(output, lustreContract);
-              realizability.checkRealizability(filePath, engineName, engineOptions, function(err, result, time, traceInfo) {
+              realizability.checkRealizability(filePath, engineName, engineOptions, function(err, result, time, traceInfo, _) {
 
               if (err) {
                   rlzState.projectReport.systemComponents[systemComponentIndex].monolithic.result = 'ERROR';
-                  rlzState.projectReport.systemComponents[systemComponentIndex].monolithic.error = err.message;
+                  rlzState.projectReport.systemComponents[systemComponentIndex].monolithic.error = err;
               } else {
                   rlzState.projectReport.systemComponents[systemComponentIndex].monolithic.result = result;
                   rlzState.projectReport.systemComponents[systemComponentIndex].monolithic.time = time;
@@ -405,11 +378,11 @@ function checkRealizability(selectedProject, components, rlzState, selectedReqs)
             ccContract.properties = (cc.ccName === ccSelected) ? ccProperties.filter(p => selectedReqs.includes(p.reqid.substring(2))) : ccProperties;
             var lustreContract = ejsCache_realize.renderRealizeCode(engineName).component.complete(ccContract);
             fs.writeSync(output, lustreContract);
-            realizability.checkRealizability(filePath, engineName, engineOptions, function(err, result, time, traceInfo) {
+            realizability.checkRealizability(filePath, engineName, engineOptions, function(err, result, time, traceInfo, _) {
               
               if (err) {
                 cc.result = 'ERROR';
-                cc.error = err.message;
+                cc.error = err;
                 rlzState.projectReport = projectReport;
                 ccResults.push('ERROR');
               } else {
@@ -471,19 +444,7 @@ function diagnoseSpec(selectedProject, rlzState, selectedReqs) {
   let engineName = nameAndEngine.name;
   let engineOptions = nameAndEngine.options + actualTimeout;
 
-  if(compositional) {
-    projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisSolver = engineName;
-    projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisStatus = 'PROCESSING';
-
-    rlzState.projectReport = projectReport;
-
-  } else {
-    projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisSolver = engineName;
-    projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisStatus = 'PROCESSING';
-    rlzState.projectReport = projectReport;
-  }
-
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     modelDB.find({
       selector: {
         component_name: selected.component_name,
@@ -512,10 +473,10 @@ function diagnoseSpec(selectedProject, rlzState, selectedReqs) {
           ccContract.properties = ccProperties
 
           let engine = new DiagnosisEngine(ccContract, actualTimeout, 'realizability', engineName, engineOptions);
-          engine.main(function (err, result) {
+          engine.main().then(function ([err, result]) {
             if (err) {              
               projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisStatus = 'ERROR';
-              projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].error = err.message+'\n'+err.stdout.toString();
+              projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].error = err;
 
                 rlzState.projectReport = projectReport
               } else if (result) {
@@ -532,17 +493,23 @@ function diagnoseSpec(selectedProject, rlzState, selectedReqs) {
 
             resolve(rlzState)
 
+          }).catch(err => {
+            projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisStatus = 'ERROR';
+            projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].error = err;
+
+            rlzState.projectReport = projectReport
+            resolve(rlzState)
           });
         } else if (monolithic) {
           contract.componentName = selected.component_name;
           let engine = new DiagnosisEngine(contract, actualTimeout, 'realizability', engineName, engineOptions);
 
-          engine.main(function (err, result) {
+          engine.main().then(function ([err, result]) {
             if (err) {
               projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisStatus = 'ERROR';
               projectReport.systemComponents[systemComponentIndex].monolithic.error = err;
 
-                rlzState.projectReport = projectReport
+              rlzState.projectReport = projectReport
             } else if (result) {
               projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisStatus = 'DIAGNOSED';
               projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisReport = result[1];
@@ -555,7 +522,27 @@ function diagnoseSpec(selectedProject, rlzState, selectedReqs) {
             }
 
             resolve(rlzState)
+          }).catch(err => {
+            projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisStatus = 'ERROR';
+            projectReport.systemComponents[systemComponentIndex].monolithic.error = err;
+
+            rlzState.projectReport = projectReport
+            resolve(rlzState)
           });
+        }
+      }).catch (err => {
+        if (compositional) {
+          projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisStatus = 'ERROR';
+          projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].error = err;
+
+          rlzState.projectReport = projectReport
+          resolve(rlzState)
+        } else {
+          projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisStatus = 'ERROR';
+          projectReport.systemComponents[systemComponentIndex].monolithic.error = err;
+
+          rlzState.projectReport = projectReport
+          resolve(rlzState)          
         }
       })
     })

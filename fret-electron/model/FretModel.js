@@ -1,46 +1,21 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
 import {leveldbDB, modelDB, system_DBkeys} from './fretDB'
 import {removeVariablesInBulk, removeVariables } from './modelDbSupport/deleteVariables_main'
 import {removeReqsInBulk} from './fretDbSupport/deleteRequirements_main'
-import {getContractInfo, getPropertyInfo, getDelayInfo, getMappingInfo,
+import {getContractInfo, getPropertyInfo, getDelayInfo, getMappingInfo, getObligationInfo,
   synchFRETvariables, variableIdentifierReplacement} from './modelDbSupport/variableMappingSupports'
 //import FretSemantics from './../app/parser/FretSemantics'
 import {export_to_md} from "../app/utils/utilityFunctions";
 import {synchAnalysisWithDB, } from './fretDbSupport/analysisTabSupport'
-import { retrieveRlzRequirements, computeConnectedComponents, checkRealizability, diagnoseSpec, checkDependenciesExist } from './realizabilitySupport/realizabilityUtils'
+import { retrieveRequirementsFromComponent, computeConnectedComponents, checkRealizability, diagnoseSpec, checkDependenciesExist } from './realizabilitySupport/realizabilityUtils'
+import { generateTests, checkTestGenDependenciesExist } from './testGenSupport/testGenUtils'
 import ejsCache from '../support/CoCoSpecTemplates/ejsCache';
+import ejsCacheSMV from '../support/SMVTemplates/ejsCacheSMV';
 import ejsCacheCoPilot from '../support/CoPilotTemplates/ejsCacheCoPilot';
 
 const modelDbSetters = require('./modelDbSupport/modelDbSetters_main.js');
@@ -50,7 +25,6 @@ const fretDbGetters = require('./fretDbSupport/fretDbGetters_main');
 const populateVariables = require('./modelDbSupport/populateVariables_main')
 const requirementsImport = require('./requirementsImport/convertAndImportRequirements_main');
 
-const fs = require('fs');
 import { v1 as uuidv1 } from 'uuid';
 import FretSemantics from "../app/parser/FretSemantics";
 import {Default_Project_name} from "./requirementsImport/convertAndImportRequirements_main";
@@ -58,6 +32,7 @@ import {createRequirements} from "./fretDbSupport/fretDbSetters_main";
 import {createVariables} from "./modelDbSupport/modelDbSetters_main";
 import {getProjectVariables} from "./modelDbSupport/modelDbGetters_main";
 const utilities = require('../support/utilities');
+
 export default class FretModel {
   constructor(){
     // *projects*
@@ -72,6 +47,8 @@ export default class FretModel {
     // *analysis*
     this.components = []     // for a specific project: this is an array of all the components
     this.completedComponents = []   // for a specific project: this is an array of all components
+    this.smvCompletedComponents = [] //System components with complete variable information in SMV.
+    this.booleanOnlyComponents = [] //System components that include only boolean variables. Used in test case generation.
     // that we have completed the variable mappings
     this.cocospecData = {}   // for a specific project: this is an object where each
     // key is a component of this project, and the value of each key is an array of variables
@@ -81,7 +58,7 @@ export default class FretModel {
     // *variableMapping*
     this.variable_data = {}  // for a specific project: this is an object where each
     // key is a component of this project, and the value  is
-    // an array[rowid: counter, variable_name, modeldoc_id, idType, dataType, description]
+    // an array[rowid: counter, variable_name, modeldoc_id, idType, dataType, completedStatus, description]
     this.modelComponent = []  // for a specific project: this is an array of strings for dropdown menu titled 'Corresponding Model Component'
     this.modelVariables  = []   // array of simulink model variables from import filtered by the selected model component
     this.selectedVariable = {}  // ui selection
@@ -90,6 +67,7 @@ export default class FretModel {
 
     // realizability
     this.rlz_data = []
+    this.testgen_data = []
     this.monolithic = false
     this.compositional = false
     this.ccSelected = ''
@@ -115,6 +93,8 @@ export default class FretModel {
       // analysis
       components : this.components,
       completedComponents : this.completedComponents,
+      smvCompletedComponents: this.smvCompletedComponents,
+      booleanOnlyComponents: this.booleanOnlyComponents,
       cocospecData : this.cocospecData,
       cocospecModes : this.cocospecModes,
 
@@ -191,6 +171,8 @@ export default class FretModel {
         this.cocospecModes = analysisStates.cocospecModes
         this.components = analysisStates.components
         this.completedComponents = analysisStates.completedComponents
+        this.smvCompletedComponents = analysisStates.smvCompletedComponents
+        this.booleanOnlyComponents = analysisStates.booleanOnlyComponents
       }
 
       // for each component, we want to call synchFRETvariables
@@ -304,6 +286,8 @@ export default class FretModel {
         selectedVariable : this.selectedVariable,
         importedComponents : this.importedComponents,
         completedComponents : this.completedComponents,
+        smvCompletedComponents: this.smvCompletedComponents,
+        booleanOnlyComponents: this.booleanOnlyComponents,
         cocospecData : this.cocospecData,
         cocospecModes : this.cocospecModes,
         rlz_data : this.rlz_data,
@@ -338,7 +322,8 @@ export default class FretModel {
         cocospecData : this.cocospecData,
         cocospecModes : this.cocospecModes,
         completedComponents : this.completedComponents,
-
+        smvCompletedComponents: this.smvCompletedComponents,
+        booleanOnlyComponents: this.booleanOnlyComponents,
         // * variableMapping
         modelComponent : this.modelComponent,
         variable_data : this.variable_data,
@@ -424,7 +409,8 @@ export default class FretModel {
       cocospecData : this.cocospecData,
       cocospecModes : this.cocospecModes,
       completedComponents : this.completedComponents,
-
+      smvCompletedComponents: this.smvCompletedComponents,
+      booleanOnlyComponents: this.booleanOnlyComponents,
       // * variableMapping
       modelComponent : this.modelComponent,
       variable_data : this.variable_data,
@@ -474,11 +460,13 @@ export default class FretModel {
         description: v.description,
         assignment: v.assignment,
         copilotAssignment: v.copilotAssignment,
+        smvAssignment: v.smvAssignment,
         modeRequirement: v.modeRequirement,
         modeldoc: v.modeldoc,
         modelComponent: v.modelComponent,
         modeldoc_id: v.modeldoc_id,
         completed: v.completed,
+        smvCompleted: v.smvCompleted
       }
       newProjectVariables.push(newVariable)
       //console.log('copyProjectModelDb newVariable: ',newVariable)
@@ -567,7 +555,8 @@ export default class FretModel {
         cocospecData : this.cocospecData,
         cocospecModes : this.cocospecModes,
         completedComponents : this.completedComponents,
-
+        smvCompletedComponents: this.smvCompletedComponents,
+        booleanOnlyComponents : this.booleanOnlyComponents,
         // * variableMapping
         modelComponent : this.modelComponent,
         variable_data : this.variable_data,
@@ -608,7 +597,8 @@ export default class FretModel {
       let variables = [] ;
 
       if(Array.isArray(data) && data.length > 0) {
-        if(data[0].reqid) {
+        if(data[0].hasOwnProperty('reqid')) //check if the first object contains the reqid key
+        {
           requirements = data;
         } else {
           variables = data;
@@ -649,7 +639,8 @@ export default class FretModel {
       cocospecData : this.cocospecData,
       cocospecModes : this.cocospecModes,
       completedComponents : this.completedComponents,
-
+      smvCompletedComponents: this.smvCompletedComponents,
+      booleanOnlyComponents: this.booleanOnlyComponents,
       // * variables
       modelComponent : this.modelComponent,
       variable_data : this.variable_data,
@@ -681,7 +672,8 @@ export default class FretModel {
       cocospecData : this.cocospecData,
       cocospecModes : this.cocospecModes,
       completedComponents : this.completedComponents,
-
+      smvCompletedComponents: this.smvCompletedComponents,
+      booleanOnlyComponents: this.booleanOnlyComponents,
       // * variableMapping
       modelComponent : this.modelComponent,
       variable_data : this.variable_data,
@@ -896,26 +888,12 @@ export default class FretModel {
   }
 
   async updateVariable_noNewVariables(evt, args){
-    // console.log('FretModel updateVariable_checkNewVariables: ', args)
 
-    var project = args[0]
-    var component_name = args[1]
-    var variables = args[2]
-    var idType = args[3]
-    var modeldoc_id = args[4]
-    var dataType = args[5]
-    var modeldbid = args[6]
-
-    var description = args[7]
-    var assignment = args[8]
-    var copilotAssignment = args[9]
-    var modeRequirement = args[10]
-    var modelComponent = args[11]
-    var lustreVariables = args[12]
-    var copilotVariables = args[13]
-    var moduleName = args[14]
+    var [project, component_name, variables, idType, modeldoc_id, dataType, modeldbid, description, assignment,
+          copilotAssignment, smvAssignment, modeRequirement, modelComponent, lustreVariables, copilotVariables, smvVariables, moduleName, busObjects, selectedBusObject, selectedBusElement, modeldoc_vectorSize, modeldoc_vectorIndex] = args;
 
     var completedVariable = false;
+    var smvCompletedVariable = false;
 
     /*
      For each Variable Type we need the following:
@@ -928,9 +906,19 @@ export default class FretModel {
     if (idType === "Input" || idType === 'Output') {
       if (modeldoc_id || dataType) {
         completedVariable = true;
+        if (dataType === 'boolean') {
+          smvCompletedVariable = true;
+        }
       }
-    } else if (modeRequirement || (dataType && (assignment || copilotAssignment)) || (idType === "Function")) {
+    } else if (modeRequirement || (dataType && (assignment || copilotAssignment))) {
       completedVariable = true;
+    } else if (idType === "Function") {
+      completedVariable = true;
+      smvCompletedVariable = true;
+    }
+
+    if (dataType && dataType === 'boolean' && smvAssignment) {
+      smvCompletedVariable = true;
     }
 
     await modelDB.get(modeldbid).then(function (vdoc) {
@@ -947,12 +935,21 @@ export default class FretModel {
         moduleName: moduleName,
         description: description,
         assignment: assignment,
+        assignmentVariables: lustreVariables,
         copilotAssignment: copilotAssignment,
+        smvAssignment: smvAssignment,
+        smvAssignmentVariables: smvVariables,
         modeRequirement: modeRequirement,
         modeldoc: false,
         modeldoc_id: modeldoc_id,
+        busObjects: busObjects,
+        busObject: selectedBusObject,
+        busElementIndex: selectedBusElement,
+        modeldoc_vectorSize: modeldoc_vectorSize,
+        modeldoc_vectorIndex: Number(modeldoc_vectorIndex),
         modelComponent: modelComponent,
-        completed: completedVariable
+        completed: completedVariable,
+        smvCompleted: smvCompletedVariable
       }).catch(function (err) {
         console.log(err);
       });
@@ -967,6 +964,8 @@ export default class FretModel {
       cocospecData : this.cocospecData,
       cocospecModes : this.cocospecModes,
       completedComponents : this.completedComponents,
+      smvCompletedComponents: this.smvCompletedComponents,
+      booleanOnlyComponents : this.booleanOnlyComponents,
       // * variableMapping
       modelComponent : this.modelComponent,
       variable_data : this.variable_data,
@@ -1012,6 +1011,7 @@ export default class FretModel {
           d.project = selectedProject;
           d.fretComponent = selectedComponent;
           d.modeldoc = true;
+          d.busObjects = data[0].Declarations.BusObjects
         })
         await modelDB.bulkDocs(data);
       } catch (err) {
@@ -1028,6 +1028,8 @@ export default class FretModel {
       cocospecData : this.cocospecData,
       cocospecModes : this.cocospecModes,
       completedComponents : this.completedComponents,
+      smvCompletedComponents: this.smvCompletedComponents,
+      booleanOnlyComponents : this.booleanOnlyComponents,
       // * variableMapping
       modelComponent : this.modelComponent,
       variable_data : this.variable_data,
@@ -1053,7 +1055,7 @@ export default class FretModel {
       }
     }).then(function (modelResult){
 
-      let contract = getContractInfo(modelResult);
+      let contract = getContractInfo(modelResult, language);
       contract.componentName = component+'Spec';
       if (language === 'cocospec' && modelResult.docs[0].modelComponent != ""){
         var variableMapping = getMappingInfo(modelResult, contract.componentName);
@@ -1068,18 +1070,7 @@ export default class FretModel {
         contract.properties = getPropertyInfo(fretResult, contract.outputVariables, component);
         contract.delays = getDelayInfo(fretResult, component);
         if (language === 'cocospec'){
-          let contractVariables = [].concat(contract.inputVariables.concat(contract.outputVariables.concat(contract.internalVariables.concat(contract.functions.concat(contract.modes)))));
-          for (const property of contract.properties){
-            // property.reqid = '__'+property.reqid;
-            for (const contractVar of contractVariables) {
-              var regex = new RegExp('\\b' + contractVar.name.substring(2) + '\\b', "g");
-              property.value = property.value.replace(regex, contractVar.name);
-            }
-            if (!contract.internalVariables.includes("__FTP")) {
-              var regex = new RegExp('\\b' + 'FTP' + '\\b', "g");
-              property.value = property.value.replace(regex, '__FTP');
-            }
-          }
+          contract = variableIdentifierReplacement(contract);
           const file = {content: ejsCache.renderContractCode().contract.complete(contract), name: contract.componentName+'.lus' }
           files.push(file);
         } else if (language === 'copilot'){
@@ -1087,6 +1078,7 @@ export default class FretModel {
           contract.modes.forEach(function(mode) {
             contract.assignments.push(mode.assignment);
           });
+          contract = variableIdentifierReplacement(contract);
           const file = {content: ejsCacheCoPilot.renderCoPilotSpec().contract.complete(contract), name: contract.componentName+'.json' }
           files.push(file);
         }
@@ -1097,6 +1089,136 @@ export default class FretModel {
     })
     return files
 
+  }
+
+  async exportTestObligations(evt, args) {
+    let [component, selectedProject, language, fragment] = args;
+    const files = [];
+    if (language === 'cocospec') {
+      return modelDB.find({
+          selector: {
+            component_name: component,
+            project: selectedProject,
+            completed: true, //for modes that are not completed; these include the ones that correspond to unformalized requirements
+            modeldoc: false
+          }
+        }).then(function (modelResult){
+          if (modelResult.docs[0].modelComponent != ""){
+            var variableMapping = getMappingInfo(modelResult, component+'Spec');
+            const file = {content: JSON.stringify(variableMapping, undefined, 4), name: 'cocospecMapping'+component+'.json' }
+            files.push(file);
+          }
+
+          return leveldbDB.find({
+            selector: {
+              project: selectedProject
+            }
+          }).then(function (fretResult){
+            function generateObligationFile(doc) {
+              var localModelResult = {...modelResult}
+
+              //Gather only the relevant variables from the project's model db.
+              //This includes:
+              //  1. All the variables that appear explicitly in the FRETish requirements
+              //  2. All the variables that the internal variables depend on. This is important because we are generating an obligations file
+              //     per requirement. If, for example, a requirement contains an internal variable that is referrencing some input variable
+              //     then, if we don't perform this step the resulting obligations file will not have a variable declaration for the input.
+              var modelVariables = [...doc.semantics.variables];
+              for (const modelDoc of localModelResult.docs) {
+                if (modelVariables.includes(modelDoc.variable_name) && modelDoc.assignment && modelDoc.assignmentVariables && modelDoc.assignmentVariables.length > 0) {
+                  const assignmentVariables = modelDoc.assignmentVariables;
+                  for (const assignVar of assignmentVariables) {
+                    if (modelVariables.indexOf(assignVar) === -1) {
+                      modelVariables.push(assignVar);
+                    }
+                  }
+                }
+              }
+
+              localModelResult.docs = localModelResult.docs.filter(modelDoc => (modelVariables.includes(modelDoc.variable_name)))
+
+              let contract = getContractInfo(localModelResult, language);
+              contract.componentName = component+'Spec';
+
+
+              contract.properties = getObligationInfo(doc, contract.outputVariables, component, language, fragment);
+              contract.delays = getDelayInfo(fretResult, component);
+              contract = variableIdentifierReplacement(contract);
+              const file = {content: ejsCache.renderContractCode().contract.complete(contract), name: contract.componentName+'_'+doc.reqid+'.lus' }
+              files.push(file);
+              return contract.properties.length;
+            }
+
+            var filePromises = fretResult.docs.filter(resultDoc => resultDoc.semantics.component_name === component).map(filteredDoc => generateObligationFile(filteredDoc))
+
+            return Promise.all(filePromises).then(numOfObligations => {
+              return {files: files, numOfObligations: numOfObligations.reduce((accumulator, currentValue) => { return accumulator + currentValue },0)}
+            });
+          }).catch((err) => {
+            console.log(err);
+          })
+      })
+    } else {
+      //smv
+      return modelDB.find({
+        selector: {
+          component_name: component,
+          project: selectedProject,
+          smvCompleted: true, //for modes that are not completed; these include the ones that correspond to unformalized requirements
+          modeldoc: false
+        }
+      }).then(function (modelResult){
+        return leveldbDB.find({
+          selector: {
+            project: selectedProject
+          }
+        }).then(function (fretResult){
+          function generateObligationFile(doc) {
+            var localModelResult = {...modelResult}
+
+            //Gather only the relevant variables from the project's model db.
+            //This includes:
+            //  1. All the variables that appear explicitly in the FRETish requirements
+            //  2. All the variables that the internal variables depend on. This is important because we are generating an obligations file
+            //     per requirement. If, for example, a requirement contains an internal variable that is referrencing some input variable
+            //     then, if we don't perform this step the resulting obligations file will not have a variable declaration for the input.
+            var modelVariables = [...doc.semantics.variables];
+
+            for (const modelDoc of localModelResult.docs) {
+              if (modelVariables.includes(modelDoc.variable_name) && modelDoc.smvAssignment && modelDoc.smvAssignmentVariables && modelDoc.smvAssignmentVariables.length > 0) {
+                const assignmentVariables = modelDoc.smvAssignmentVariables;
+                for (const assignVar of assignmentVariables) {
+                  if (modelVariables.indexOf(assignVar) === -1) {
+                    modelVariables.push(assignVar);
+                  }
+                }
+              }
+            }
+
+            localModelResult.docs = localModelResult.docs.filter(modelDoc => (modelVariables.includes(modelDoc.variable_name)))
+
+            let contract = getContractInfo(localModelResult, language);
+            contract.componentName = component+'Spec';
+
+
+            contract.properties = getObligationInfo(doc, contract.outputVariables, component, language, fragment);
+            contract.delays = getDelayInfo(fretResult, component);
+            const file = {content: ejsCacheSMV.renderModelCode().model.complete(contract), name: contract.componentName+'_'+doc.reqid+'.smv' }
+            files.push(file);
+
+            return contract.properties.length;
+          }
+
+          var filePromises = fretResult.docs.filter(resultDoc => resultDoc.semantics.component_name === component).map(filteredDoc => generateObligationFile(filteredDoc))
+
+          return Promise.all(filePromises).then(numOfObligations => {
+            return {files: files, numOfObligations: numOfObligations.reduce((accumulator, currentValue) => { return accumulator + currentValue },0)}
+          });
+        }).catch((err) => {
+          console.log(err);
+        })
+      })
+    }
   }
 
   async selectCorspdModelComp(evt,args){       // TBD add tests
@@ -1126,7 +1248,9 @@ export default class FretModel {
           tool: vdoc.tool,
           description: "",
           assignment: "",
+          assignmentVariables:[],
           copilotAssignment: "",
+          smvAssignment: "",
           modeRequirement: "",
           modeldoc: vdoc.modeldoc,
           modelComponent: modelComponent,
@@ -1150,6 +1274,8 @@ export default class FretModel {
       cocospecData : this.cocospecData,
       cocospecModes : this.cocospecModes,
       completedComponents : this.completedComponents,
+      smvCompletedComponents: this.smvCompletedComponents,
+      booleanOnlyComponents : this.booleanOnlyComponents,
       // * variables
       modelComponent : this.modelComponent,
       variable_data : this.variable_data,
@@ -1164,7 +1290,7 @@ export default class FretModel {
   async selectRealizabilityComponent(evt,args) {
     const component = args[0]
     var connectedComponentInfo = await computeConnectedComponents(this.selectedProject, this.completedComponents, ...args);
-    this.rlz_data = await retrieveRlzRequirements(this.selectedProject,component.component_name)
+    this.rlz_data = await retrieveRequirementsFromComponent(this.selectedProject,component.component_name)
     var states = {
       rlz_data : this.rlz_data,
       connectedComponentInfo: connectedComponentInfo
@@ -1191,6 +1317,44 @@ export default class FretModel {
   async diagnoseUnrealizableRequirements(evt, args){
     var diagnosisResult = await diagnoseSpec(this.selectedProject, ...args);
     return diagnosisResult;
+  }
+
+  async checkTestGenDependencies(evt, args) {
+    var missingDependencies = await checkTestGenDependenciesExist();
+    return missingDependencies;
+  }
+
+  async selectTestGenComponent(evt,args) {
+    const [ component, projectReport, selectedReqs ] = args;
+    this.testgen_data = await retrieveRequirementsFromComponent(this.selectedProject,component.component_name)
+
+    return fretDbGetters.getProjectRequirements(this.selectedProject).then(fretResult => {
+      projectReport.systemComponents = [].concat(projectReport.systemComponents.map(obj => {
+          if (obj.name === component.component_name) {
+            return {...obj,
+              comments: '',
+              requirements: fretResult.docs,
+              selectedReqs: (selectedReqs.length === 0 ? fretResult.docs.filter(doc => doc.semantics && doc.semantics.component_name === component.component_name).map(doc => doc.reqid) : selectedReqs),
+              tests: [],
+              time: ''
+            }
+          }
+          return obj;
+      }))
+
+
+      var states = {
+        testgen_data : this.testgen_data,
+        selectedReqs: (selectedReqs.length === 0 ? this.testgen_data.map(d => d.doc.reqid)  : selectedReqs),
+        projectReport: projectReport
+      }
+      return states
+    })
+  }
+
+  async generateTests(evt, args) {
+    var testGenResult = generateTests(this.selectedProject, this.components, ...args);
+    return testGenResult;
   }
 
   async ltlsimSaveJson(evt,args){

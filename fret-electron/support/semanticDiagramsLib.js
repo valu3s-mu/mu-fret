@@ -1,35 +1,8 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 const {Rectangle,Text, placeRight, placeBelow, placeMiddle, createMode,VerticalLine,Circle,Arrow} = require('./svgUtilities')
 const fs = require('fs');
 const M = {width:135, height: 65, x: 200, bw: 4}
@@ -73,7 +46,7 @@ const pastEnd = 7;
 
 // Timeline is shortened by this amount, so that the arrow is right at
 // the end of the shaded region and not past it.
-const pastEnd2 = pastEnd + 3; 
+const pastEnd2 = pastEnd + 3;
 
 function setTimeline(startx, endx, y, lineWidth=3) {return(`
   <path d="M ${startx} ${y} h ${endx - pastEnd2}" stroke="#000" stroke-width="${lineWidth}" fill="none"/>`
@@ -101,7 +74,7 @@ class Canvas {
 
   save(name) {
     var headerText = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${this.width + pastEnd}px" height="${this.height}px">`
-    
+
 
     // defines the dotted pattern
     headerText = headerText + DottedPattern + "\n\n"
@@ -166,7 +139,7 @@ class semanticDiagram{
 
   timingRect(color,scopeObj,isShort=false){
       var conditionLine = (this.condition === "regular") ? scopeObj.trigger :
-	  (this.condition === "noTrigger" ? scopeObj.noTrigger : null)
+	  (this.condition === "holding" ? scopeObj.holding : null)
     var stopCondition = scopeObj.stopCond;
     var scope = scopeObj.scope;
     var start = (conditionLine)? conditionLine.getX() : scope.getX();
@@ -179,14 +152,14 @@ class semanticDiagram{
     return(rect);
   }
 
-  // type is trigger, noTrigger or stopCond
+  // type is trigger, holding or stopCond
   condRect(scopeObj,type) {
     //console.log('type: ' + type + ' scopeObj: ' + JSON.stringify(scopeObj))
-    const conditionLine = (type === "trigger") ? scopeObj.trigger : scopeObj.noTrigger;
+    const conditionLine = (type === "trigger") ? scopeObj.trigger : scopeObj.holding;
     const stopCondition = scopeObj.stopCond;
     const scopeRect = scopeObj.scope;
     const start = (type === "trigger") ? conditionLine.getX() :
-	  ((type === "noTrigger") ? (conditionLine.getX() - condRectXShift) : 0);
+	  ((type === "holding") ? (conditionLine.getX() - condRectXShift) : 0);
     const end = (stopCondition) ? (stopCondition.getX() + condRectXShift) : (scopeRect.rightX() - condRectXShift - 7);
     const rectW = end - start;
     const rectH = scopeRect.getH()/3;
@@ -213,11 +186,11 @@ class semanticDiagram{
     var arrowColor = (isOnlyScope)? "red" : "green";
     var isShort = timings.get(timing)[2];
     var arrow = undefined;
-      //if (this.condition === "noTrigger") console.log("noTrigger scope: " + JSON.stringify(sc));
+      //if (this.condition === "holding") console.log("holding scope: " + JSON.stringify(sc));
     var arrowXPos = (this.condition === "regular") ?
 	  sc.trigger.getX() :
-	((this.condition === "noTrigger" && sc.noTrigger)
-	 ? sc.noTrigger.getX() : sc.scope.getX());
+	((this.condition === "holding" && sc.holding)
+	 ? sc.holding.getX() : sc.scope.getX());
     var arrowYPos = this.canvas.getTimelineYPos();
     var rectangle = this.timingRect(color,sc,isShort);
 
@@ -258,12 +231,12 @@ class semanticDiagram{
     return (arrow);
 }
 
-  //type can be "trigger" or "stopCond" or "noTrigger"
+  //type can be "trigger" or "stopCond" or "holding"
   //whereInScope values can be:   1. first     2. last     3. all
   addCondition(type,whereInScope="first") {
     var line = null;
     const name = (type === "trigger") ? "TC" :
-	  ((type === "noTrigger") ? "CC" :
+	  ((type === "holding") ? "CC" :
 	   ((type === "stopCond") ? "SC" :
 	    "Unknown condition type in addCondition"))
     switch(whereInScope){
@@ -316,12 +289,12 @@ class semanticDiagram{
       for (var sc of this.scopes){
 	count = count + 1;
         /* We do not want to add the timing rectangle
-        if there is no trigger AND there is regular condition 
+        if there is no trigger AND there is regular condition
 	or count == 2 & (in/notin,null,before or onlyIn,null,until)
 	*/
 
         if(!((this.condition == "regular" && sc.trigger == null)
-	       || (this.condition == "noTrigger" && sc.noTrigger == null))){
+	       || (this.condition == "holding" && sc.holding == null))){
               this.createTiming(this.timing,sc,count);
         }
       }
@@ -375,8 +348,8 @@ class semanticDiagram{
     if(this.condition === "regular"){
       this.addCondition("trigger","first")
     }
-    else if (this.condition === "noTrigger") {
-      this.addCondition("noTrigger","first")
+    else if (this.condition === "holding") {
+      this.addCondition("holding","first")
     }
     this.addTiming();
 

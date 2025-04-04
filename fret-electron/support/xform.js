@@ -1,38 +1,14 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 //const astsem = require('./ASTSemantics');
 const astsem = require('./LTLParser/LTLASTSemantics');
+const prismASTsem = require('./PrismProp/PrismPropASTSemantics');
 const utils = require('./utils');
+const constants = require ('../app/parser/Constants');
+const { negate } = require('./utilities');
 
 module.exports = {
     optimizePT,
@@ -46,15 +22,17 @@ module.exports = {
     transformTemporalConditions,
     transformPastTemporalConditionsNoBounds,
     transformFutureTemporalConditionsNoBounds,
-    transformTemporalConditionsNoBounds
-
+    transformTemporalConditionsNoBounds,
+    generateFLIPObligations,
+    simplifyPrismProp
 }
 
 const isArray = utils.isArray;
 const isVar = utils.isVar;
 const isAtom = utils.isAtom;
 const setProp = utils.setProp;
-const isEqual = utils.isEqual;
+const isEqual = utils.sameAST; // was isEqual, but sameAST should be faster
+const isString = utils.isString;
 
 const identities = { And : true, Or : false, Plus : 0, Mult : 1 };
 const absorbers = { And : false, Or : true, Mult : 0 };
@@ -107,7 +85,7 @@ const pastTimeSimplifications = [
   ['(Y __p) | (Z FALSE)', trueFn, '(Z __p)'],
   ['HTimed(__l,__r,__p)', trueFn,'H[__l,__r] __p'],
   ['OTimed(__l,__r,__p)', trueFn,'O[__l,__r] __p'],
-  ['STimed(__l,__r,__p,__q)',trueFn,'__p S[__l,__r] __q']  
+  ['STimed(__l,__r,__p,__q)',trueFn,'__p S[__l,__r] __q']
 
           // -xtltl flag given to SALT does this: [ '__p | <| [] __p', trueFn, 'O __p']
 	  // For "regular,within":
@@ -152,9 +130,15 @@ function nIsNumber (sbst) {
   return utils.isIntegerString(sbst.__n);
 }
 
+function mnIsNumber(sbst) {
+    return utils.isIntegerString(sbst.__m) && utils.isIntegerString(sbst.__n)
+}
+
 const futureTemporalConditions = [
     ['persists(__n,__p)', nIsNumber ,'((G[<=__n] __p) & (G[<__n] ! $Right$))'],
-    ['occurs(__n,__p)', nIsNumber,'(((! $Right$) U __p) & (F[<=__n] __p))'],
+    ['persists(__m,__n,__p)', mnIsNumber ,'((G[__m,__n] __p) & (G[<__n] ! $Right$))'],
+  ['occurs(__n,__p)', nIsNumber,'(((! $Right$) U __p) & (F[<=__n] __p))'],
+  ['occurs(__m,__n,__p)', mnIsNumber,'(!$Right) U[__m,__n] __p'],
     // This commented out version assumes there must be a next occurrence of p
     // ['nextOcc(__p,__q)', trueFn, '(X((!__p & !$Right$) U (__p & __q)))']
     // This version is satisfied if there is no next occurrence of p.
@@ -176,9 +160,12 @@ const pastTemporalConditions = [
   // ['preBool(__init,__p)', trueFn, //(sbst) => nonBoolConstant(sbst["__init"]),
   //'(($Left$ & __init) | ((! $Left$) & (Y __p)))'],
   ['preBool(__init,__p)', trueFn, //(sbst) => nonBoolConstant(sbst["__init"]),
-   '(((! (Y TRUE)) & (__init)) | ((! (! Y TRUE) ) & (Y __p)))'],
+   '((Z FALSE) & __init) | ((Y TRUE) & (Y __p))'],
   ['persisted(__n,__p)', nIsNumber,'((H[<=__n] __p) & (H[<__n] ! $Left$))'],
+  ['persisted(__m,__n,__p)',mnIsNumber,'(H[__m,__n]__p) & (H[<__n] ! $Left$)'],
   ['occurred(__n,__p)', nIsNumber,'(((! $Left$) S __p) & (O[<=__n] __p))'],
+  ['occurred(__m,__n,__p)', mnIsNumber,'(! $Left$) S[__m,__n] __p'],
+
   //['prevOcc(__p,__q)', trueFn, '(Z (((! $Left$ & !__p) S __p) => ((! $Left$ & !__p) S (__p & __q))))']
   ['prevOcc(__p,__q)', trueFn, '($Left$ | (Y (((! $Left$ & !__p) S __p) => ((! $Left$ & !__p) S (__p & __q)))))']
 ]
@@ -187,66 +174,39 @@ const temporalConditions = pastTemporalConditions.concat(futureTemporalCondition
 
 const futureTemporalConditionsNoBounds = [
     ['persists(__n,__p)',nIsNumber,'(G[<=__n] __p)'],
+    ['persists(__m,__n,__p)', mnIsNumber,'G[__m,__n] __p'],
     ['occurs(__n,__p)',nIsNumber,'(F[<=__n] __p)'],
+    ['occurs(__m,__n,__p)',mnIsNumber,'(F[__m,__n] __p)'],
     ['nextOcc(__p,__q)', trueFn, '(X((!__p) U (__p & __q)))']
     ]
 
 const pastTemporalConditionsNoBounds = [
     ['persisted(__n,__p)',nIsNumber,'(H[<=__n] __p)'],
+    ['persisted(__m,__n,__p)',mnIsNumber,'(H[__m,__n] __p)'],
     ['occurred(__n,__p)',nIsNumber,'(O[<=__n] __p)'],
+    ['occurred(__m,__n,__p)',mnIsNumber,'(O[__m,__n] __p)'],
     ['prevOcc(__p,__q)', trueFn, '(Y ((!__p) S (__p & __q)))']
 ]
 
 const temporalConditionsNoBounds = pastTemporalConditionsNoBounds.concat(futureTemporalConditionsNoBounds);
 
-/*
-// pat has variables which are strings prefixed with '__'. Return null if no match else
-// a hashmap of variables to subterms of term.
-function matchAST(pat,term) {
-    if (isVar(pat)) return setProp({},pat,term)
-    else if (isAtom(pat)) return ((pat === term) ? {} : null)
-    else if (isArray(pat)) {
-	if (isArray(term) && (pat.length === term.length)) {
-	    var merged = {};
-	    for (let i = 0; i < pat.length; i++) {
-		let m = matchAST(pat[i],term[i])
-		if (m === null) return null
-		else merged = mergeSubsts(merged,m);
-	    }
-	    return merged;
-	} else return null;
-    } else console.log('matchAST says: what type is ' + pat)
-}
+const probExprs = [
+  ['P=?[true]',trueFn,'1'],
+  ['__x / 1', trueFn, '__x']
+]
 
-function mergeSubsts(sbst1,sbst2) {
-    let keys1 = Object.keys(sbst1);
-    let keys2 = Object.keys(sbst2);
-    let intersection = keys1.filter((x) => keys2.includes(x));
-    let isConsistent = intersection.every((v) => isEqual(sbst1[v],sbst2[v]))
-    let r = isConsistent ? {...sbst1,...sbst2} : null
-    //console.log('mergeSubsts: sbst1: ' + JSON.stringify(sbst1) + ' sbst2: ' + JSON.stringify(sbst2) + ' consistent?: '  + isConsistent + ' result: ' + JSON.stringify(r))
-    return r
-}
+const probFormulas = [
+  ['P=?[__p] >= __r',trueFn,'P>=__r[__p]'],
+  //['true & __p',trueFn,'__p'] Boolean simplifications deal with this.
+  // Fortunately TRUE and true have the same abstract syntax (the
+  // boolean value "true").
+]
 
-// given term which may include variables, do the substitution
-function subst(term,sbst) {
-    if (isVar(term)) {
-	let x = sbst[term];
-	return ((x === undefined) ? term : x);
-    } else if (isAtom(term)) { return term; }
-    else if (isArray(term)) {
-	function aux(subterm) {
-	    return subst(subterm,sbst)
-	}
-	return term.map(aux);
-    } else console.log('subst says: what type is ' + term)
-}
-*/
 /*
 // rule returns null if it didn't apply. Apply the rule.
 function rewrite1(term,rule) {
     if (isAtom(term)) return term;
-    else if (!isArray(term)) console.log('rewrite1 says what is ' + term);
+    else if (!isArray(term)) console.log('rewrite1 says what is ' + JSON.stringify(term));
     else { let r = rule(term);
 	   if (r === null) {
 	       function aux(subterm) {
@@ -301,13 +261,24 @@ function applyTriples(term,indexedTriples) {
     let r = null;
     const triples = getApplicableTriples(indexedTriples,extractIndex(term))
     for (let triple of triples) {
-	let result = applyTriple(term,triple);
-	if (result !== null) {
-	    r = result;
-	    break;
-	}
+	r = applyTriple(term,triple);
+	if (r !== null) break;
     }
     return r;
+}
+
+function parsePrismFormulaTriple(triple) {
+    let pat = prismASTsem.PrismPropToAST(triple[0]);
+    let fn = triple[1];
+    let replacement = prismASTsem.PrismPropToAST(triple[2]);
+    return [pat,fn,replacement]
+}
+
+function parsePrismExprTriple(triple) {
+    let pat = prismASTsem.PrismExprToAST(triple[0]);
+    let fn = triple[1];
+    let replacement = prismASTsem.PrismExprToAST(triple[2]);
+    return [pat,fn,replacement]
 }
 
 function parseit(triple) {
@@ -337,13 +308,20 @@ const ftSimplifications =
 const finitizingFuture = indexTriples(finitizeFuture.map(parseit));
 
 const parsedPastTemporalConditions = indexTriples(pastTemporalConditions.map(parseit))
-const parsedFutureTemporalConditions = indexTriples(futureTemporalConditions.map(parseit)) 
+const parsedFutureTemporalConditions = indexTriples(futureTemporalConditions.map(parseit))
 const parsedTemporalConditions = indexTriples(temporalConditions.map(parseit));
 
 const parsedPastTemporalConditionsNoBounds = indexTriples(pastTemporalConditionsNoBounds.map(parseit))
 const parsedFutureTemporalConditionsNoBounds = indexTriples(futureTemporalConditionsNoBounds.map(parseit))
 const parsedTemporalConditionsNoBounds = indexTriples(temporalConditionsNoBounds.map(parseit));
 
+const parsedProbExprSimplifications = probExprs.map(parsePrismExprTriple)
+const parsedProbFormulaSimplifications = probFormulas.map(parsePrismFormulaTriple)
+const probSimplifications = parsedProbExprSimplifications.concat(parsedProbFormulaSimplifications).concat(ftSimplifications)
+
+function applyProbSimplifications(formOrExpr) {
+  return applyTriples(formOrExpr,probSimplifications)
+}
 
 function applyPtSimplifications (term) {
     return applyTriples(term,ptSimplifications);
@@ -384,21 +362,21 @@ function applyTemporalConditionsNoBounds(term) {
 // Apply rules exhaustively to term, starting at the bottom again each time a rule applies.
 function rewrite_bottomup(term,rules) {
     //console.log('term: ' + term);
-    if (isAtom(term)) { let ra = applyRules(term,rules);
-			let r =  ((ra === null) ? term : ra);
-			//console.log('r: ' + r);
-		        return r;
-		      }
-    else if (!isArray(term)) console.log('rewrite_bottomup says what is ' + term);
-    else { function aux(subterm) {
-	     return rewrite_bottomup(subterm,rules);
-           };
-	   let rewritten_subtrees = term.map(aux);
-	   let r = applyRules(rewritten_subtrees,rules);
-	   let ret = (r === null) ? rewritten_subtrees : rewrite_bottomup(r,rules);
-	   //console.log('r: ' + r);
-	   return ret;
-	 }
+  if (isAtom(term)) { const ra = applyRules(term,rules);
+		      const r =  ((ra === null) ? term : ra);
+		      //console.log('r: ' + r);
+		      return r;
+		    }
+  else if (!isArray(term)) console.log('rewrite_bottomup says what is ' + JSON.stringify(term));
+  else { function aux(subterm) {
+    return rewrite_bottomup(subterm,rules);
+  };
+	 const rewritten_subtrees = term.map(aux);
+	 const r = applyRules(rewritten_subtrees,rules);
+	 const ret = (r === null) ? rewritten_subtrees : rewrite_bottomup(r,rules);
+	 //console.log('r: ' + r);
+	 return ret;
+       }
 }
 
 function rule_SinceInclusive (term) {
@@ -408,6 +386,13 @@ function rule_SinceInclusive (term) {
 	 if (sbst !== null) return ['SinceInclusive',sbst['__p'], sbst['__q']];
 	 else return null;
        }
+}
+
+const optimizeProbRules = [applyProbSimplifications, utils.simplifyImplication]
+
+function optimizeProb(formula) {
+  let result = rewrite_bottomup(formula,optimizeProbRules);
+  return result;
 }
 
 const optimizePTrules = [applyPtSimplifications];
@@ -481,7 +466,6 @@ function expandTemporalConditionsNoBounds (ast) {
     return result;
 }
 
-
 function transform(formulaString,transformation) {
     //let AST = astsem.SMVtoAST(formulaString);
     let AST = astsem.LTLtoAST(formulaString);
@@ -497,6 +481,27 @@ function transformToAST(formulaString,transformation) {
     if (AST === undefined) console.log("xform.transform couldn't parse '" + formulaString + "'");
   let transformedAST = transformation(AST);
   return transformedAST;
+}
+
+function transformProb(formulaString,transformation) {
+    let AST = prismASTsem.PrismPropToAST(formulaString);
+    if (AST === undefined) console.log("xform.transform couldn't parse '" + formulaString + "'");
+    let transformedAST = transformation(AST);
+  if (transformedAST === undefined) console.log("xform.transform transformed '" + formulaString + "' into undefined")
+    let transformedString = prismASTsem.ASTtoPrismProp(transformedAST);
+    return transformedString;
+}
+
+function transformProbToAST(formulaString,transformation) {
+    let AST = prismASTsem.PrismPropToAST(formulaString);
+    if (AST === undefined) console.log("xform.transform couldn't parse '" + formulaString + "'");
+  let transformedAST = transformation(AST);
+  return transformedAST;
+}
+
+function simplifyPrismProp(formulaString) {
+  const result = transformProb(formulaString,optimizeProb);
+  return result;
 }
 
 function transformPastTemporalConditions (formulaString) {
@@ -529,6 +534,326 @@ function transformTemporalConditionsNoBounds (formulaString) {
     return result;
 }
 
+//This function replaces multiple occurences of the same atomic proposition with indexed variants.
+//For example, if atomic proposition `a` appears 2 times in the formula, its occurences will be
+//replaced with two new atomic propositions, `a_0` and `a_1`.
+function linearizeFormulaAST(vars, formulaAST) {
+    if (isVar(formulaAST)) {
+        return formulaAST;
+    } else if (isAtom(formulaAST)) {
+        if (formulaAST in vars) {
+            let newVar = formulaAST+'_'+vars[formulaAST]
+            vars[formulaAST]--
+            formulaAST = newVar
+            return formulaAST
+        }
+    } else if (!isArray(formulaAST)) return formulaAST;
+    else {
+        function aux(subterm) {
+            return linearizeFormulaAST(vars, subterm);
+        }
+        return formulaAST.map(aux);
+    }
+    return formulaAST
+}
+
+//This function is the inverse of linearizeFormulaAST i.e., it replaces indexed variants with the original atomic proposition.
+function delinearizeFormulaAST(varsObj, formulaAST) {
+    let conditionVars = Object.keys(varsObj);
+    if (isVar(formulaAST)) {
+        return formulaAST;
+    } else if (isAtom(formulaAST)) {
+        if (conditionVars.includes(formulaAST)) {
+            formulaAST = varsObj[formulaAST];
+            return formulaAST;
+        }
+    } else if (!isArray(formulaAST)) return formulaAST;
+    else {
+        function aux(subterm) {
+            return delinearizeFormulaAST(varsObj, subterm);
+        }
+        return formulaAST.map(aux);
+    }
+    return formulaAST;
+}
+
+// Returns e.g. { a : 1, b :
+function getVars (formulaAST, vars = {}) {
+    if (isVar(formulaAST)) {
+        return formulaAST;
+    } else if (isString(formulaAST) && ! constants.predefinedVars.includes(formulaAST)) {
+        if (!(formulaAST in vars)) {
+            vars[formulaAST] = 0;
+        } else {
+            vars[formulaAST]++
+        }
+    } else if (isArray(formulaAST)) {
+        function aux(subterm) {
+         return getVars(subterm, vars);
+        };
+        let varsInSubtrees = formulaAST.slice(1).map(aux);
+        for (var i = 0; i < varsInSubtrees.length; i++) {
+            vars = {...vars, ...varsInSubtrees[i]};
+        }
+    }
+    return vars;
+}
+
+function occursIn(x,ast) {
+  if (!isArray(ast)) return (x === ast)
+  else return ast.some((y) => occursIn(x,y))
+}
+
+let negNormalizationRules = [
+  ['! (! __p)', trueFn, '__p'],
+  ['!(__p | __q)', trueFn, '!__p & !__q'],
+  ['!(__p & __q)', trueFn, '!__p | !__q'],
+  ['__p -> __q', trueFn, '!__p | __q'],
+  ['__p <-> __q', trueFn, '(__p -> __q) & (__q -> __p)'],
+  ['! X __p', trueFn, 'X ! __p'],
+  ['!(__p U __q)', trueFn, '!__p V !__q'],
+  ['!(__p V __q)', trueFn, '!__p U !__q'],
+  ['! G __p', trueFn, 'F ! __p'],
+  ['! F __p', trueFn, 'G ! __p'],
+
+  //PLTL
+  ['! Y __p', trueFn, 'Z ! __p'],
+  ['! Z __p', trueFn, 'Y ! __p'],
+  ['!(__p S __q)', trueFn, '!__p T !__q'],
+  ['!(__p T __q)', trueFn, '!__p S !__q'],
+  ['! H __p', trueFn, 'O ! __p'],
+  ['! O __p', trueFn, 'H ! __p'],
+
+  //MTL
+  ['!(__p U[__l, __u] __q)', trueFn, '!__p V[__l, __u] !__q'],
+  ['!(__p V[__l, __u] __q)', trueFn, '!__p U[__l, __u] !__q'],
+  ['! G[__l, __u] __p', trueFn, 'F[__l, __u] ! __p'],
+  ['! F[__l, __u] __p', trueFn, 'G[__l, __u] ! __p'],
+  ['!(__p S[__l, __u] __q)', trueFn, '!__p T[__l, __u] !__q'],
+  ['!(__p T[__l, __u] __q)', trueFn, '!__p S[__l, __u] !__q'],
+  ['! H[__l, __u] __p', trueFn, 'O[__l, __u] ! __p'],
+  ['! O[__l, __u] __p', trueFn, 'H[__l, __u] ! __p'],
+  ]
+
+let negNormalizationRulesParsed = indexTriples(negNormalizationRules.map(parseit))
+
+function applyNegNormalization(term) {
+  return applyTriples(term,negNormalizationRulesParsed)
+}
+
+function doNegNormalization(AST) {
+  const result = rewrite_bottomup(AST,[applyNegNormalization])
+  return result
+}
+
+
+// Note that the F rule introduces a => so the result is not in negation
+// normal form.
+let flipRules = [
+  ['flip(__var,__p)',
+   (sbst) => (! occursIn(sbst['__var'],sbst['__p'])),
+   'FALSE'],
+
+  ['flip(__var,__var)', trueFn, '__var'],
+  ['flip(__var, ! __var)',trueFn,'! __var'],
+
+  ['flip(__a, __phi_a & __phi_prime)',
+   (sbst) => (occursIn(sbst['__a'],sbst['__phi_a'])),
+   'flip(__a,__phi_a) & __phi_prime'],
+
+  ['flip(__a, __phi_prime & __phi_a)',
+   (sbst) => (occursIn(sbst['__a'],sbst['__phi_a'])),
+   '__phi_prime & flip(__a,__phi_a)'],
+
+  ['flip(__a, __phi_a | __phi_prime)',
+   (sbst) => (occursIn(sbst['__a'],sbst['__phi_a'])),
+   'flip(__a,__phi_a) & !__phi_prime'],
+
+  ['flip(__a, __phi_prime | __phi_a)',
+   (sbst) => (occursIn(sbst['__a'],sbst['__phi_a'])),
+   '!__phi_prime & flip(__a,__phi_a)'],
+
+  ['flip(__a, X __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    'X flip(__a, __phi_a)'],
+
+  ['flip(__a, __phi_a U __phi_prime)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_a U __phi_prime) & (!__phi_prime U (flip(__a,__phi_a) & !__phi_prime))'],
+
+  ['flip(__a, __phi_prime U __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_prime U __phi_a) & (!__phi_prime V (__phi_a => flip(__a, __phi_a)))'],
+
+  ['flip(__a, __phi_a V __phi_prime)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_a V __phi_prime) & ((__phi_a => flip(__a, __phi_a)) U !__phi_prime)'],
+
+  ['flip(__a, __phi_prime V __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_prime V __phi_a) & (!__phi_prime U flip(__a, __phi_a))'],
+
+  ['flip(__a, F __phi_a)',
+   (sbst) => (occursIn(sbst['__a'],sbst['__phi_a'])),
+   '(F __phi_a) & G(__phi_a => flip(__a,__phi_a))'],
+
+  ['flip(__a, G __phi_a)',
+   (sbst) => (occursIn(sbst['__a'],sbst['__phi_a'])),
+   '(G __phi_a) & F flip(__a,__phi_a)'],
+
+  //PLTL
+
+  ['flip(__a, Y __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    'Y flip(__a, __phi_a)'],
+  ['flip(__a, Z __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    'Y flip(__a, __phi_a)'],
+  ['flip(__a, __phi_a S __phi_prime)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_a S __phi_prime) & (!__phi_prime S (flip(__a,__phi_a) & !__phi_prime))'],
+  ['flip(__a, __phi_prime S __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_prime S __phi_a) & (!__phi_prime T (__phi_a => flip(__a, __phi_a)))'],
+  ['flip(__a, __phi_a T __phi_prime)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_a T __phi_prime) & ((__phi_a => flip(__a, __phi_a) S (! __phi_prime)))'],
+  ['flip(__a, __phi_prime T __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_prime T __phi_a) & (!__phi_prime S flip(__a, __phi_a))'],
+  ['flip(__a, O __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(O __phi_a) & H (__phi_a => flip(__a, __phi_a))'],
+  ['flip(__a, H __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(H __phi_a) & O flip(__a, __phi_a)'],
+
+  //MTL
+  ['flip(__a, __phi_a U[__l,__u] __phi_prime)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_a U[__l,__u] __phi_prime) & (!__phi_prime U[__l,__u] (flip(__a,__phi_a) & !__phi_prime))'],
+
+  ['flip(__a, __phi_prime U[__l,__u] __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_prime U[__l,__u] __phi_a) & (!__phi_prime V[__l,__u] (__phi_a => flip(__a, __phi_a)))'],
+
+  ['flip(__a, __phi_a V[__l,__u] __phi_prime)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_a V[__l,__u] __phi_prime) & ((__phi_a => flip(__a, __phi_a)) U[__l,__u] !__phi_prime)'],
+
+  ['flip(__a, __phi_prime V[__l,__u] __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_prime V[__l,__u] __phi_a) & (!__phi_prime U[__l,__u] flip(__a, __phi_a))'],
+  ['flip(__a, F[__l,__u] __phi_a)',
+   (sbst) => (occursIn(sbst['__a'],sbst['__phi_a'])),
+   '(F[__l,__u] __phi_a) & G[__l,__u](__phi_a => flip(__a,__phi_a))'],
+
+  ['flip(__a, G[__l,__u] __phi_a)',
+   (sbst) => (occursIn(sbst['__a'],sbst['__phi_a'])),
+   '(G[__l,__u] __phi_a) & F[__l,__u] flip(__a,__phi_a)'],
+
+  ['flip(__a, __phi_a S[__l,__u] __phi_prime)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_a S[__l,__u] __phi_prime) & (!__phi_prime S[__l,__u] (flip(__a,__phi_a) & !__phi_prime))'],
+  ['flip(__a, __phi_prime S[__l,__u] __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_prime S[__l,__u] __phi_a) & (!__phi_prime T[__l,__u] (__phi_a => flip(__a, __phi_a)))'],
+  ['flip(__a, __phi_a T[__l,__u] __phi_prime)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_a T[__l,__u] __phi_prime) & ((__phi_a => flip(__a, __phi_a) S[__l,__u] (! __phi_prime)))'],
+  ['flip(__a, __phi_prime T[__l,__u] __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),
+    '(__phi_prime T[__l,__u] __phi_a) & (!__phi_prime S[__l,__u] flip(__a, __phi_a))'],
+  ['flip(__a, O[__l,__u] __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])), '(O[__l,__u] __phi_a) & H[__l,__u] (__phi_a => flip(__a, __phi_a))'],
+  ['flip(__a, H[__l,__u] __phi_a)',
+    (sbst) => (occursIn(sbst['__a'], sbst['__phi_a'])),'(H[__l,__u] __phi_a) & O[__l,__u] flip(__a, __phi_a)'],
+]
+
+let flipRulesParsed = indexTriples(flipRules.map(parseit))
+
+function applyFlip(term) {
+  return applyTriples(term,flipRulesParsed)
+}
+
+function doFlips(AST) {
+  const result = rewrite_bottomup(AST,[applyFlip])
+  return result
+}
+
+function testObl(v,formula) {
+  console.log('testObl(' + v + ', "' + formula + ' ")')
+  let formulaAST = astsem.LTLtoAST(formula);
+  console.log(formulaAST)
+  let vars = getVars(formulaAST);
+  console.log('getVars: ' + JSON.stringify(vars))
+
+  let conditions = []
+  for (const varName in vars) {
+    for (var i = 0; i <= vars[varName]; i++) {
+        conditions.push(varName+'_'+i);
+    }
+  }
+  console.log('Conditions: ' + JSON.stringify(conditions))
+
+  let linFormulaAST = linearizeFormulaAST(vars, formulaAST)
+  console.log('Linearized Formula: '+ JSON.stringify(astsem.ASTtoLTL(linFormulaAST)))
+
+  let negNormalAST = doNegNormalization(linFormulaAST);
+  console.log('Negation normalized: ' + JSON.stringify(astsem.ASTtoLTL(negNormalAST)))
+
+  let obl = doFlips(['flip', v, negNormalAST])
+  console.log('obligation: ' + JSON.stringify(astsem.ASTtoLTL(obl)))
+}
+
+
+//For each input LTL formula:
+//1. Retrieve AST from formula
+//2. Replace arithmetic expressions with atomic propositions (abstractArithExprsAndNonMonotonicOpsInAST)
+//3. Linearize AST (linearizeFormulaAST)
+//4. Transform AST to Negation Normal Form (doNegNormalization)
+//5. For each condition:
+//      5.1 Apply FLIP rules to generate trap formula AST (doFlips)
+//      5.2 De-Linearize trap formula's AST (delinearizeFormulaAST)
+//      5.3 Re-introduce arithmetic expressions that were abstracted in step 2 (concretizeArithExprsInAST)
+//      5.4 Negate trap formula AST
+//      5.5 Transform AST to LTL or CoCoSpec (ASTtoLTL, ASTtoCoCo)
+function generateFLIPObligations(formulas, format) {
+    let allObligations = []
+    for (const formula in formulas) {
+        let formulaAST = astsem.LTLtoAST(formulas[formula]);
+        let { result, abstractions } = astsem.abstractArithExprsAndNonMonotonicOpsInAST(formulaAST);
+        let abstractedFormulaAST = result;
+        let vars = getVars(abstractedFormulaAST);
+        let conditions = []
+        let conditionsToVars = {}
+        for (const varName in vars) {
+            for (var i = 0; i <= vars[varName]; i++) {
+                let indexedVarName = varName+'_'+i
+                conditions.push(indexedVarName);
+                conditionsToVars[indexedVarName] = varName;
+            }
+        }
+
+        let linFormulaAST = linearizeFormulaAST(vars, abstractedFormulaAST)
+        let negNormalAST = doNegNormalization(linFormulaAST);
+        for (const c of conditions) {
+            let trapFormulaAST = doFlips(['flip', c, negNormalAST])
+            let delinTrapFormulaAST = delinearizeFormulaAST(conditionsToVars, trapFormulaAST);
+            let concreteTrapFormulaAST = astsem.concretizeArithExprsInAST(delinTrapFormulaAST, abstractions);
+            let negateTrapFormulaAST = ['Not', concreteTrapFormulaAST];
+            let negNormalTrapFormulaAST = doNegNormalization(negateTrapFormulaAST);
+            if (format === 'cocospec') {
+                //Optimize past-time formula since we know it's a CoCoSpec export.
+                let optimizedTrapFormulaAST = optimizePT(negNormalTrapFormulaAST);
+                allObligations.push([formula, c, astsem.ASTtoCoCo(optimizedTrapFormulaAST)])
+            } else {
+                allObligations.push([formula, c, astsem.ASTtoLTL(negateTrapFormulaAST)])
+            }
+        }
+    }
+    return allObligations;
+}
 
 /*
 function rule_NotOfNot (term) {
@@ -655,6 +980,37 @@ testapply(x3)
 /*
 console.log(transform('((((((! FALSE) & (! LAST)) & (X FALSE)) | LAST) V (((((! FALSE) & (! LAST)) & (X FALSE)) | LAST) -> r)) | FALSE)',optimizeFT))
 
+
+/*
+function testProb(form) {
+  console.log('\nFormula = ' + form)
+  const parsedForm = prismASTsem.PrismPropToAST(form)
+  console.log('AST = ' + JSON.stringify(parsedForm))
+  const parsedFormOpt = optimizeProb(parsedForm)
+  console.log('Optimized AST = ' + JSON.stringify(parsedFormOpt))
+  const formOpt = prismASTsem.ASTtoPrismProp(parsedFormOpt)
+  console.log('Optimized = ' + formOpt);
+  const s = simplifyPrismProp(form);
+  console.log('simplifyPrismProp = ' + s)
+}
+
+//testProb(form)
+//testProb(form2)
+testProb(form3)
+//testProb(form4)
+=======
+let form = 'P>=1[!p & X(p) => P=?[!p & X(p) & X(q)]/P=?[!p & X(p)] >= 0.8]'
+let form2 = 'P=?[p] >= 0.8'
+
+let form3 = 'P>=1[p => P=?[p & X(q)]/P=?[p] >= 0.8]'
+
+let form4 = 'P>=1[(G[0,3](p)) => P=?[(G[0,3](p)) & X(q)]/P=?[(G[0,3](p))] >= 0.8]'
+
+testProb(form)
+testProb(form2)
+testProb(form3)
+testProb(form4)
+
 console.log(optimizeFT(astsem.LTLtoAST('FALSE | ite(safe,green,red)')))
 console.log(transformTemporalConditions("persisted(3,!p) & occurred(4,p)"))
 console.log(transformTemporalConditionsNoBounds("persisted(3,!p) & occurred(4,p)"))
@@ -664,9 +1020,6 @@ console.log(transformFutureTemporalConditions("persists(3,!p) & occurs(4,p)"))
 console.log(transformFutureTemporalConditionsNoBounds("persists(3,!p) & occurs(4,p)"))
 console.log(transformTemporalConditions("m"))
 
-*/
-
-/*
 console.log(transform('persisted(3,temp>100)',expandTemporalConditions));
 console.log(transform('(G ((!(((! m) & (! FALSE) & X m) & (!FALSE))) | ((((! m) & (! FALSE) & X m) & (!FALSE)) & (X ((((m & (! FALSE)) & X (! m)) | FALSE) V post))))) & (m -> ((m & X !m) V post))',optimizeFT))
 console.log(JSON.stringify(trueFn))

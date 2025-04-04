@@ -1,35 +1,8 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -57,14 +30,13 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import TextField from '@material-ui/core/TextField';
 import Select from '@material-ui/core/Select';
 
-import Checkbox from '@material-ui/core/Checkbox';
+import Radio from '@material-ui/core/Radio';
 
 /*analysis icons*/
 import CheckCircleOutlineIcon from '@material-ui/icons/CheckCircleOutline';
 import HighlightOffIcon from '@material-ui/icons/HighlightOff';
 import HelpOutlineIcon from '@material-ui/icons/HelpOutline';
 import CircularProgress from '@material-ui/core/CircularProgress';
-
 
 /*Realizability checking*/
 import ChordDiagram from './ChordDiagram';
@@ -218,7 +190,7 @@ export function ResultIcon(props) {
     const {reskey, result, time, error} = props;
 
     return (
-      <Tooltip title={<span style={{ whiteSpace: 'pre-line' }}> {(result === 'ERROR' ? ("The following error(s) occured at the solver level:\n" + error) : result) +
+      <Tooltip title={<span style={{ whiteSpace: 'pre-line' }}> {(result === 'ERROR' ? error : result) +
         (time !== undefined ? time : '')} </span>}>
         {result === 'REALIZABLE' ?
           <CheckCircleOutlineIcon id = {"qa_rlzCont_res_"+reskey+"_"+result} style={{fontSize : '20px', verticalAlign : 'bottom', color : '#68BC00'}}/> :
@@ -428,11 +400,28 @@ class RealizabilityContent extends React.Component {
     let currentProjectState = {selected, ccSelected, monolithic, compositional, timeout, projectReport, retainFiles, selectedEngine};
 
     self.setState({actionsMenuOpen: false});
+
+    var systemComponentIndex = projectReport.systemComponents.findIndex( sc => sc.name === selected.component_name);
+    var connectedComponentIndex = (systemComponentIndex !== -1 && projectReport.systemComponents[systemComponentIndex].compositional) ? projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents.findIndex( cc => cc.ccName === ccSelected ) : 0;
+    if(compositional) {
+      projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisSolver = selectedEngine;
+      projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisStatus = 'PROCESSING';  
+    } else {
+      projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisSolver = selectedEngine;
+      projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisStatus = 'PROCESSING';
+    }
+
     ipcRenderer.invoke('diagnoseUnrealizableRequirements', [currentProjectState, selectedReqs]).then((result) => {
       self.setState({
         projectReport: result.projectReport,
         diagnosisRequirements: result.diagnosisRequirements
       });
+    }).catch(err => {
+      self.setState((prevState) => ({
+        ...prevState,
+        projectReport: err.projectReport,
+        diagnosisRequirements: err.diagnosisRequirements
+      }))
     })
   }
 
@@ -476,10 +465,23 @@ class RealizabilityContent extends React.Component {
     })
   }
 
-  disableSimulateRealizableButton = (systemComponentIndex, connectedComponentIndex) => {
-    const {projectReport, monolithic, compositional} = this.state;            
+  isNotJKind = (systemComponentIndex) => {
+    const {projectReport, monolithic, compositional} = this.state;
+    let analysisSolver;
     
-    let isNotJKind = (analysisSolver) => {return analysisSolver !== 'jkind'};
+    if (monolithic || compositional) {
+      if (compositional) {
+          analysisSolver = projectReport.systemComponents[systemComponentIndex].compositional.solver;                     
+      } else {        
+          analysisSolver = projectReport.systemComponents[systemComponentIndex].monolithic.solver;                  
+      }
+    }
+
+    return analysisSolver !== 'jkind'
+  }
+
+  disableSimulateRealizableButton = (systemComponentIndex, connectedComponentIndex) => {
+    const {projectReport, monolithic, compositional} = this.state;
     
     if (!(this.LTLSimStatus.ltlsim && this.LTLSimStatus.nusmv)) {
       return true;
@@ -488,13 +490,11 @@ class RealizabilityContent extends React.Component {
     if (monolithic || compositional) {
       if (compositional) {
         if (projectReport.systemComponents[systemComponentIndex].compositional.result !== 'UNCHECKED') {
-          let analysisSolver = projectReport.systemComponents[systemComponentIndex].compositional.solver;        
-          return isNotJKind(analysisSolver) || projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].result !== 'REALIZABLE';
+          return this.isNotJKind(systemComponentIndex) || projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].result !== 'REALIZABLE';
         }       
       } else {
         if (projectReport.systemComponents[systemComponentIndex].monolithic.result !== 'UNCHECKED') {
-          let analysisSolver = projectReport.systemComponents[systemComponentIndex].monolithic.solver;        
-          return isNotJKind(analysisSolver) || projectReport.systemComponents[systemComponentIndex].monolithic.result !== 'REALIZABLE';        
+          return this.isNotJKind(systemComponentIndex) || projectReport.systemComponents[systemComponentIndex].monolithic.result !== 'REALIZABLE';
         }      
       }
     }
@@ -568,12 +568,14 @@ class RealizabilityContent extends React.Component {
     var menuItems =[];
     var monolithicStatus = {};
     var compositionalStatus = {};
+    var monolithicDiagStatus = {};
+    var compositionalDiagStatus = {};
 
     for (const comp of projectReport.systemComponents) {
       monolithicStatus[comp.name] = comp.monolithic ? comp.monolithic.result : '';
-    }
-    for (const comp of projectReport.systemComponents) {
+      monolithicDiagStatus[comp.name] = comp.monolithic ? comp.monolithic.diagnosisStatus : '';
       compositionalStatus[comp.name] = comp.compositional ? comp.compositional.result : '';
+      compositionalDiagStatus[comp.name] = comp.compositional ? comp.compositional.connectedComponents.map(cc => cc.diagnosisStatus) : [];
     }
 
     var status = {};
@@ -588,15 +590,20 @@ class RealizabilityContent extends React.Component {
       time[comp.name] = comp.monolithic ? comp.monolithic.time : '';
     };
 
-    var diagStatus, diagReport;
+    var diagStatus, diagReport;    
     if (selected !== '' && selected !== 'all' && projectReport.systemComponents[systemComponentIndex]) {
-
       if (projectReport.systemComponents[systemComponentIndex].compositional && projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents.length > 0) {
         diagStatus = monolithic ? projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisStatus : projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisStatus;
 
         diagReport = monolithic ? projectReport.systemComponents[systemComponentIndex].monolithic.diagnosisReport : projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].diagnosisReport;
       }
     }
+
+    var globalStatus = [].concat(Object.values(monolithicStatus))
+                          .concat(Object.values(compositionalStatus))
+                          .concat(Object.values(monolithicDiagStatus))
+                          .concat(Object.values(compositionalDiagStatus).flat(Infinity))
+    var analysisProcessing = globalStatus.includes('PROCESSING')
 
     let actionsMargin = {marginRight: '55%', transition: 'margin-right 450ms cubic-bezier(0.23, 1, 0.32, 1)' };
 
@@ -666,138 +673,152 @@ class RealizabilityContent extends React.Component {
     }
 
     return(
-      <div>
+      <div>        
         <SelectRequirementsContext.Provider value={this.state}>
           <div>
             <SelectRequirementsContext.Consumer>
                 {({selectedReqs, setMessage}) =>                            
                   <div>
                     {components.length !== 0 &&
-                      <div style={{alignItems: 'flex-end', display: 'flex', flexWrap :'wrap'}}>
-                      <Grid container alignItems="flex-end">          
-                        <FormControl className={classes.formControl} required>
-                          <InputLabel>System Component</InputLabel>
-                          <Select
-                            id="qa_rlzCont_sel_sysComp"
-                            value={selected}
-                            onChange={this.handleChange('selected')}
-                          >
-                              {menuItems.concat(stableSort(components, getSorting(order, orderBy))
-                                .map(n => {
+                      <div>
+                      <Grid container direction="row" justifyContent="space-between" alignItems="center">
+                          <Grid item>
+                          <div style={{display: 'flex', alignItems:'center'}}>
+                          <FormControl className={classes.formControl} required>
+                            <InputLabel>System Component</InputLabel>
+                            <Select
+                              id="qa_rlzCont_sel_sysComp"
+                              value={selected}
+                              onChange={this.handleChange('selected')}
+                            >
+                                {menuItems.concat(stableSort(components, getSorting(order, orderBy))
+                                  .map(n => {
 
-                                return (
-                                  <Tooltip
-                                    key={n.component_name}
-                                    value={!this.isComponentComplete(n.component_name) ? '' : n}
-                                    title={!this.isComponentComplete(n.component_name) ? 'Analysis is not possible for this component. Please complete mandatory variable fields in Variable Mapping first.' : ''}>
-                                      <span key={n.component_name}>
-                                      <MenuItem key={n.component_name} 
-                                        id={"qa_rlzCont_mi_sysComp_"+n.component_name}
-                                        disabled={!this.isComponentComplete(n.component_name)}>
-                                        <div key={n.component_name} style={{display : 'flex', alignItems : 'center'}}>
-                                          {n.component_name}
-                                          &nbsp;
-                                          <ResultIcon reskey={n.component_name} result={status[n.component_name] !== undefined ? status[n.component_name] : ''} time={(monolithic && time[n.component_name] !== undefined) ? ' - ' + time[n.component_name] : ''}
-                                            error={
-                                              (systemComponentIndex !== -1 && projectReport.systemComponents[systemComponentIndex].monolithic) ? projectReport.systemComponents[systemComponentIndex].monolithic.error : ''
-                                            }/>
-                                        </div>
-                                      </MenuItem>
-                                      </span>
-                                  </Tooltip>
-                                  )
-                              }))}
-                          </Select>
-                        </FormControl>
-                        <FormControlLabel
-                          disabled={
-                            selected === '' || (selected !== 'all' && systemComponentIndex > -1 && (!projectReport.systemComponents[systemComponentIndex].compositional || projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents.length <= 1))                  
-                          }
-                          control={
-                            <Checkbox
-                              id="qa_rlzCont_cb_compositional"
-                              checked={compositional}
-                              onChange={this.handleChange('compositional')}
-                              value="compositional"
-                              color="primary"
-                            />
-                          }
-                          label="Compositional"
-                        />
-                        <FormControlLabel
-                          disabled={selected === '' || (systemComponentIndex > -1 && !projectReport.systemComponents[systemComponentIndex].compositional)}
-                          control={
-                            <Checkbox
-                              id="qa_rlzCont_cb_monolithic"
-                              checked={monolithic}
-                              onChange={this.handleChange('monolithic')}
-                              value="monolithic"
-                              color="primary"
-                            />
-                          }
-                          style={actionsMargin}
-                          label="Monolithic"
-                        />
+                                  return (
+                                    <Tooltip
+                                      key={n.component_name}
+                                      value={!this.isComponentComplete(n.component_name) ? '' : n}
+                                      title={!this.isComponentComplete(n.component_name) ? 'Analysis is not possible for this component. Please complete mandatory variable fields in Variable Mapping first.' : ''}>
+                                        <span key={n.component_name}>
+                                        <MenuItem key={n.component_name} 
+                                          id={"qa_rlzCont_mi_sysComp_"+n.component_name}
+                                          disabled={!this.isComponentComplete(n.component_name)}>
+                                          <div key={n.component_name} style={{display : 'flex', alignItems : 'center'}}>
+                                            {n.component_name}
+                                            &nbsp;
+                                            <ResultIcon reskey={n.component_name} result={status[n.component_name] !== undefined ? status[n.component_name] : ''} time={(monolithic && time[n.component_name] !== undefined) ? ' - ' + time[n.component_name] : ''}
+                                              error={
+                                                (systemComponentIndex !== -1 && projectReport.systemComponents[systemComponentIndex].monolithic) ? projectReport.systemComponents[systemComponentIndex].monolithic.error : ''
+                                              }/>
+                                          </div>
+                                        </MenuItem>
+                                        </span>
+                                    </Tooltip>
+                                    )
+                                }))}
+                            </Select>
+                          </FormControl>
+                          <FormControlLabel
+                            disabled={
+                              selected === '' || (selected !== 'all' && systemComponentIndex > -1 && (!projectReport.systemComponents[systemComponentIndex].compositional || projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents.length <= 1))                  
+                            }
+                            control={
+                              <Radio
+                                id="qa_rlzCont_cb_compositional"
+                                checked={compositional}
+                                onChange={this.handleChange('compositional')}
+                                value="compositional"
+                                color="primary"
+                              />
+                            }
+                            label="Compositional"
+                          />
+                          <FormControlLabel
+                            disabled={selected === '' || (systemComponentIndex > -1 && !projectReport.systemComponents[systemComponentIndex].compositional)}
+                            control={
+                              <Radio
+                                id="qa_rlzCont_cb_monolithic"
+                                checked={monolithic}
+                                onChange={this.handleChange('monolithic')}
+                                value="monolithic"
+                                color="primary"
+                              />
+                            }
+                            label="Monolithic"
+                          />
+                          </div>
+                          </Grid>
+                        {analysisProcessing &&
+                          <Grid item>
+                            <div style={{display : 'flex', alignItems: 'center'}}>                                                            
+                              <Typography variant="body2">Analysis in progress, do not exit REALIZABILITY CHECKING tab...</Typography>
+                              <CircularProgress size={15}/>                              
+                            </div>
+                          </Grid>
+                        }
                         {!dependenciesExist &&
                           <Tooltip title={"Dependencies missing for realizability checking. Click \"HELP\" for details."}>
                             <ErrorIcon id="qa_rlzCont_icon_depMissing" className={classes.wrapper} style={{verticalAlign : 'bottom'}} color='error'/>
                           </Tooltip>
                         }
-                        {monolithic && diagStatus === 'ERROR' &&
-                          <Tooltip title={(systemComponentIndex !== -1 && projectReport.systemComponents[systemComponentIndex]) ? projectReport.systemComponents[systemComponentIndex].monolithic.error.toString() : ''}>
+                        {(diagStatus === 'ERROR' && !analysisProcessing) &&
+                          <Tooltip title={(systemComponentIndex !== -1 && projectReport.systemComponents[systemComponentIndex]) ? (monolithic ? projectReport.systemComponents[systemComponentIndex].monolithic.error.toString() : projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].error.toString()) : 'Diagnosis terminated unexpectedly.'}>
                             <ErrorIcon id="qa_rlzCont_icon_analysisError" className={classes.wrapper} style={{verticalAlign: 'bottom'}} color='error'/>
                           </Tooltip>
                         }
-                        <div className={classes.wrapper}>
-                          <Button 
-                            id="qa_rlzCont_btn_actions"
-                            ref={this.anchorRef}
-                            aria-controls={actionsMenuOpen ? 'realizability_actions_menu' : undefined}
-                            aria-haspopup="true"
-                            aria-expanded={actionsMenuOpen ? 'true' : undefined}   
-                            size="small" variant="contained" color="secondary"
-                            disabled={status[selected.component_name] === 'PROCESSING' || diagStatus === 'PROCESSING'}
-                            endIcon={<KeyboardArrowDownIcon />}
-                            onClick={(event) => this.handleActionsClick(event)}>
-                            Actions        
-                          </Button>
-                          <Menu id="qa_rlzCont_sel_actions" anchorEl={this.anchorRef.current} open={actionsMenuOpen} onClose={(event) => this.handleActionsMenuClose(event)} MenuListProps={{'aria-labelledby': 'realizability_actions_button'}}>
-                            <MenuItem 
-                            id="qa_rlzCont_btn_check"
-                            disabled={selectedReqs.length === 0 || !dependenciesExist || (dependenciesExist && selected === '')}
-                            onClick={(event) => this.checkRealizability(event, selectedReqs)}>Check Realizability</MenuItem>
-                            <Tooltip title={'This action is available only when using the \'JKind\' engine option.'}>
-                              <span>
-                                <MenuItem
-                                  id="qa_rlzCont_btn_realizSimulate"
-                                  disabled={this.disableSimulateRealizableButton(systemComponentIndex, connectedComponentIndex)}
-                                  onClick={(event) => this.openLTLSimDialog(event)}
-                                >
-                                  {'Simulate Realizable Requirements' + (compositional ? (' ('+ccSelected.toUpperCase()+')') : '')}
-                                </MenuItem>
-                              </span>
-                            </Tooltip>
-                            <MenuItem 
-                              id="qa_rlzCont_btn_diagnose"
-                              onClick={(event) => this.diagnoseSpec(event, selectedReqs)}
-                              disabled={selectedReqs.length === 0 || status[selected.component_name] === 'PROCESSING' || diagStatus === 'PROCESSING' || !dependenciesExist || (dependenciesExist && (selected === '' || selected === 'all')) ||
-                              (dependenciesExist && selected !== '' && compositional && projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].result !== 'UNREALIZABLE') ||
-                                (selected !== '' && monolithic && status[selected.component_name] !== 'UNREALIZABLE')}
-                            >
-                              {'Diagnose Unrealizable Requirements' + (compositional ? (' ('+ccSelected.toUpperCase()+')') : '')}
-                            </MenuItem>
-                            <MenuItem id="qa_rlzCont_btn_save">
-                              <SaveRealizabilityReport classes={{vAlign: classes.vAlign}} enabled={projectReport.systemComponents.length > 0 && status[selected.component_name] !== 'PROCESSING' && diagStatus !== 'PROCESSING'} projectReport={projectReport}/>
-                            </MenuItem>
-                            <MenuItem id="qa_rlzCont_btn_settings" onClick={() => this.handleSettingsOpen()}>Change Settings</MenuItem>
-                          </Menu>
-                        </div>
-                        
-                        <div className={classes.wrapper}>
-                          <Button id="qa_rlzCont_btn_help" color="secondary" onClick={this.handleHelpOpen} size="small" className={classes.vAlign} variant="contained"> Help </Button>
-                        </div>
+                        <Grid item>
+                          <Grid container direction="row" spacing={2}>
+                            <Grid item>
+                            <Button 
+                              id="qa_rlzCont_btn_actions"
+                              ref={this.anchorRef}
+                              aria-controls={actionsMenuOpen ? 'realizability_actions_menu' : undefined}
+                              aria-haspopup="true"
+                              aria-expanded={actionsMenuOpen ? 'true' : undefined}   
+                              size="small" variant="contained" color="secondary"
+                              disabled={analysisProcessing || !dependenciesExist || (dependenciesExist && selected === '')}
+                              endIcon={<KeyboardArrowDownIcon />}
+                              onClick={(event) => this.handleActionsClick(event)}>
+                              Actions        
+                            </Button>
+                            <Menu id="qa_rlzCont_sel_actions" anchorEl={this.anchorRef.current} open={actionsMenuOpen} onClose={(event) => this.handleActionsMenuClose(event)} MenuListProps={{'aria-labelledby': 'realizability_actions_button'}}>
+                              <MenuItem 
+                              id="qa_rlzCont_btn_check"
+                              disabled={selectedReqs.length === 0 || !dependenciesExist || (dependenciesExist && selected === '')}
+                              onClick={(event) => this.checkRealizability(event, selectedReqs)}>Check Realizability</MenuItem>
+                              <Tooltip title={this.isNotJKind(systemComponentIndex) ? 'This action is available only when using the \'JKind\' engine option.' : ''}>
+                                <span>
+                                  <MenuItem
+                                    id="qa_rlzCont_btn_realizSimulate"
+                                    disabled={this.disableSimulateRealizableButton(systemComponentIndex, connectedComponentIndex)}
+                                    onClick={(event) => this.openLTLSimDialog(event)}
+                                  >
+                                    {'Simulate Realizable Requirements' + (compositional ? (' ('+ccSelected.toUpperCase()+')') : '')}
+                                  </MenuItem>
+                                </span>
+                              </Tooltip>
+                              <MenuItem 
+                                id="qa_rlzCont_btn_diagnose"
+                                onClick={(event) => this.diagnoseSpec(event, selectedReqs)}
+                                disabled={selectedReqs.length === 0 || status[selected.component_name] === 'PROCESSING' || diagStatus === 'PROCESSING' || !dependenciesExist || (dependenciesExist && (selected === '' || selected === 'all')) ||
+                                (dependenciesExist && selected !== '' && compositional && projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex].result !== 'UNREALIZABLE') ||
+                                  (selected !== '' && monolithic && status[selected.component_name] !== 'UNREALIZABLE')}
+                              >
+                                {'Diagnose Unrealizable Requirements' + (compositional ? (' ('+ccSelected.toUpperCase()+')') : '')}
+                              </MenuItem>
+                              <MenuItem id="qa_rlzCont_btn_save">
+                                <SaveRealizabilityReport classes={{vAlign: classes.vAlign}} enabled={projectReport.systemComponents.length > 0 && status[selected.component_name] !== 'PROCESSING' && diagStatus !== 'PROCESSING'} projectReport={projectReport}/>
+                              </MenuItem>
+                              <MenuItem id="qa_rlzCont_btn_settings" onClick={() => this.handleSettingsOpen()}>Change Settings</MenuItem>
+                            </Menu>
+                            </Grid>
+                            <Grid item>
+                            <Button id="qa_rlzCont_btn_help" color="secondary" onClick={this.handleHelpOpen} size="small" className={classes.vAlign} variant="contained"> Help </Button>
+                            </Grid>
+                          </Grid>
                         </Grid>
-                        <div style={{width : '95%'}}>
+                      </Grid>
+                        <div>
                         {selected !== '' && selected !== 'all' &&
                           <div className={classes.root}>
                             &nbsp;
@@ -845,6 +866,7 @@ class RealizabilityContent extends React.Component {
                                           (<Fade in={diagStatus === 'DIAGNOSED'}>
                                             <div>
                                               {[...Array(2)].map((e, i) => <div key={i}> &nbsp; </div>)}
+                                              <Typography>Diagnosis Results: </Typography>
                                               <ChordDiagram selectedReport = {diagReport} selectedProject={selectedProject} requirements={diagnosisRequirements}/>
                                               &nbsp;
                                             </div>
@@ -861,7 +883,8 @@ class RealizabilityContent extends React.Component {
                                             selectedComponent={selected.component_name}
                                             listOfProjects={[selectedProject]}
                                             connectedComponent={projectReport.systemComponents[systemComponentIndex].compositional.connectedComponents[connectedComponentIndex]}
-                                            importedRequirements={false}                                        
+                                            importedRequirements={false}
+                                            disableSelection={analysisProcessing}                                        
                                           />
                                         }
                                       </div>
@@ -894,6 +917,7 @@ class RealizabilityContent extends React.Component {
                                         listOfProjects={[selectedProject]}
                                         connectedComponent={{}}
                                         importedRequirements={false}
+                                        disableSelection={analysisProcessing}
                                       />
                                     }
                                     {this.state.LTLSimDialogOpen && <LTLSimComponent selectedReqs={selectedReqs} systemComponentIndex={systemComponentIndex} connectedComponentIndex={connectedComponentIndex}/>}

@@ -1,35 +1,8 @@
-// *****************************************************************************
-// Notices:
-//
-// Copyright © 2019, 2021 United States Government as represented by the Administrator
-// of the National Aeronautics and Space Administration. All Rights Reserved.
-//
-// Disclaimers
-//
-// No Warranty: THE SUBJECT SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY OF
-// ANY KIND, EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
-// TO, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL CONFORM TO SPECIFICATIONS,
-// ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-// OR FREEDOM FROM INFRINGEMENT, ANY WARRANTY THAT THE SUBJECT SOFTWARE WILL BE
-// ERROR FREE, OR ANY WARRANTY THAT DOCUMENTATION, IF PROVIDED, WILL CONFORM TO
-// THE SUBJECT SOFTWARE. THIS AGREEMENT DOES NOT, IN ANY MANNER, CONSTITUTE AN
-// ENDORSEMENT BY GOVERNMENT AGENCY OR ANY PRIOR RECIPIENT OF ANY RESULTS,
-// RESULTING DESIGNS, HARDWARE, SOFTWARE PRODUCTS OR ANY OTHER APPLICATIONS
-// RESULTING FROM USE OF THE SUBJECT SOFTWARE.  FURTHER, GOVERNMENT AGENCY
-// DISCLAIMS ALL WARRANTIES AND LIABILITIES REGARDING THIRD-PARTY SOFTWARE, IF
-// PRESENT IN THE ORIGINAL SOFTWARE, AND DISTRIBUTES IT ''AS IS.''
-//
-// Waiver and Indemnity:  RECIPIENT AGREES TO WAIVE ANY AND ALL CLAIMS AGAINST
-// THE UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS
-// ANY PRIOR RECIPIENT.  IF RECIPIENT'S USE OF THE SUBJECT SOFTWARE RESULTS IN
-// ANY LIABILITIES, DEMANDS, DAMAGES, EXPENSES OR LOSSES ARISING FROM SUCH USE,
-// INCLUDING ANY DAMAGES FROM PRODUCTS BASED ON, OR RESULTING FROM, RECIPIENT'S
-// USE OF THE SUBJECT SOFTWARE, RECIPIENT SHALL INDEMNIFY AND HOLD HARMLESS THE
-// UNITED STATES GOVERNMENT, ITS CONTRACTORS AND SUBCONTRACTORS, AS WELL AS ANY
-// PRIOR RECIPIENT, TO THE EXTENT PERMITTED BY LAW.  RECIPIENT'S SOLE REMEDY FOR
-// ANY SUCH MATTER SHALL BE THE IMMEDIATE, UNILATERAL TERMINATION OF THIS
-// AGREEMENT.
-// *****************************************************************************
+// Copyright © 2025, United States Government, as represented by the Administrator of the National Aeronautics and Space Administration. All rights reserved.
+// 
+// The “FRET : Formal Requirements Elicitation Tool - Version 3.0” software is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 import PropTypes from 'prop-types';
 import {Editor, Node, Range, Transforms, Text} from 'slate';
 import {Slate, Editable, withReact, ReactEditor} from 'slate-react';
@@ -57,7 +30,12 @@ import { formalizeRequirement } from '../reducers/allActionsSlice';
 
 const isDev = require('electron-is-dev');
 
-const FIELDS = [
+//switch: https://mui.com/material-ui/react-switch/#system-CustomizedSwitches.js
+//import Switch from '@material-ui/core/Switch';
+import { Switch } from '@material-ui/core';
+import { FormControlLabel} from '@material-ui/core';
+
+const fieldsoriginal = [
   {
     label: "Scope",
     key: "scope",
@@ -95,6 +73,15 @@ const FIELDS = [
     isDisabled: false,
   }
 ]
+var fieldswithprop = fieldsoriginal.slice(); //copy fields (not pointer as only using =)
+fieldswithprop.splice(4, 0, { //add probability after "Shall"
+  label: "Probability",
+  key: "probability",
+  isRequired: false,
+  isDisabled: false,
+});
+
+
 const styles = theme => ({
   bar: {
     backgroundColor: theme.palette.secondary.main,
@@ -130,14 +117,15 @@ class SlateEditor2 extends React.Component {
     this.state = {
       editorValue: [],     // The Dom of the Editable of this Slate class
       inputText: ' ',      // all requirement texts
-      //fieldColors: {},
-      menuOptions: [],     // field template options (scope,conditions, components, timing, responses) buble drop down menu
-      menuIndex: 0,        // menu index for both field drop down and glossary menu
-      selectedField: undefined,    // selected field when in template mode
-      search: '',        // search string for glossary autofill
-      variables: [],     // filtered variables for glossary autofill
-      beforeRange: null,  // for tracking glossary autofill search string
-      position: null,    // position for dropdown menu in editable (template field or glossary)
+      menuOptions: [],
+      menuIndex: 0,
+      selectedField: undefined,
+      search: '',
+      variables: [],
+      beforeRange: null,
+      position: null,
+      fields: [],
+      isProbabilistic: false
     }
 
 
@@ -158,7 +146,8 @@ class SlateEditor2 extends React.Component {
     if (isDev)
       path = `file://${__dirname}/../docs/_media/fretishGrammar/index.html`
     this.setState({
-      grammarUrl: path
+      grammarUrl: path,
+      fields: fieldsoriginal
     })
 
       if (this.props.inputFields) {
@@ -214,6 +203,23 @@ class SlateEditor2 extends React.Component {
             }
           }
   }
+
+switchHandler = (event) => {
+  this.props.switchProbabilisticHandler(event);
+  if (event.target.checked){
+    this.setState({
+     fields: fieldswithprop,
+     isProbabilistic: event.target.checked
+    })
+  }
+  else{
+    console.log("event.target.checked: "+ event.target.checked);
+    this.setState({
+      fields: fieldsoriginal,
+      isProbabilistic: event.target.checked
+     })
+  }
+};
 
   // Externally referenced by CreateRequirementDialog
   getRequirementFields = () => {
@@ -455,7 +461,7 @@ class SlateEditor2 extends React.Component {
       } else if(variables.length > 1){
         // glossary autofill
         //this.props.editor.redo()
-      } else {        
+      } else {
         this.props.editor.redo();
       }
     } else if (event.key.length === 1) {
@@ -1070,13 +1076,35 @@ class SlateEditor2 extends React.Component {
             padding: '10px',
           }}>
           <div className={SlateEditor2Styles.showGrammarBtn}>
+
+          <Tooltip title="Activate probabilistic FRETish">
+          <FormControlLabel
+            id="qa_crt_ib_activate_probability"
+            control={
+              <Switch
+                onChange={this.switchHandler}
+              />
+            }
+            style={{
+            position:'relative',
+            left:'20px',
+            top:'-40px',}}>
+            <Tooltip title="Activate Probabilistic logic">
+            </Tooltip>
+          </FormControlLabel>
+          </Tooltip>
+          </div>
+          <br />
+
+          <div className={SlateEditor2Styles.showGrammarBtn}>
           <IconButton id="qa_crt_ib_question" onClick={this.openGrammarWindow} style={{padding:'2px'}}>
             <Tooltip title="See Grammar">
             <HelpIcon />
             </Tooltip>
           </IconButton>
           </div>
-        {FIELDS.map(({label, key, isRequired, isDisabled}) => {
+        {
+        this.state.fields.map(({label, key, isRequired, isDisabled}) => {
           const title = label + (isRequired ? '*' : '')
           if (isDisabled) {
             return(
@@ -1193,6 +1221,7 @@ class SlateEditor2 extends React.Component {
     // leaf.isPlaceholder or leaf.type
     const { attributes, children, leaf } = props
     const { fieldColors } = this.props
+    let { isProbabilistic } = this.state
     let style = {};
     if (leaf.isPlaceholder) {
       style = { color: 'gray' };
@@ -1206,6 +1235,9 @@ class SlateEditor2 extends React.Component {
           break
         case 'componentTextRange':
           style = { color: fieldColors.component };
+          break
+        case 'probabilityTextRange':
+          style = isProbabilistic ? { color: fieldColors.probability } : {color: 'lightgray'};
           break
         case 'timingTextRange':
           style = { color: fieldColors.timing };
@@ -1226,7 +1258,7 @@ class SlateEditor2 extends React.Component {
   renderEditor = () => {
     // process slate data then render slate editor
     const { template } = this.props;
-    const { menuOptions, menuIndex, editorValue, variables, position } = this.state;
+    const { menuOptions, menuIndex, editorValue, variables, position, isProbabilstic } = this.state;
     const hasFields = Boolean(template);
     this.props.editor.fieldsEnabled = hasFields;
 
@@ -1401,7 +1433,8 @@ SlateEditor2.propTypes = {
   updateSemantics: PropTypes.func.isRequired,
   inputFields: PropTypes.object,  // requirement fullText
   grammarRule: PropTypes.string,
-  template: PropTypes.object
+  template: PropTypes.object,
+  switchProbabilisticHandler : PropTypes.func.isRequired
 }
 /**
  * Export.
@@ -1419,4 +1452,3 @@ const mapDispatchToProps = {
 };
 
 export default withStyles(styles)(connect(mapStateToProps,mapDispatchToProps)(SlateEditor2));
-
