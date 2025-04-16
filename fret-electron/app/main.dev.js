@@ -279,7 +279,7 @@ ipcMain.handle('selectTestGenComponent', async (evt, arg) => {
 ipcMain.handle('generateTests', async (evt, arg) => {
   const result = await fretModel.generateTests(evt, arg);
   return result
-
+})
 
 //Mu-FRET additions:
 

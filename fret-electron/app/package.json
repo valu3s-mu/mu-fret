@@ -1,7 +1,7 @@
 {
   "name": "fret",
   "productName": "MU-FRET",
-  "version": "2.2.2-mu.fret",
+  "version": "3.0.0-mu.fret",
   "description": "MU-FRET",
   "main": "./main.prod.js",
   "author": {
@@ -16,12 +16,12 @@
   "license": "Apache 2.0",
   "dependencies": {
     "jest-config": "^24.7.1",
-    "lodash": "^4.17.13",
     "ltlsim-core": "file:../../tools/LTLSIM/ltlsim-core",
     "pouchdb": "^7.0.0",
     "pouchdb-find": "^7.0.0",
     "typeface-gloria-hallelujah": "0.0.54",
     "typeface-indie-flower": "0.0.54",
-    "typeface-roboto": "0.0.54"
+    "typeface-roboto": "0.0.54",
+    "lodash": "^4.17.13"
   }
 }

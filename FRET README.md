@@ -1,81 +1,56 @@
 FRET: Formal Requirements Elicitation Tool
 =============================================
 
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue)](LICENSE.pdf)
+[![Release](https://img.shields.io/badge/release-v3.0-orange)](https://github.com/NASA-SW-VnV/fret/releases/tag/v3.0.0)
+
 Introduction
 ------------
 
-FRET is a framework for the elicitation, formalization and understanding of requirements. Users enter system requirements in a specialized natural language. FRET helps understanding and review of semantics by utilizing a variety of forms for each requirement: natural language description, formal mathematical logics, and diagrams. Requirements can be defined in a hierarchical fashion and can be exported in a variety of forms to be used by analysis tools.
+FRET is a framework for the elicitation, specification, formalization, and analysis of system requirements. It enables users to define requirements using a structured natural language while providing multiple representations to enhance clarity, validation, and verification. These representations include natural language descriptions, formal mathematical logics, and visual diagrams, allowing users with different expertise to review and understand requirements effectively.
 
-Take a look at the [FRET demo](https://drive.google.com/open?id=142C-xIw6ar9rSgxz-wAXktYrTwAG0sKw).
+FRET supports hierarchical requirement definition, enabling users to structure requirements based on different levels. It also offers export capabilities in various formats, facilitating integration with external formal analysis tools. FRET provides automated, requirement-based test case generation, incorporating a coverage metric to assess the adequacy of generated tests. Furthermore, FRET includes built-in consistency checking mechanisms to detect logical contradictions and thus, it helps to ensure that requirements are both complete and logically sound.
 
-Contact
-=======
-For further information on FRET, please contact <andreas.katis@nasa.gov>,
-<anastasia.mavridou@nasa.gov>, <tom.pressburger@nasa.gov> or issues and
-discussions on GitHub at [https://github.com/NASA-SW-VnV/fret.git](https://github.com/NASA-SW-VnV/fret.git). Detailed
-information can be found in the
-[FRET manual](fret-electron/docs/_media/userManual.md).
-
-Installation
-------------
-
-### Dependencies
-
- * [nodejs v10.15.x](https://nodejs.org/download/release/v10.15.3/)
- * Python 2.x
- * [Git](https://git-scm.com/) (must be available in PATH)
- * (Optional) [NuSMV](http://nusmv.fbk.eu/)
-
-### Download and Install
-
-As you open the FRET distribution, you shall see the following directory structure:
-
-```
-.
-├── fret-electron
-├── tools
-├── README.md
-└── LICENSE.pdf
-```
-
-Here are the steps to install and start FRET:
-
-1. cd fret-electron
-2. npm run fret-install (please do 'npm run fret-reinstall' instead if you already have a FRET installation)
-3. npm start
-
-It's as simple as that. Enjoy!
-
-
-For the installation of FRET for Windows 10 see the [Windows Installation Manual](fret-electron/docs/installation_windows.md).
-
-### Linux Executable
-
-Alternatively, you can run FRET on a Linux machine by using the [FRET-linux-x64](executables/) executable. Instructions are available [here](executables/README.md).
-
-### Notes
-
-> __Note:__ To run the LTLSIM simulator, a NuSMV (see http://nusmv.fbk.eu/) installation is required. Please make sure that the NuSMV binaries directory is added to the PATH environment variable. Additionally, please add `$PATH_TO_FRET/fret/tools/LTLSIM/ltlsim-core/simulator` to the PATH environment variable.
-
-> __Note:__ FRET requires **python 2.x**. If your machine is running a newer version of python, e.g., 3.x, then please config FRET to search for a python2 executable. Run the following: `npm config set python /usr/bin/python2.x`
-
-> __Note:__ Using FRET on Windows machines requires [Cygwin](https://cygwin.com/index.html) and the [node-gyp prerequisites](https://github.com/nodejs/node-gyp#on-windows)
-
->__Note:__ Recommended npm version 6.x (comes with nodejs v10.x)
-
-
-Platforms
----------
-
-FRET has been tested in a range of architecture/operating system combinations. It has been tested on PC Intel, Apple Mac and Sun architectures, with different versions and distributions of Linux, Windows and Mac OS X.
+For more details, refer to the [FRET manual](fret-electron/docs/_media/userManual.md).
 
 License
 -------
 
-FRET has been released under the NASA Open Source Agreement version 1.3, see [LICENSE.pdf](LICENSE.pdf).
+FRET is released under the Apache 2.0 license. For more details, please refer to the [LICENSE.pdf](LICENSE.pdf).
 
+Contact
+-------
+
+For further information on FRET, please contact <andreas.katis@nasa.gov> and <anastasia.mavridou@nasa.gov>. 
+
+You can also report [issues](https://github.com/NASA-SW-VnV/fret/issues) and participate in [discussions on GitHub](https://github.com/NASA-SW-VnV/fret.git).
+
+Installation
+------------
+
+See [installation guide](fret-electron/docs/_media/installingFRET/installationInstructions.md).
+
+Troubleshooting
+------------
+
+See [Troubleshooting](Troubleshooting.md).
+
+Release notes
+---------
+
+See [Releases](https://github.com/NASA-SW-VnV/fret/releases).
+
+Platforms
+---------
+
+FRET has been tested across a variety of architecture and operating system combinations, including PC (Intel), Apple Mac, and Sun architectures. It has been validated on multiple versions and distributions of Windows, macOS, and Linux.
 
 Contributors
 ------------
 
-See the FRET [Contributors](CONTRIBUTORS.md).
+See [Contributors](CONTRIBUTORS.md).
+
+Publications
+------------
+
+For a comprehensive collection of FRET-related research, development and case studies, please refer to the [Publications](PUBLICATIONS.md) section. This includes scholarly works that highlight the features and applications of FRET.
