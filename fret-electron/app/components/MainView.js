@@ -45,6 +45,8 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import LoopIcon from '@material-ui/icons/Loop';
 import Tooltip from '@material-ui/core/Tooltip';
 
+import ImportContactsIcon from '@material-ui/icons/ImportContacts';
+
 import css from './MainView.css';
 import CreateRequirementDialog from './CreateRequirementDialog';
 import CreateProjectDialog from './CreateProjectDialog';
@@ -814,9 +816,11 @@ class MainView extends React.Component {
               </div>
               <div>
               <ListItem button onClick={() => this.openVersionDialog()}>
+                <Tooltip title={'Version Information'}>
                 <ListItemIcon>
-                  <InfoIcon />
+                  <ImportContactsIcon />
                 </ListItemIcon>
+                </Tooltip>
                 <ListItemText primary="Version" />
               </ListItem>
               </div>
