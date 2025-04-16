@@ -35,7 +35,9 @@ Our team have given several presentations about both FRET and Mu-FRET as part of
 * [_FRETing about Requirements: Formalised Requirements for an Aircraft Engine Controller_](mu-fret-docs/presentations/refsq2022-fret.pdf) (slides PDF): conference presentation about our work using FRET to formalise the requirements of an aircraft engine controller, provided by our Use Case 5 partner. The accompanying publication can be found on the [publisher's page](https://doi.org/10.1007/978-3-030-98464-9_9) or Open Access on [arXiv](https://arxiv.org/abs/2112.04251).
 * [Demonstration Session slides](mu-fret-docs/presentations/goteburg-nuim.pdf) (PDF) from the General Assembly meeting in Gothenburg. These high-level slides gave us a visual aid while we were demonstrating progress using FRET and Mu-FRET in the VALU3S project. 
 * [Demonstration Session slides](mu-fret-docs/presentations/hamburg-nuim.pdf) (PDF) from the General Assembly meeting in Hamburg, providing an update on the slides from the Gothenburg meeting. These high-level slides gave us a visual aid while we were demonstrating progress using FRET and Mu-FRET in the VALU3S project.
-* [_FRETting and Formal Modelling: A Mechanical Lung Ventilator_](https://github.com/valu3s-mu/mu-fret/blob/master/mu-fret-docs/presentations/ABZ-2024-MuFret-Presentation.pdf) (PDF) Conference presentation summarising our formalisation of the Mechanical Lung Ventilator requirements for the ABZ 2024 case study, as well as our Event-B model of the system. Full paper can be found on the [publisher's page](https://link.springer.com/chapter/10.1007/978-3-031-63790-2_28).
+* [_FRETting and Formal Modelling: A Mechanical Lung Ventilator_](mu-fret-docs/presentations/ABZ-2024-MuFret-Presentation.pdf) (PDF) Conference presentation summarising our formalisation of the Mechanical Lung Ventilator requirements for the ABZ 2024 case study, as well as our Event-B model of the system. Full paper can be found on the [publisher's page](https://link.springer.com/chapter/10.1007/978-3-031-63790-2_28).
+* [_Sharper Specs for Smarter Drones: Formalising Requirements with FRET_](mu-fret-docs/presentations/refsq2025presentation.pdf) (PDF) Conference presentation summarising our formalisation of the requirements for the ProVANT Emergentia tilt-rotor drone in FRETish. Full paper can be found on [Springer](https://link.springer.com/chapter/10.1007/978-3-031-88531-0_25).
+* [_Refactoring in Requirements Engineering: Exploring a methodology for formal verification of safety-critical systems_](mu-fret-docs/presentations/REFSQ-PhD-2025.pdf) (PDF) Presentation from the REFSQ2025 Doctoral Symposium summarising the current state of the refactoring work as of April 2025.
 
 ### Posters
 
@@ -43,6 +45,7 @@ Our team have given several presentations about both FRET and Mu-FRET as part of
 * [_Modular Formal Requirements-Driven Verification_](mu-fret-docs/posters/NUIM-Modular_Formal_Requirements-Driven_Verification.pdf) (poster PDF): a poster from the VALU3S project that describes Mu-FRET, explaining how we have improved FRET to enable it to perform refactoring.
 * [_Refactoring Requirements and MU-FRET's Place in the VeRFoR Toolchain_](mu-fret-docs/posters/Refactoring_Requirements_and_MU-FRETs_Place_in_the_VeRFoR_Toolchain.pdf) (poster PDF): a poster from the VALU3S Summer School in 2023 which describes the purpose of refactoring in MU-FRET and locates it in toolchains used in VALU3S.
 * [_Using Mu-FRET for Parent-Child Relationship, and comparisons with EARS_](mu-fret-docs/posters/Using_Mu-FRET_for_Parent-Child_Relationships_and_Comparisons_with_EARS.pdf) (poster PDF): a poster from the VALU3S Summer School in 2023 which showcases the MU-FRET user interface and contrasts FRET with a competing structured natural language for requirements elicitation, EARS.
+* [_Refactoring in Requirements Engineering: Exploring a methodology for formal verification of safety-critical systems_](mu-fret-docs/posters/REFSQ_2025_Mu-FRET_Poster.pdf) (poster PDF): a poster presented at REFSQ 2025 describing the motivation for Mu-FRET and the Extract and Inline Requirement refactorings.
 
 ## Papers
 
@@ -65,6 +68,7 @@ Our team has written several papers about our work for the VALU3S project using 
 
 * _Adventures in FRET and Specification_: A paper giving an overview of a number of case studies that have been formalised in FRET, and providing analysis and lessons learned from the formalisation process. Available: [https://link.springer.com/chapter/10.1007/978-3-031-75380-0_7](https://link.springer.com/chapter/10.1007/978-3-031-75380-0_7)
 
+* _Sharper Specs for Smarter Drones: Formalising Requirements with FRET_ : A paper published at REFSQ2025 describing our formalisation of the requirements for the ProVANT Emergentia tilt-rotor drone, producing four iterations of FRETish requirements. Available on Springer: [https://link.springer.com/chapter/10.1007/978-3-031-88531-0_25](https://link.springer.com/chapter/10.1007/978-3-031-88531-0_25)
 
 
 ## The VALU3S Project
