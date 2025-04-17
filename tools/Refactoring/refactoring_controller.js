@@ -2,7 +2,7 @@
 * Controller code for the refactoring module backend
 * @module Refactoring/refactoring_controller
 * @author Matt Luckcuck 
-* 2022
+* 2022,2025
 */
 
 
@@ -40,7 +40,7 @@ function newRequirement()
  * Returns a dummy requirement object, with the reqid, fulltext, 
  * semantics.ftExpands, and semantics.variables copied from the req paramter.
  * This is used to test-run the refactoring and becomes hte new requirement if 
- * NuSMC check passes.
+ * NuSMV check passes.
  * 
  * @param {Object} req The original requirement to copy
  * @returns A dummy requirement object, copied form the req parameter
@@ -61,10 +61,10 @@ function makeDummyUpdatedReq(req)
 /**
  * Handles one request to refactor one requirement
  * 
- * @param {Object} req the requirement that is having behaviour extracted from it
+ * @param {Object} req the source requirement, the requirement that is having behaviour extracted from it
  * @param {Map<String, String>} reqVars map of the req paramter's variables mapped to their types
  * @param {String} fragment the fragment to be extracted
- * @param {String} destinationName the name to be given to the newly created requirement
+ * @param {String} destinationName the name to be given to the (newly created) destination requirement
  * @param {*} newID the new (database) UUID for the newly created requirement
  * @param {Array<Object>} allRequirements List of all the other requirements in the project
  * @returns {Boolean} True if NuSMV says that the original and refactored requirement behaves the same.
@@ -74,27 +74,30 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 	console.log("Extract One");
 
 	let dummyUpdatedReq = makeDummyUpdatedReq(req);
+	dummyUpdatedReq.semantics.ftExpanded = "gobaldegook";
 
 
 
 	// Ramos Step 1: Make New requirement
 
-	let newReq = newRequirement();
+	let destinationReq = newRequirement();
 
 	let fretishDestinationName = destinationName.replace(/ /g, "_").toUpperCase();
 
 
-	newReq.reqid = fretishDestinationName;
+	destinationReq.reqid = fretishDestinationName;
 	// New Req needs a new ID
-	newReq._id = newID;
+	destinationReq._id = newID;
 	// Copying the project name
-	newReq.project = req.project;
+	destinationReq.project = req.project;
 	// Oisín: Marking New Req as a fragment
-	newReq.isFragment = true;
+	destinationReq.isFragment = true;
 
-	newReq.rationale = "EXTRACT REQUIREMENT: extracted " + fragment + " from " + req.reqid;
+	destinationReq.rationale = "EXTRACT REQUIREMENT: extracted " + fragment + " from " + req.reqid;
+	// Not adding this as a fragment to the dummy requirement because it doesn't need it yet
+	// Plus it triggers the fragment fiding behaviour in generateSMV which is sloooow
 	console.log("Made New Requirement")
-	//console.log(newReq);
+	//console.log(destinationReq);
 
 
 	// Step 2
@@ -105,24 +108,32 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
   // New fretish requirement
 	let newFretish = "if " + fragment + " " + component + " shall satisfy " + fretishDestinationName;
 
-	 newReq.fulltext = newFretish;
+	 destinationReq.fulltext = newFretish;
 	 // Compile the new semantics and add to the new req
 	 // Not sure that this is working
 	 newSemantics = fretSemantics.compile(newFretish)
-	 newReq.semantics = newSemantics.collectedSemantics;
+	 destinationReq.semantics = newSemantics.collectedSemantics;
+	 console.log("destinationReq's semantics = ...");
+	 console.log(destinationReq.semantics);
 
 	// Step 3
 
-
-
 	// Dummy Run on the Dummy Req
 	model.ReplaceFragment(dummyUpdatedReq, fragment, fretishDestinationName);
-
+	console.log("dummyUpdatedReq semantics = ...");
+	console.log(dummyUpdatedReq.semantics);
+	// Recompile the dummy's sematics...
+	let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
+	dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
+	console.log("dummyUpdatedReq semantics after compile = ...");
+	console.log(dummyUpdatedReq.semantics);
 
 	console.log("~~~~~")
 	console.log("checking what two reqs I'm comparing...")
 	console.log("req text = " + req.fulltext)
+	console.log("req semantics = " + req.semantics.ftExpanded)
 	console.log("dummyUpdatedReq text = " + dummyUpdatedReq.fulltext)
+	console.log("dummyUpdatedReq semantics = " + dummyUpdatedReq.semantics.ftExpanded)
 	console.log("~~~~~")
 
 
@@ -132,7 +143,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 
   // Step 4
   // Verify
-	var result = compare.compareRequirements(req, reqVars, dummyUpdatedReq, allRequirements);
+	var result = compare.compareRequirements(req, reqVars, dummyUpdatedReq, destinationReq, allRequirements);
 	console.log("controller, result = " + result);
 	if(result)
 	{
@@ -140,7 +151,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 		//Updating original requirement and adding to database
 
 		// New Field to list the fragments that this requirement depends on
-		req.fragments = [newReq.reqid]
+		req.fragments = [destinationReq.reqid]
 
 		// Replace fragment in original requirement with reference to new requirement
 		model.ReplaceFragment(req, fragment, fretishDestinationName);
@@ -149,7 +160,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 		model.AddRequirementToDB(req);
 
 	 // Adding extracted requirement
-		 model.AddRequirementToDB(newReq);
+		 model.AddRequirementToDB(destinationReq);
 
 		 model.UpdateFragmentVariable(fretishDestinationName, component, req.project)
 	}
@@ -163,8 +174,11 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 	console.log(req);
 
 
-	console.log(newReq);
+	console.log(destinationReq);
 
+	//Matt: This is empty if the check fails. I'm expecting NuSMV to return some information if the check fails,
+	// but it seems to not, because boolResults in callNuSMV is empty... This, in turn, means that the 
+	// dialogue has nothing to show.
 	return result
 }
 exports.extractRequirement = extractRequirement;
@@ -191,21 +205,21 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 	// Step 1
 
 	// The destination of the extracted fragment
-	let newReq = newRequirement();
+	let destinationReq = newRequirement();
 
 	let fretishDestinationName = destinationName.replace(/ /g, "_").toUpperCase();
 
 
-	newReq.reqid = fretishDestinationName;
+	destinationReq.reqid = fretishDestinationName;
 	// New Req needs a new ID
-	newReq._id = newID;
+	destinationReq._id = newID;
 	// Copying the project name
-	newReq.project = req.project;
+	destinationReq.project = req.project;
 	// Oisín: Marking New Req as a fragment
-	newReq.isFragment = true;
+	destinationReq.isFragment = true;
 
 
-	newReq.rationale = "EXTRACT REQUIREMENT: extracted " + fragment + " from " + req.reqid;
+	destinationReq.rationale = "EXTRACT REQUIREMENT: extracted " + fragment + " from " + req.reqid;
 
 	// Step 2
   // Build new fretish requirement
@@ -214,13 +228,13 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
   // New fretish requirement
 	let newFretish = "if " + fragment + " " + component + " shall satisfy " + fretishDestinationName;
 
-	 newReq.fulltext = newFretish;
+	 destinationReq.fulltext = newFretish;
 	 // Compile the new semantics and add to the new req
 	 newSemantics = fretSemantics.compile(newFretish)
-	 newReq.semantics = newSemantics.collectedSemantics;
+	 destinationReq.semantics = newSemantics.collectedSemantics;
 
 	console.log("Made New Requirement")
-	console.log(newReq);
+	console.log(destinationReq);
 
 	console.log("knockons");
   // Do the thing
@@ -246,7 +260,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 			// Dummy Run on the Dummy Req
 			model.ReplaceFragment(dummyUpdatedReq, fragment, fretishDestinationName);
-			dummyUpdatedReq.fragments = [newReq.reqid]
+			dummyUpdatedReq.fragments = [destinationReq.reqid]
 
 			console.log("~~~~~")
 			console.log("checking what two reqs I'm comparing...")
@@ -263,7 +277,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 			// This call to compareRequirements can reuse reqVars because if we are doing extract all
 			// then `reqvars` will contain all the variables (and types) for all the requirements that
 			// contain the fragment being extracted.
-			result = compare.compareRequirements(kreq, reqVars, dummyUpdatedReq, allRequirements);
+			result = compare.compareRequirements(kreq, reqVars, dummyUpdatedReq, destinationReq, allRequirements);
 			console.log("controller, result = " + result);
 
 			if(!result)
@@ -286,7 +300,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 				let kreq = reqKnockons[i];
 
-				kreq.fragments = [newReq.reqid]
+				kreq.fragments = [destinationReq.reqid]
 				model.ReplaceFragment(kreq, fragment, fretishDestinationName);
 				model.AddRequirementToDB(kreq);
 
@@ -294,7 +308,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 			console.log("+++ Adding Extracted Requirement +++")
 		// Adding extracted requirement
-			model.AddRequirementToDB(newReq);
+			model.AddRequirementToDB(destinationReq);
 
 		}
 		 model.UpdateFragmentVariable(fretishDestinationName, component, req.project)
