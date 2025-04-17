@@ -65,10 +65,10 @@ function substitutePlaceholders (ltlspec,n) {
 * @param {Object} originalReq - the original requirement
 * @param {Map<String, String>} originalReqVars - the variables of the original requirement
 * @param {Object} newReq - the refactored requirement
-* @param {Object} destingationReq - the destination requirement (the fragment)
+* @param {Object} destinationReq - the destination requirement (the fragment)
 * @param {Set} requirementSet - the set of requirements the requirement belongs to
 */
-function compareRequirements(originalReq, originalReqVars, newReq, destingationReq, requirementSet)
+function compareRequirements(originalReq, originalReqVars, newReq, destinationReq, requirementSet)
 {
   let len = 11;
   let n = 4;
@@ -79,7 +79,7 @@ function compareRequirements(originalReq, originalReqVars, newReq, destingationR
 
   console.log("+++ Comparing Requirements +++")
 
-  let checkResult = checkInNuSMV(originalReq, originalReqVars, newReq, destingationReq, len,n, requirementSet);
+  let checkResult = checkInNuSMV(originalReq, originalReqVars, newReq, destinationReq, len,n, requirementSet);
 
   if (checkResult)
   {
@@ -87,7 +87,7 @@ function compareRequirements(originalReq, originalReqVars, newReq, destingationR
   }
   else
   {
-    console.log("FAIL: Requirements have differently");
+    console.log("FAIL: Requirements behave differently");
   }
   return checkResult;
 }
@@ -101,18 +101,19 @@ exports.compareRequirements = compareRequirements;
  * @param {Object} originalReq 
  * @param {Map<String, String>} originalReqVars 
  * @param {Object} newReq 
- * @param {Object} destingationReq
+ * @param {Object} destinationReq
  * @param {int} len 
  * @param {int} n 
  * @param {Array<Object>} allRequirements 
  * 
  */
-function checkInNuSMV (originalReq, originalReqVars, newReq, destingationReq, len,n, allRequirements)
+function checkInNuSMV (originalReq, originalReqVars, newReq, destinationReq, len,n, allRequirements)
 {
   console.log("checkInNuSMV allRequirements -> ");
   console.log(allRequirements);
-  let r = generateSMV(originalReq, originalReqVars, newReq, destingationReq, n, allRequirements);
-  let smvCode = preamble(r.vars, len) + r.specs.join('\n') + '\n'; //
+  let r = generateSMV(originalReq, originalReqVars, newReq, destinationReq, n, allRequirements);
+  fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";"
+  let smvCode = preamble(r.vars, len, fragmentMacro) + r.specs.join('\n') + '\n'; //
 
   let checkName =  originalReq.reqid;
   
@@ -152,7 +153,7 @@ function checkInNuSMV (originalReq, originalReqVars, newReq, destingationReq, le
  * @param {Array<Object>} allRequirements 
  * @returns 
  */
-function generateSMV(originalReq, originalReqVars, newReq, destingationReq, n, allRequirements)
+function generateSMV(originalReq, originalReqVars, newReq, destinationReq, n, allRequirements)
 {
   let ltlspecs = [];
   let fragList = [];
@@ -187,7 +188,7 @@ function generateSMV(originalReq, originalReqVars, newReq, destingationReq, n, a
 
   let newFT = newReq.semantics.ftExpanded;
   // Merge in the fragment extracted to the destination requirement
-  newFT = mergeFragment(newFT, destingationReq) 
+  //newFT = mergeFragment(newFT, destinationReq) 
 
   // Check if the new requirement has any fragments in the database that should be merged back in
  
@@ -207,7 +208,7 @@ function generateSMV(originalReq, originalReqVars, newReq, destingationReq, n, a
 
 
 
-  let variables = getVars(originalReq, originalReqVars, newReq, destingationReq.reqid, fragList);
+  let variables = getVars(originalReq, originalReqVars, newReq, destinationReq.reqid, fragList);
   let name = originalReq.reqid;
 
   let rawSaltSpec = `${origFT} <-> ${newFT}`;
@@ -272,11 +273,12 @@ function getFragmentReqs(fragmentNames, allRequirements)
  * This defines the variables (both common and specific, via the `variables` parameter)
  * that the specification uses.
  * 
- * @param {*} variables 
+ * @param {string} variables - the extra variables from the requriements
  * @param {int} len 
+ * @param {string} fragmentMacro - the fragment name mapped to the fragment's definition
  * @returns 
  */
-function preamble(variables, len) {
+function preamble(variables, len, fragmentMacro) {
     return `MODULE main
 VAR
   t : 0 .. ` + len + `;
@@ -284,14 +286,13 @@ VAR
   pre : boolean;
   stop : boolean;
   post : boolean;\n`
-  + variables +
-  `
+  + variables + `\n
 ASSIGN
   init(t) := 0;
   next(t) := (t >= ` + len +`) ? ` + len + ` : t + 1;
 DEFINE
-  LAST := (t = ` + (len - 1) + `);
-`;
+  LAST := (t = ` + (len - 1) + `);\n`
++ fragmentMacro +"\n\n";
 }
 
 
@@ -340,7 +341,7 @@ function mergeFragment(property, fragment)
  * @param {Array<Object>} fragList 
  * @returns {String} The variable names and types for the SMV file
  */
-function getVars(originalReq, originalReqVars, newReq, fragmentName, fragList)
+function getVars(originalReq, originalReqVars, newReq, destinationName, fragList)
 {
   console.log("getVars");
   let varSet = new Set();
@@ -357,7 +358,11 @@ function getVars(originalReq, originalReqVars, newReq, fragmentName, fragList)
 
   for (let v of newVars)
   {
-    varSet.add(v);
+    if (v != destinationName)
+    {
+        varSet.add(v);
+    }
+    
   }
 
   if (fragList != [])
@@ -382,11 +387,7 @@ function getVars(originalReq, originalReqVars, newReq, fragmentName, fragList)
       console.log(typeof(originalReqVars));
      type = originalReqVars.get(value); 
       // Assumes the types are right, UI should prevent incorrect types from coming through.
-      if (value == fragmentName)
-      {
-        variables += value + " : boolean;"
-      }
-      else if (type == "integer")
+      if (type == "integer")
       {
         variables += value + " :  0..4 ;\n";
       }

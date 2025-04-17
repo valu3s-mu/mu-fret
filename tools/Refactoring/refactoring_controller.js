@@ -95,7 +95,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 
 	destinationReq.rationale = "EXTRACT REQUIREMENT: extracted " + fragment + " from " + req.reqid;
 	// Not adding this as a fragment to the dummy requirement because it doesn't need it yet
-	// Plus it triggers the fragment fiding behaviour in generateSMV which is sloooow
+	// Plus it triggers the fragment finding behaviour in generateSMV which is sloooow
 	console.log("Made New Requirement")
 	//console.log(destinationReq);
 
@@ -200,6 +200,7 @@ exports.extractRequirement = extractRequirement;
 
 function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, newID, allRequirements)
 {
+
 	console.log("Extract All")
 
 	// Step 1
@@ -262,10 +263,18 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 			model.ReplaceFragment(dummyUpdatedReq, fragment, fretishDestinationName);
 			dummyUpdatedReq.fragments = [destinationReq.reqid]
 
+
+			let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
+			dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
+			console.log("dummyUpdatedReq semantics after compile = ...");
+			console.log(dummyUpdatedReq.semantics);
+
 			console.log("~~~~~")
 			console.log("checking what two reqs I'm comparing...")
 			console.log("req text = " + req.fulltext)
+			console.log("req semantics = " + req.semantics.ftExpanded)
 			console.log("dummyUpdatedReq text = " + dummyUpdatedReq.fulltext)
+			console.log("dummyUpdatedReq semantics = " + dummyUpdatedReq.semantics.ftExpanded)
 			console.log("~~~~~")
 
 			// Step 4
@@ -321,7 +330,7 @@ exports.extractRequirement_ApplyAll = extractRequirement_ApplyAll;
  * Updates the variable types in the database using the types that the
  * user added on the RefactorRequirementDialog's TYPES input fields. 
  * 
- * @param {Object?} variableDocs collection of database documents for the variables in this project
+ * @param {Object} variableDocs collection of database documents for the variables in this project
  * @param {Map} variables Map of variable names to type names
  */
 function updateVariableTypes(variableDocs, variables)
