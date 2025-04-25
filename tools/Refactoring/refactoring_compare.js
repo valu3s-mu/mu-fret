@@ -6,7 +6,7 @@
  * 
  * @module Refactoring/refactoring_compare
  * @author Matt Luckcuck 
- * 2022
+ * 2022, 2025
  */
 const fs = require('fs');
 const execSync = require('child_process').execSync;
@@ -60,14 +60,15 @@ function substitutePlaceholders (ltlspec,n) {
 /**
 * Compares the original requirement with the refactored version.
 * The method uses pulls any extracted fragments from the requirement set, using
-* the `fragment` varibale present in a previously refactored requirement.
+* the `fragment` variable present in a previously refactored requirement.
 *
 * @param {Object} originalReq - the original requirement
 * @param {Map<String, String>} originalReqVars - the variables of the original requirement
 * @param {Object} newReq - the refactored requirement
+* @param {Object} destinationReq - the destination requirement (the fragment)
 * @param {Set} requirementSet - the set of requirements the requirement belongs to
 */
-function compareRequirements(originalReq, originalReqVars, newReq, requirementSet)
+function compareRequirements(originalReq, originalReqVars, newReq, destinationReq, requirementSet)
 {
   let len = 11;
   let n = 4;
@@ -88,7 +89,7 @@ function compareRequirements(originalReq, originalReqVars, newReq, requirementSe
   //console.log("requirementSet");
   //console.log(requirementSet);
 
-  let checkResult = checkInNuSMV(originalReq, originalReqVars, newReq ,len,n, requirementSet);
+  let checkResult = checkInNuSMV(originalReq, originalReqVars, newReq, destinationReq, len, n, requirementSet);
 
   if (checkResult)
   {
@@ -110,18 +111,20 @@ exports.compareRequirements = compareRequirements;
  * @param {Object} originalReq 
  * @param {Map<String, String>} originalReqVars 
  * @param {Object} newReq 
+ * @param {Object} destinationReq
  * @param {int} len 
  * @param {int} n 
  * @param {Array<Object>} allRequirements 
  * 
  */
-function checkInNuSMV (originalReq, originalReqVars, newReq,len,n, allRequirements)
+function checkInNuSMV (originalReq, originalReqVars, newReq, destinationReq, len, n, allRequirements)
 {
   //console.log("checkInNuSMV allRequirements -> ");
   //console.log(allRequirements); Oisín: this log is horrible in backend code so I'm getting rid of it
   
-  let r = generateSMV(originalReq, originalReqVars, newReq, n, allRequirements);
-  let smvCode = preamble(r.vars, len) + r.specs.join('\n') + '\n'; //
+  let r = generateSMV(originalReq, originalReqVars, newReq, destinationReq, n, allRequirements);
+  let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
+  let smvCode = preamble(r.vars, len, fragmentMacro) + r.specs.join('\n') + '\n'; //
 
   let checkName =  originalReq.reqid;
   
@@ -156,11 +159,12 @@ function checkInNuSMV (originalReq, originalReqVars, newReq,len,n, allRequiremen
  * @param {Object} originalReq 
  * @param {Map<String, String>} originalReqVars 
  * @param {Object} newReq 
+ * @param {Object} destinationReq
  * @param {int} n 
  * @param {Array<Object>} allRequirements 
  * @returns 
  */
-function generateSMV(originalReq, originalReqVars, newReq,n, allRequirements)
+function generateSMV(originalReq, originalReqVars, newReq, destinationReq, n, allRequirements)
 {
   let ltlspecs = [];
   let fragList = [];
@@ -174,40 +178,47 @@ function generateSMV(originalReq, originalReqVars, newReq,n, allRequirements)
   //console.log("generateSMV allRequirements -> ");
   //console.log(allRequirements); Oisín: this log is horrible in backend code so I'm getting rid of it
 
-    let origFT = originalReq.semantics.ftExpanded;
+  // Store the temporal logic of the original requirement
+  let origFT = originalReq.semantics.ftExpanded;
+  console.log("origFT = " + origFT)
 
-    if ("fragments" in originalReq)
+  // check if the original requirement has fragments that should be merged back in
+  if ("fragments" in originalReq)
+  {
+    console.log("merging original req")
+
+    let fragments = getFragmentReqs(originalReq.fragments, allRequirements)
+
+    for (let f of fragments)
     {
-      console.log("merging original req")
-
-      let fragments = getFragmentReqs(originalReq.fragments, allRequirements)
-
-      for (let f of fragments)
-      {
-        origFT = mergeFragment(origFT, f.doc)//Oisin: can maybe fix by changing 'f' to 'f.doc'
-        fragList.push(f)
-      }
+      origFT = mergeFragment(origFT, f.doc)//Oisin: can maybe fix by changing 'f' to 'f.doc'
+      fragList.push(f)
     }
+  }
 
-    let newFT = newReq.semantics.ftExpanded;
-    console.log("newReq.fragments:");
-    console.log(newReq.fragments);
-    if ("fragments" in newReq)
+  let newFT = newReq.semantics.ftExpanded;
+  // Merge in the fragment extracted to the destination requirement
+  // newFT = mergeFragment(newFT, destinationReq) 
+
+  // Check if the new requirement has any fragments in the database that should be merged back in
+  console.log("newReq.fragments:");
+  console.log(newReq.fragments);
+  if ("fragments" in newReq)
+  {
+    console.log("merging new req")
+
+    let fragments = getFragmentReqs(newReq.fragments, allRequirements)
+    console.log(fragments)
+    for (let f of fragments)
     {
-      console.log("merging new req")
-
-      let fragments = getFragmentReqs(newReq.fragments, allRequirements)
-      console.log(fragments)
-      for (let f of fragments)
-      {
-        newFT = mergeFragment(newFT, f.doc)//Oisin: can maybe fix by changing 'f' to 'f.doc
-        fragList.push(f)
-      }
+      newFT = mergeFragment(newFT, f.doc)//Oisin: can maybe fix by changing 'f' to 'f.doc
+      fragList.push(f)
     }
+  }
 
 
-    let variables = getVars(originalReq, originalReqVars, newReq, fragList);
-    let name = originalReq.reqid;
+  let variables = getVars(originalReq, originalReqVars, newReq, destinationReq.reqid, fragList);
+  let name = originalReq.reqid;
 
     let rawSaltSpec = `${origFT} <-> ${newFT}`;
     //let nothingAfterLast = "G(LAST -> (G (!pre & !post & !m)))";
@@ -235,33 +246,34 @@ function generateSMV(originalReq, originalReqVars, newReq,n, allRequirements)
 function getFragmentReqs(fragmentNames, allRequirements)
 {
   console.log("getting fragment requirements");
-   let fragments = [];
-   console.log(fragmentNames)
+ let fragments = [];
+ console.log(fragmentNames)
 
 
-   //console.log("getFragmentReqs allRequirements -> ");
-   //console.log(allRequirements); Oisín: this log statement is awful in terminal
+ //console.log("getFragmentReqs allRequirements -> ");
+ //console.log(allRequirements); Oisín: this log statement is awful in terminal
 
-   // Nested loops...would be nice if we could get rid of that.
-   for (let req of allRequirements)
+ // Nested loops...would be nice if we could get rid of that.
+ for (let req of allRequirements)
+ {
+   console.log("-- req = ")
+   console.log(req);
+   console.log("-- reqid = " + req.doc.reqid);
+   for (let name of fragmentNames)
    {
-     console.log("-- req = ")
-     console.log(req);
-     console.log("-- reqid = " + req.doc.reqid);
-     for (let name of fragmentNames)
+     console.log(name);
+     //req.doc because allRequirements is actually a list of docs from the database *sigh*
+     if (req.doc.reqid == name)
      {
-       console.log(name);
-       if (req.doc.reqid == name) //req.doc because allRequirements is actually a list of docs from the database *sigh*
-       {
-         console.log("req in fragment names")
-         fragments.push(req);
-         fragmentNames.splice(fragmentNames.indexOf(name),1);
-       }
+       console.log("req in fragment names")
+       fragments.push(req);
+       fragmentNames.splice(fragmentNames.indexOf(name),1);
      }
-
    }
 
-   return fragments
+ }
+
+ return fragments
 }
 
 /**
@@ -273,11 +285,12 @@ function getFragmentReqs(fragmentNames, allRequirements)
  * This defines the variables (both common and specific, via the `variables` parameter)
  * that the specification uses.
  * 
- * @param {*} variables 
+ * @param {string} variables - the extra variables from the requirements
  * @param {int} len 
+ * @param {string} fragmentMacro - the fragment name mapped to the fragment's definition
  * @returns 
  */
-function preamble(variables, len) {
+function preamble(variables, len, fragmentMacro) {
     return `MODULE main
 VAR
   t : 0 .. ` + len + `;
@@ -285,21 +298,20 @@ VAR
   pre : boolean;
   stop : boolean;
   post : boolean;\n`
-  + variables +
-  `
+  + variables + `\n
 ASSIGN
   init(t) := 0;
   next(t) := (t >= ` + len +`) ? ` + len + ` : t + 1;
 DEFINE
-  LAST := (t = ` + (len - 1) + `);
-`;
+  LAST := (t = ` + (len - 1) + `);\n`
+ + fragmentMacro + '\n\n';
 }
 
 
 
 /**
- * Replace each instance of the fragment name in the
- * requirement's property, with the pre-condition of the fragment
+ * Replace each instance of the fragment name in the requirement's 
+ * property, with the pre-condition of the fragment requirement
  *
  * @param {*} property 
  * @param {*} fragment 
@@ -341,7 +353,7 @@ function mergeFragment(property, fragment)
  * @param {Array<Object>} fragList 
  * @returns {String} The variable names and types for the SMV file
  */
-function getVars(originalReq, originalReqVars, newReq, fragList)
+function getVars(originalReq, originalReqVars, newReq, destinationName, fragList)
 {
   console.log("getVars");
   let varSet = new Set();
@@ -358,7 +370,10 @@ function getVars(originalReq, originalReqVars, newReq, fragList)
 
   for (let v of newVars)
   {
-    varSet.add(v);
+    if (v != destinationName)
+    {
+        varSet.add(v);
+    }
   }
 
   console.log("fragList:");
