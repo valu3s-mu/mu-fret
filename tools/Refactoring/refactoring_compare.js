@@ -44,11 +44,11 @@ quit`
 
 var placeholderSubsts =
       [
-	  ['\\$regular_condition\\$','pre'],
-	  ['\\$post_condition\\$', 'post'],
-	  ['\\$stop_condition\\$', 'stop'],
-	  ['\\$scope_mode\\$', 'm'],
-	  ['\\$duration\\$', '0']
+    ['\\$regular_condition\\$','pre'],
+    ['\\$post_condition\\$', 'post'],
+    ['\\$stop_condition\\$', 'stop'],
+    ['\\$scope_mode\\$', 'm'],
+    ['\\$duration\\$', '0']
       ];
 
 function substitutePlaceholders (ltlspec,n) {
@@ -73,10 +73,20 @@ function compareRequirements(originalReq, originalReqVars, newReq, requirementSe
   let n = 4;
 
 
-  console.log("compareRequirements requirementSet -> ");
-  console.log(requirementSet);
+  //console.log("compareRequirements requirementSet -> ");
+  //console.log(requirementSet); Oisín: I have replaced these with the logs below
 
   console.log("+++ Comparing Requirements +++")
+
+  console.log("== compareRequirements arguments: ==");
+  console.log("originalReq:");
+  console.log(originalReq);
+  console.log("originalReqVars");
+  console.log(originalReqVars);
+  console.log("newReq");
+  console.log(newReq)
+  //console.log("requirementSet");
+  //console.log(requirementSet);
 
   let checkResult = checkInNuSMV(originalReq, originalReqVars, newReq ,len,n, requirementSet);
 
@@ -86,7 +96,7 @@ function compareRequirements(originalReq, originalReqVars, newReq, requirementSe
   }
   else
   {
-    console.log("FAIL: Requirements have differently");
+    console.log("FAIL: Requirements behave differently");
   }
   return checkResult;
 }
@@ -107,8 +117,9 @@ exports.compareRequirements = compareRequirements;
  */
 function checkInNuSMV (originalReq, originalReqVars, newReq,len,n, allRequirements)
 {
-  console.log("checkInNuSMV allRequirements -> ");
-  console.log(allRequirements);
+  //console.log("checkInNuSMV allRequirements -> ");
+  //console.log(allRequirements); Oisín: this log is horrible in backend code so I'm getting rid of it
+  
   let r = generateSMV(originalReq, originalReqVars, newReq, n, allRequirements);
   let smvCode = preamble(r.vars, len) + r.specs.join('\n') + '\n'; //
 
@@ -160,8 +171,8 @@ function generateSMV(originalReq, originalReqVars, newReq,n, allRequirements)
   console.log(newReq);
 
 
-  console.log("generateSMV allRequirements -> ");
-  console.log(allRequirements);
+  //console.log("generateSMV allRequirements -> ");
+  //console.log(allRequirements); Oisín: this log is horrible in backend code so I'm getting rid of it
 
     let origFT = originalReq.semantics.ftExpanded;
 
@@ -179,6 +190,7 @@ function generateSMV(originalReq, originalReqVars, newReq,n, allRequirements)
     }
 
     let newFT = newReq.semantics.ftExpanded;
+    console.log("newReq.fragments:");
     console.log(newReq.fragments);
     if ("fragments" in newReq)
     {
@@ -205,6 +217,9 @@ function generateSMV(originalReq, originalReqVars, newReq,n, allRequirements)
     let smvSpec = utils.salt2smv(saltSpec);
     ltlspecs.push(`LTLSPEC NAME ${name} := ` + smvSpec + ';');
 
+    console.log("LTL Specs:");
+    console.log(ltlspecs);
+
   return {specs: ltlspecs,  vars: variables};
 }
 
@@ -224,8 +239,8 @@ function getFragmentReqs(fragmentNames, allRequirements)
    console.log(fragmentNames)
 
 
-     console.log("getFragmentReqs allRequirements -> ");
-     console.log(allRequirements);
+   //console.log("getFragmentReqs allRequirements -> ");
+   //console.log(allRequirements); Oisín: this log statement is awful in terminal
 
    // Nested loops...would be nice if we could get rid of that.
    for (let req of allRequirements)
@@ -346,7 +361,9 @@ function getVars(originalReq, originalReqVars, newReq, fragList)
     varSet.add(v);
   }
 
-  if (fragList != [])
+  console.log("fragList:");
+  console.log(fragList);
+  if (fragList != [])//Oisín: This check seems to always pass, even if fragList actually is empty. I don't think it matters though, may just remove
   {
     console.log("Processing the FragList... " + fragList )
     for (let f of fragList)
@@ -383,7 +400,8 @@ function getVars(originalReq, originalReqVars, newReq, fragList)
 
     }
   )
-
+  console.log("Variables string:");
+  console.log(variables);
   return variables;
 }
 
