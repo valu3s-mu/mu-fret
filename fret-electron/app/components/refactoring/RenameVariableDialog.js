@@ -348,6 +348,7 @@ class RenameVariableDialog extends React.Component
                     id="definition"
                     multiline
                     fullWidth
+                    spellCheck="false"
                     label="Definition"
                     value={fulltext} />
                 </Grid>
@@ -388,6 +389,7 @@ class RenameVariableDialog extends React.Component
                       id="definition"
                       multiline
                       fullWidth
+                      spellCheck="false"
                       label=""
                       value={varName}
                     />
@@ -420,6 +422,7 @@ class RenameVariableDialog extends React.Component
                   id="newVarName"
                   label={""}
                   placeholder="Type the new name for the chosen variable"
+                  spellCheck="false"
                   value={this.state.newName}
                   onChange={this.updateNewName()}
                 />
@@ -482,6 +485,7 @@ class RenameVariableDialog extends React.Component
                       id="definition"
                       multiline
                       fullWidth
+                      spellCheck="false"
                       label="Definition"
                       value={req.fulltext}
                     />

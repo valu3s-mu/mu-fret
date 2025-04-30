@@ -555,6 +555,7 @@ class CreateRequirementDialog extends React.Component {
                           defaultValue={this.state.rationale}
                           fullWidth
                           multiline
+                          spellCheck="false"
                           onChange={this.handleTextFieldChange('rationale')}
                           onFocus={this.handleTextFieldFocused('rationale')}
                           className={classes.text}
@@ -566,6 +567,7 @@ class CreateRequirementDialog extends React.Component {
                           defaultValue={this.state.comments}
                           fullWidth
                           multiline
+                          spellCheck="false"
                           onChange={this.handleTextFieldChange('comments')}
                           onFocus={this.handleTextFieldFocused('comments')}
                           className={classes.text}

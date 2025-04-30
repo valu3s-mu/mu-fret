@@ -347,6 +347,7 @@ class RenameRequirementDialog extends React.Component
                     id="definition"
                     multiline
                     fullWidth
+                    spellCheck="false"
                     label="Definition"
                     value={fulltext} />
                 </Grid>
@@ -359,6 +360,7 @@ class RenameRequirementDialog extends React.Component
                     id="newReqName"
                     label="New Name"
                     placeholder="Type the name you want to give to the extracted requirement"
+                    spellCheck="false"
                     value={this.state.newName}
                     onChange={this.updateNewName()}
                   />
@@ -448,6 +450,7 @@ class RenameRequirementDialog extends React.Component
                     id="definition"
                     multiline
                     fullWidth
+                    spellCheck="false"
                     label="Definition"
                     value={fulltext} />
                 </Grid>
@@ -460,6 +463,7 @@ class RenameRequirementDialog extends React.Component
                     id="newReqName"
                     label="New Name"
                     placeholder="Type the name you want to give to the extracted requirement"
+                    spellCheck="false"
                     value={this.state.newName}
                     onChange={this.updateNewName()}
                   />
@@ -484,6 +488,7 @@ class RenameRequirementDialog extends React.Component
                       id="definition"
                       multiline
                       fullWidth
+                      spellCheck="false"
                       label="Definition"
                       value={req.fulltext}
                     />
@@ -507,6 +512,7 @@ class RenameRequirementDialog extends React.Component
                       id="definition"
                       multiline
                       fullWidth
+                      spellCheck="false"
                       label="Definition"
                       value={req.fulltext}
                     />

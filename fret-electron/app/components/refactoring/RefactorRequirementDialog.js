@@ -456,6 +456,7 @@ getType = (variableName) =>
                           id="definition"
                           multiline
                           fullWidth
+                          spellCheck="false"
                           label="Definition"
                           value={fulltext} />
                       </Grid>
@@ -468,6 +469,7 @@ getType = (variableName) =>
                           id="extract"
                           multiline
                           fullWidth
+                          spellCheck="false"
                           label="Extract"
                           placeholder="Copy the part of the definition to extract"
                           value={this.state.extract}
@@ -482,6 +484,7 @@ getType = (variableName) =>
                               id="newReqName"
                               label="New Name"
                               placeholder="Type the name you want to give to the extracted requirement"
+                              spellCheck="false"
                               value={this.state.newName}
                               onChange={this.updateNewName()}
                             />
@@ -576,6 +579,7 @@ getType = (variableName) =>
 
                 multiline
                 fullWidth
+                spellCheck="false"
 
                 value={fulltext} />
             </Grid>

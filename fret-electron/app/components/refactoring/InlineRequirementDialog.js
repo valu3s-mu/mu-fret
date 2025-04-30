@@ -342,6 +342,7 @@ class InlineRequirementDialog extends React.Component
                     id="definition"
                     multiline
                     fullWidth
+                    spellCheck="false"
                     label="Definition"
                     value={fulltext} />
                 </Grid>
@@ -381,6 +382,7 @@ class InlineRequirementDialog extends React.Component
                       id="definition"
                       multiline
                       fullWidth
+                      spellCheck="false"
                       label="Definition"
                       value={req.doc.fulltext}
                     />
@@ -468,6 +470,7 @@ class InlineRequirementDialog extends React.Component
                     id="definition"
                     multiline
                     fullWidth
+                    spellCheck="false"
                     label="Definition"
                     value={fulltext} />
                 </Grid>
@@ -481,6 +484,7 @@ class InlineRequirementDialog extends React.Component
                 id="definition"
                 multiline
                 fullWidth
+                spellCheck="false"
                 label="Definition"
                 value={inlinedRequirementPlaceholder}
               />
