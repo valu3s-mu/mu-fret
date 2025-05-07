@@ -387,9 +387,14 @@ model.MoveFragment(sourceReq, definition, destinationReq) // Not yet working
 /**
 * Handles one request to rename a requirement, including the knock-on effect to
 * other requirements that reference this requirement
-* @todo Implement
+* 
+* @param {Object} requirement the requirement being renamed
+* @param {String} newName the new name (reqid) for requirement
+* @param {Array<Object>} childRequirements the children of requirement
+* @param {Array<Object>?} renameVariableArgs Either an empty array, or the first three parameters for RenameVariable
+* @returns {Boolean} True
 */
-function RenameRequirement(requirement, newName, childRequirements)
+function RenameRequirement(requirement, newName, childRequirements, renameVariableArgs)
 {
   // Ramos
   // 1. Select the requirement you want to rename.
@@ -414,13 +419,33 @@ function RenameRequirement(requirement, newName, childRequirements)
 		model.AddRequirementToDB(kreq)
 	})
 
+	if(renameVariableArgs.length == 3){//If renameVariableArgs is non-empty, then we are renaming a variable as well. So we fetch the requirements with
+																		 // that variable and call RenameVariable. RenameVariable requires four parameters
+		let variableDBID = renameVariableArgs[1];
 
-	return true;
+		return model.getRequirementsWithVariable(variableDBID).then((reqsWithVariable) => {
+			renameVariableArgs.push(reqsWithVariable.rows);
+			return RenameVariable(...renameVariableArgs);
+		})
+
+	}else{
+		return true;
+	}
+
 
 }
 exports.RenameRequirement = RenameRequirement;
 
 
+/**
+ * Handles a request to rename a variable in all the requirements in which it appears.
+ * 
+ * @param {String} variableOldName the original name of the chosen variable
+ * @param {String} variableDBID the chosen variable's database ID, of the form Project+Component+variableOldName
+ * @param {String} newVariableName the new name entered by the user
+ * @param {Array<Object>} targetRequirements an array of the JSONs of all the requirements that contain the chosen variable
+ * @returns {Boolean} True
+ */
 function RenameVariable(variableOldName, variableDBID, newVariableName, targetRequirements)
 {
 	model.FetchVariableFromDB(variableDBID).then((variableDBObject) => {
@@ -452,7 +477,6 @@ exports.RenameVariable = RenameVariable;
 /**
 * Handles one request to inline a requirement, including the knock-on effects to
 * other requirements that reference the requirement being inlined.
-* @todo Implement
 * 
 * @param {Object} source the requirement (currently, specifically a fragment) that is being inlined from
 * @param {Array<Object>} destinationReqs a list of the requirements that are being inlined into

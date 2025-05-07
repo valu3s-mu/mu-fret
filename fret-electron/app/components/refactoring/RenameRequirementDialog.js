@@ -207,10 +207,11 @@ class RenameRequirementDialog extends React.Component
           let dummyUpdatedReqs = reqsWithVariableResult.rows.map((req) => {
               
             let replacedFulltext = RefactoringUtils.replaceVariableName(req, fragmentVariable, newName);
+            let oldReqID = this.state.selectedRequirement.reqid;
 
             let updatedReqObject = {
               dbid: req.id,
-              reqid: req.doc.reqid,
+              reqid: req.doc.reqid == oldReqID ? newName : req.doc.reqid, //If it's the requirement we are renaming, that should be reflected in the preview.
               fulltext: replacedFulltext,
             };
             return updatedReqObject;
@@ -266,19 +267,16 @@ class RenameRequirementDialog extends React.Component
 
       //ipcRenderer.invoke('updateVariableTypes', [this.state.variableDocs, this.state.variables]);
 
-      let renameRequirementArgs = [this.state.selectedRequirement, this.state.newName, this.state.childRequirements];
-      let renameRequirementPromise = ipcRenderer.invoke('renameRequirement', renameRequirementArgs);
+      let selectedRequirement = this.state.selectedRequirement;
 
-
-      let renameVariablePromise;
+      let renameVariableArgs = [];
       if(this.state.fragmentVariable){
-        let varNameID = this.state.selectedRequirement.project+this.state.selectedRequirement.semantics.component_name+this.state.fragmentVariable;
-        let renameVariableArgs = [this.state.fragmentVariable, varNameID, this.state.newName, this.state.reqsWithVariable];
-      
-        let renameVariablePromise = ipcRenderer.invoke('renameVariable', renameVariableArgs);
+        let varNameID = selectedRequirement.project + selectedRequirement.semantics.component_name + this.state.fragmentVariable;
+        renameVariableArgs = [this.state.fragmentVariable, varNameID, this.state.newName];
       }
+      let renameRequirementArgs = [selectedRequirement, this.state.newName, this.state.childRequirements, renameVariableArgs];
 
-      Promise.all([renameRequirementPromise, renameVariablePromise]).then((results) => {
+      ipcRenderer.invoke('renameRequirement', renameRequirementArgs).then((renameReqResult) => {
         ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
 
           this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
@@ -298,7 +296,7 @@ class RenameRequirementDialog extends React.Component
 
           this.handleClose();
         })
-        
+
       })
     }
 
