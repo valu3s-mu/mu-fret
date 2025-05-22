@@ -81,17 +81,15 @@ class InlineRequirementDialog extends React.Component
     variables: new Map(),
     variablesText: "No Variables",
     applyToAll: false,
-    refactoringType: '',
-    refactoringContent: ' ',
     extractString: 'default extract string',
     requirements: [],
     refactoringCheckresult: null,
     variableDocs : {},
     //String with the IDs of any requirements to be refactored
     applicableRequirementsNames: "",
-    //Testing out putting this in the state instead of a variable
+    //Requirements which contain the response variable of the chosen fragment, i.e. those that reference the chosen fragment
     requirementsWithResponse: [],
-    //Funny placeholders
+    //A preview of the text of the chosen destination requirement after Inline has been performed
     inlinedRequirementPlaceholder: "",
     inlinedName: "",
     //Used for error messages on the Types screen
@@ -122,8 +120,7 @@ class InlineRequirementDialog extends React.Component
       selectedRequirement: {},
       requirements: [],
       refactoringCheckresult: null,
-      applyToAll: false, refactoringType: '',
-      refactoringContent: '',
+      applyToAll: false,
       applicableRequirementsNames: "",
       requirementsWithResponse: [],
       allVarsDefined: true,
@@ -382,27 +379,29 @@ class InlineRequirementDialog extends React.Component
 
               {requirementsWithResponse.map(req => {
 
-                return(//React yells at you if the items don't have unique keys
-                  <Grid item xs={3} key={req.id}>
-                    {req.doc.reqid}
-                    <br/>
-                    <TextField
-                      id="definition"
-                      multiline
-                      fullWidth
-                      spellCheck="false"
-                      label="Definition"
-                      value={req.doc.fulltext}
-                    />
+                if(req.doc.reqid != reqid){
+                  return(//React yells at you if the items don't have unique keys
+                    <Grid item xs={3} key={req.id}>
+                      {req.doc.reqid}
+                      <br/>
+                      <TextField
+                        id="definition"
+                        multiline
+                        fullWidth
+                        spellCheck="false"
+                        label="Definition"
+                        value={req.doc.fulltext}
+                      />
 
-                    <Button
-                    onClick={(event) => this.handleChooseDestination(req)}
-                    color="secondary"
-                    >
-                      Inline here  
-                    </Button>
-                  </Grid>
-                  )
+                      <Button
+                      onClick={(event) => this.handleChooseDestination(req)}
+                      color="secondary"
+                      >
+                        Inline here  
+                      </Button>
+                    </Grid>
+                    )
+                  }
                 }
 
               )}
@@ -466,29 +465,20 @@ class InlineRequirementDialog extends React.Component
                 If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
               </DialogContentText>
               
-
-              <Grid spacing={2}>
-
-                <Grid item xs={3}>
-                  {reqid}:
-                </Grid>
-
-                <Grid item xs={9}>
-                  <TextField
-                    id="definition"
-                    multiline
-                    fullWidth
-                    spellCheck="false"
-                    label="Definition"
-                    value={fulltext} />
-                </Grid>
-
-              </Grid>
-
+              {reqid}:
+              <TextField
+                id="definition"
+                multiline
+                fullWidth
+                spellCheck="false"
+                label="Definition"
+                value={fulltext}
+              />
+                
+              <br/>
               <br/>
 
               Inlined version of {inlinedName}:
-              <br/>
               <TextField
                 id="definition"
                 multiline

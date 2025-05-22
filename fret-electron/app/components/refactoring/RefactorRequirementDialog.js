@@ -95,8 +95,6 @@ class RefactorRequirementDialog extends React.Component
     variables: new Map(),
     variablesText: "No Variables",
     applyToAll: false,
-    refactoringType: '',
-    refactoringContent: ' ',
     extractString: 'default extract string',
     newName: '',
     requirements: [],
@@ -133,7 +131,7 @@ class RefactorRequirementDialog extends React.Component
    */
   handleClose = () => {
     // Reset the state
-    this.setState({ open: false, dialogState: STATE.INITIAL, selectedRequirement: {}, requirements: [], refactoringCheckresult: null, applyToAll: false, refactoringType: '', newName: '', refactoringContent: '', fragmentNotFoundinSelected: false, fragmentNotFoundinAll: false, applicableRequirementsNames: "", invalidNewName: false});
+    this.setState({ open: false, dialogState: STATE.INITIAL, selectedRequirement: {}, requirements: [], refactoringCheckresult: null, applyToAll: false, newName: '', fragmentNotFoundinSelected: false, fragmentNotFoundinAll: false, applicableRequirementsNames: "", invalidNewName: false});
     this.state.dialogCloseListener();
   };
 
