@@ -105,7 +105,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 
 
   // New fretish requirement
-	let newFretish = "if " + fragment + " " + component + " shall satisfy " + fretishDestinationName;
+	let newFretish = "whenever " + fragment + " " + component + " shall at the same timepoint satisfy " + fretishDestinationName;
 
 	 destinationReq.fulltext = newFretish;
 	 // Compile the new semantics and add to the new req
@@ -226,7 +226,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 	let component = req.semantics.component_name;
 
   // New fretish requirement
-	let newFretish = "if " + fragment + " " + component + " shall satisfy " + fretishDestinationName;
+	let newFretish = "whenever " + fragment + " " + component + " shall at the same timepoint satisfy " + fretishDestinationName;
 
 	 destinationReq.fulltext = newFretish;
 	 // Compile the new semantics and add to the new req
