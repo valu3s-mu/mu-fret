@@ -365,14 +365,17 @@ function getVars(originalReq, originalReqVars, newReq, destinationName, fragList
 
   for (let v of origVars)
   {    
-    varSet.add(v);
+    if (v != destinationName)
+    {
+      varSet.add(v);
+    }
   }
 
   for (let v of newVars)
   {
     if (v != destinationName)
     {
-        varSet.add(v);
+      varSet.add(v);
     }
   }
 

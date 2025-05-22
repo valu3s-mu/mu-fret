@@ -216,8 +216,9 @@ class InlineRequirementDialog extends React.Component
 
     let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
 
-    let varList = RefactoringUtils.getVariableNames(req.doc);
-    let args = [req.doc.project, varList];
+    let destinationVarList = RefactoringUtils.getVariableNames(req.doc);
+    let selectedVarList = RefactoringUtils.getVariableNames(this.state.selectedRequirement);
+    let args = [req.doc.project, destinationVarList.concat(selectedVarList)];
     ipcRenderer.invoke('createVariableMap', args).then((result) => {
 
       let variableDocs = result[0];
@@ -265,31 +266,38 @@ class InlineRequirementDialog extends React.Component
 
       ipcRenderer.invoke('updateVariableTypes', [this.state.variableDocs, this.state.variables]);
 
-      ipcRenderer.invoke('inlineRequirement', [this.state.selectedRequirement, this.state.destinationReqs]).then((result) => {
-        ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
+      ipcRenderer.invoke('inlineRequirement', [this.state.selectedRequirement, this.state.destinationReqs, this.state.variables, this.state.requirements]).then((result) => {
 
-          this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
-                                                requirements: result.requirements,
-                                                // analysis
-                                                components : result.components,
-                                                completedComponents : result.completedComponents,
-                                                cocospecData : result.cocospecData,
-                                                cocospecModes : result.cocospecModes,
-                                                // variables
-                                                variable_data : result.variable_data,
-                                                modelComponent : result.modelComponent,
-                                                modelVariables : result.modelVariables,
-                                                selectedVariable : result.selectedVariable,
-                                                importedComponents : result.importedComponents,
-                                                })
+        if(result==true){
+          ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
 
-          this.handleClose();
-        })
+            this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
+                                                  requirements: result.requirements,
+                                                  // analysis
+                                                  components : result.components,
+                                                  completedComponents : result.completedComponents,
+                                                  cocospecData : result.cocospecData,
+                                                  cocospecModes : result.cocospecModes,
+                                                  // variables
+                                                  variable_data : result.variable_data,
+                                                  modelComponent : result.modelComponent,
+                                                  modelVariables : result.modelVariables,
+                                                  selectedVariable : result.selectedVariable,
+                                                  importedComponents : result.importedComponents,
+                                                  })
+
+            this.setState({dialogState:STATE.RESULT_TRUE, refactoringCheckresult: result});
+          })
+        }
+        else
+        {
+          this.setState({dialogState:STATE.RESULT_FALSE, refactoringCheckresult: result});
+        }
         
       })
     }
-
-    this.handleClose();
+    //We don't need an else statement, because if any variables are undefined, we will stay on the TYPES screen and any error messages will
+    //be displayed at the bottom of the dialog.
 
   }
 
@@ -432,16 +440,12 @@ class InlineRequirementDialog extends React.Component
         })
 
         let {allVarsDefined, variableErrorMessages} = this.state;
-        console.log("InlineRequirementDialog Error prints:");
-        console.log(allVarsDefined);
-        console.log(variableErrorMessages);
 
 
         var self = this;
 
         return(
 
-        <div>
           <Dialog
             open={this.state.open}
             onClose={this.handleClose}
@@ -453,15 +457,19 @@ class InlineRequirementDialog extends React.Component
             <DialogContent>
 
               <DialogContentText>
-                Response: {semantics ? semantics.post_condition_SMV_pt : ""}
-                <br/>
-                {isFragment ? "This is a fragment" : "This is not a fragment"}
+                Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
+
+                Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
+
+                Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
+
+                If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
               </DialogContentText>
               
 
-              <Grid container spacing={2} direction="row">
+              <Grid spacing={2}>
 
-                <Grid style={{ textAlign: 'right' }} item xs={3}>
+                <Grid item xs={3}>
                   {reqid}:
                 </Grid>
 
@@ -477,6 +485,7 @@ class InlineRequirementDialog extends React.Component
 
               </Grid>
 
+              <br/>
 
               Inlined version of {inlinedName}:
               <br/>
@@ -553,10 +562,62 @@ class InlineRequirementDialog extends React.Component
             </DialogActions>
 
           </Dialog>
-        </div>
+        
+        );
+        break;
 
-        ); 
+    case STATE.RESULT_TRUE:
+    // Check has passed
+      return(
+        <Dialog
+          open={this.state.open}
+          onClose={this.handleClose}
+          aria-labelledby="form-dialog-title"
+          maxWidth="md"
+        >
+        <DialogTitle id="simple-dialog-title">  Sucessfully Inlined Requirement: {reqid}
+        </DialogTitle>
+          <DialogContent>
+              <DialogContentText>
+                The checks have passed and the refactoring is complete. You may Close this dialogue.
+              </DialogContentText>
+              <CheckCircleIcon/> Checks Passed. The original and new requirements behave the same.
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={this.handleClose} color="secondary">
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      );
+      break;
 
+    case STATE.RESULT_FALSE:
+    // Check has failed. The user should probably never see this
+      return(
+        <Dialog
+          open={this.state.open}
+          onClose={this.handleClose}
+          aria-labelledby="form-dialog-title"
+          maxWidth="md"
+        >
+        <DialogTitle id="simple-dialog-title">  Inline Requirement Failed: {reqid}
+        </DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              The checks have failed and the refactoring was not performed. Please Close this dialogue, review the types and part of the requirement you were trying to extract, and try again.
+            </DialogContentText>
+            <CancelIcon/> The check failed, the original and new requirement behave differently.
+            Result: {this.state.refactoringCheckresult}
+          </DialogContent>
+          <DialogActions>
+          <Button onClick={this.handleClose} color="secondary">
+            Close
+          </Button>
+          </DialogActions>
+        </Dialog>
+      );
+      break;
 
     }
 

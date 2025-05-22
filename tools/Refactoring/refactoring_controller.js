@@ -480,8 +480,11 @@ exports.RenameVariable = RenameVariable;
 * 
 * @param {Object} source the requirement (currently, specifically a fragment) that is being inlined from
 * @param {Array<Object>} destinationReqs a list of the requirements that are being inlined into
+* @param {Map<String, String>} varMap map of the requirements' variables mapped to their types
+* @param {Array<Object>} allRequirements List of all the other requirements in the project, which is used for the NuSMV check(s)
+* @returns {Boolean} True if NuSMV says that the original and refactored requirement behave the same, and thus if the refactoring was performed
 */
-function InlineRequirement(source, destinationReqs)
+function InlineRequirement(source, destinationReqs, varMap, allRequirements)
 {
 
 // Ramos
@@ -490,40 +493,72 @@ function InlineRequirement(source, destinationReqs)
 // 3. Remove references to the inlined requirement.
 // 4. Remove the inlined requirement.
 
+
+	//Retrieve the parts of the source requirement that we need
+  let semantics = source.semantics; //We pull from the source requirement's semantics
+  let sourceResponse = semantics.post_condition_SMV_pt; //The text to be replaced
+  let sourceCondition = semantics.pre_condition; //The text to be inlined
+
+  //For each destination requirement, we create a copy and check if the inlining changes the meaning
+  let result = false;
 	for (let i = 0; i < destinationReqs.length; i++){
 
 		let currentDestination = destinationReqs[i].doc;
 
 		let destinationText = currentDestination.fulltext;
 
-    let semantics = source.semantics; //We pull from the source requirement's semantics
-    let sourceResponse = semantics.post_condition_SMV_pt; //The text to be replaced
-    let sourceCondition = semantics.pre_condition; //The text to be inlined
-
     let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
 
-    currentDestination.fulltext = inlineResult;
+    let dummyUpdatedReq = makeDummyUpdatedReq(currentDestination);
+    dummyUpdatedReq.fulltext = inlineResult;
+    let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
+ 		dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
 
-    //Recompile the requirement's semantics based on the new text
-    let newSemantics = fretSemantics.compile(inlineResult);
-		currentDestination.semantics = newSemantics.collectedSemantics;
+ 		result = compare.compareRequirements(currentDestination, varMap, dummyUpdatedReq, source, allRequirements);
+ 		console.log("controller, result = " + result);
 
-		//Remove reference to the source fragment from the destination's list of fragments
-		if(currentDestination.fragments){
-			let fragIndex = currentDestination.fragments.indexOf(source._id);
-			if(fragIndex > -1){
-				currentDestination.fragments.splice(fragIndex, 1);
-			}
-			
+		if(!result)
+		{
+			console.log("+++ check failed aborting +++")
+			console.log("+++ failed on the following requirement +++")
+			console.log(currentDestination);
+			break;
 		}
+  }
 
-		//Add to the database
-    model.AddRequirementToDB(currentDestination);
+  //If the check(s) passed, now we do the inlining for real
+  if(result){
+		for (let i = 0; i < destinationReqs.length; i++){
 
+			let currentDestination = destinationReqs[i].doc;
+
+			let destinationText = currentDestination.fulltext;
+
+	    let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
+
+	    currentDestination.fulltext = inlineResult;
+
+	    //Recompile the requirement's semantics based on the new text
+	    let newSemantics = fretSemantics.compile(inlineResult);
+			currentDestination.semantics = newSemantics.collectedSemantics;
+
+			//Remove reference to the source fragment from the destination's list of fragments
+			if(currentDestination.fragments){
+				let fragIndex = currentDestination.fragments.indexOf(source._id);
+				if(fragIndex > -1){
+					currentDestination.fragments.splice(fragIndex, 1);
+				}
+				
+			}
+
+			//Add to the database
+	    model.AddRequirementToDB(currentDestination);
+
+		}
 	}
 
 
-	return true;
+	return result;
 
 }
 exports.InlineRequirement = InlineRequirement;
