@@ -140,7 +140,9 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 
   // Step 4
   // Verify
-	var result = compare.compareRequirements(req, reqVars, dummyUpdatedReq, destinationReq, allRequirements);
+  let fragmentName = destinationReq.reqid;
+  let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
+	var result = compare.compareRequirements(req, dummyUpdatedReq, reqVars, fragmentName, fragmentMacro, allRequirements);
 	console.log("controller, result = " + result);
 	if(result)
 	{
@@ -280,7 +282,9 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 			// This call to compareRequirements can reuse reqVars because if we are doing extract all
 			// then `reqvars` will contain all the variables (and types) for all the requirements that
 			// contain the fragment being extracted.
-			result = compare.compareRequirements(kreq, reqVars, dummyUpdatedReq, destinationReq, allRequirements);
+			let fragmentName = destinationReq.reqid;
+  		let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
+			result = compare.compareRequirements(kreq, dummyUpdatedReq, reqVars, fragmentName, fragmentMacro, allRequirements);
 			console.log("controller, result = " + result);
 
 			if(!result)
@@ -514,7 +518,10 @@ function InlineRequirement(source, destinationReqs, varMap, allRequirements)
     let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
  		dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
 
- 		result = compare.compareRequirements(currentDestination, varMap, dummyUpdatedReq, source, allRequirements);
+
+		let fragmentName = source.reqid;
+  	let fragmentMacro = source.reqid + " := " + source.semantics.pre_condition +";";
+ 		result = compare.compareRequirements(currentDestination, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements);
  		console.log("controller, result = " + result);
 
 		if(!result)

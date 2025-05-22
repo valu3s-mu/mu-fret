@@ -59,37 +59,35 @@ function substitutePlaceholders (ltlspec,n) {
 
 /**
 * Compares the original requirement with the refactored version.
-* The method uses pulls any extracted fragments from the requirement set, using
+* The method pulls any extracted fragments from the requirement set, using
 * the `fragment` variable present in a previously refactored requirement.
 *
 * @param {Object} originalReq - the original requirement
-* @param {Map<String, String>} originalReqVars - the variables of the original requirement
 * @param {Object} newReq - the refactored requirement
-* @param {Object} destinationReq - the destination requirement (the fragment)
+* @param {Map<String, String>} variableMap - the variables of the requirements, mapped to their types
+* @param {String} fragmentName - the name/reqid of the fragment involved in the current refactoring
+* @param {String} fragmentMacro - an NuSMV macro used to check the current refactoring
 * @param {Set} requirementSet - the set of requirements the requirement belongs to
 */
-function compareRequirements(originalReq, originalReqVars, newReq, destinationReq, requirementSet)
+function compareRequirements(originalReq, newReq, variableMap, fragmentName, fragmentMacro, requirementSet)
 {
   let len = 11;
   let n = 4;
 
-
-  //console.log("compareRequirements requirementSet -> ");
-  //console.log(requirementSet); Oisín: I have replaced these with the logs below
 
   console.log("+++ Comparing Requirements +++")
 
   console.log("== compareRequirements arguments: ==");
   console.log("originalReq:");
   console.log(originalReq);
-  console.log("originalReqVars");
-  console.log(originalReqVars);
   console.log("newReq");
   console.log(newReq)
+  console.log("variableMap");
+  console.log(variableMap);
   //console.log("requirementSet");
   //console.log(requirementSet);
 
-  let checkResult = checkInNuSMV(originalReq, originalReqVars, newReq, destinationReq, len, n, requirementSet);
+  let checkResult = checkInNuSMV(originalReq, newReq, variableMap, fragmentName, fragmentMacro, len, n, requirementSet);
 
   if (checkResult)
   {
@@ -109,21 +107,21 @@ exports.compareRequirements = compareRequirements;
  * to temporal logic that behaves the same.
  * 
  * @param {Object} originalReq 
- * @param {Map<String, String>} originalReqVars 
  * @param {Object} newReq 
- * @param {Object} destinationReq
+ * @param {Map<String, String>} variableMap 
+ * @param {String} fragmentName
+ * @param {String} fragmentMacro
  * @param {int} len 
  * @param {int} n 
  * @param {Array<Object>} allRequirements 
  * 
  */
-function checkInNuSMV (originalReq, originalReqVars, newReq, destinationReq, len, n, allRequirements)
+function checkInNuSMV (originalReq, newReq, variableMap, fragmentName, fragmentMacro, len, n, allRequirements)
 {
   //console.log("checkInNuSMV allRequirements -> ");
   //console.log(allRequirements); Oisín: this log is horrible in backend code so I'm getting rid of it
   
-  let r = generateSMV(originalReq, originalReqVars, newReq, destinationReq, n, allRequirements);
-  let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
+  let r = generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequirements);
   let smvCode = preamble(r.vars, len, fragmentMacro) + r.specs.join('\n') + '\n'; //
 
   let checkName =  originalReq.reqid;
@@ -157,14 +155,14 @@ function checkInNuSMV (originalReq, originalReqVars, newReq, destinationReq, len
 * behave in the same way.
 
  * @param {Object} originalReq 
- * @param {Map<String, String>} originalReqVars 
  * @param {Object} newReq 
- * @param {Object} destinationReq
+ * @param {Map<String, String>} variableMap 
+ * @param {String} fragmentName
  * @param {int} n 
  * @param {Array<Object>} allRequirements 
  * @returns 
  */
-function generateSMV(originalReq, originalReqVars, newReq, destinationReq, n, allRequirements)
+function generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequirements)
 {
   let ltlspecs = [];
   let fragList = [];
@@ -217,7 +215,7 @@ function generateSMV(originalReq, originalReqVars, newReq, destinationReq, n, al
   }
 
 
-  let variables = getVars(originalReq, originalReqVars, newReq, destinationReq.reqid, fragList);
+  let variables = getVars(originalReq, newReq, variableMap, fragmentName, fragList);
   let name = originalReq.reqid;
 
     let rawSaltSpec = `${origFT} <-> ${newFT}`;
@@ -348,12 +346,12 @@ function mergeFragment(property, fragment)
  * were originally fragments) their variables will be included too.
  * 
  * @param {Object} originalReq 
- * @param {Map<String, String>} originalReqVars 
  * @param {Object} newReq 
+ * @param {Map<String, String>} variableMap 
  * @param {Array<Object>} fragList 
  * @returns {String} The variable names and types for the SMV file
  */
-function getVars(originalReq, originalReqVars, newReq, destinationName, fragList)
+function getVars(originalReq, newReq, variableMap, fragmentName, fragList)
 {
   console.log("getVars");
   let varSet = new Set();
@@ -365,7 +363,7 @@ function getVars(originalReq, originalReqVars, newReq, destinationName, fragList
 
   for (let v of origVars)
   {    
-    if (v != destinationName)
+    if (v != fragmentName)
     {
       varSet.add(v);
     }
@@ -373,7 +371,7 @@ function getVars(originalReq, originalReqVars, newReq, destinationName, fragList
 
   for (let v of newVars)
   {
-    if (v != destinationName)
+    if (v != fragmentName)
     {
       varSet.add(v);
     }
@@ -399,9 +397,9 @@ function getVars(originalReq, originalReqVars, newReq, destinationName, fragList
   ( function(value)
     {
       console.log("making smv variable: " + value );
-      console.log(originalReqVars);
-      console.log(typeof(originalReqVars));
-      let type = originalReqVars.get(value); // Big assumption here is that the new requirement doesn't have new variables...
+      console.log(variableMap);
+      console.log(typeof(variableMap));
+      let type = variableMap.get(value); // Big assumption here is that the new requirement doesn't have new variables...
       // Assumes the types are right, UI should prevent incorrect types from coming through.
       if (type == "integer")
       {
