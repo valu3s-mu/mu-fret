@@ -256,8 +256,8 @@ class InlineRequirementDialog extends React.Component
       }
 
     }
-
     this.setState({allVarsDefined : allVarsDefined, variableErrorMessages: variableErrorMessages});
+
 
     if(allVarsDefined){
 
@@ -435,7 +435,7 @@ class InlineRequirementDialog extends React.Component
 
         let reqVariables = []
         this.state.variables.forEach (function(value, key) {
-        reqVariables.push(key);
+          reqVariables.push(key);
         })
 
         let {allVarsDefined, variableErrorMessages} = this.state;

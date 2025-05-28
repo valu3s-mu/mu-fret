@@ -532,7 +532,7 @@ getType = (variableName) =>
 
       let reqVariables = []
       this.state.variables.forEach (function(value, key) {
-        reqVariables.push(key);
+        reqVariables.push(key);
       })
 
       var self = this;

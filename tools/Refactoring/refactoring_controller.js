@@ -450,31 +450,62 @@ exports.RenameRequirement = RenameRequirement;
  * @param {Array<Object>} targetRequirements an array of the JSONs of all the requirements that contain the chosen variable
  * @returns {Boolean} True
  */
-function RenameVariable(variableOldName, variableDBID, newVariableName, targetRequirements)
+function RenameVariable(variableOldName, variableDBID, newVariableName, targetRequirements, varMap, allRequirements)
 {
-	model.FetchVariableFromDB(variableDBID).then((variableDBObject) => {
-		
-		variableDBObject._id = newVariableName;
-		variableDBObject.variable_name = newVariableName;
 
-		model.ReplaceVariableInDB(variableDBID, variableDBObject);
-	})
+	let result = false;
+	for (let i = 0; i < targetRequirements.length; i++){
 
+		let reqDoc = targetRequirements[i].doc;
 
-	targetRequirements.map((req) => {
-
-		let reqDoc = req.doc;
+		let dummyUpdatedReq = makeDummyUpdatedReq(reqDoc);
 
 		let replacedFulltext = refactoring_utils.replaceVariableName(reqDoc, variableOldName, newVariableName);
-		reqDoc.fulltext = replacedFulltext;
+		dummyUpdatedReq.fulltext = replacedFulltext;
 
-		let newSemantics = fretSemantics.compile(replacedFulltext);
-		reqDoc.semantics = newSemantics.collectedSemantics;
+		let newDummySemantics = fretSemantics.compile(replacedFulltext);
+		dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
+		
 
-		model.AddRequirementToDB(reqDoc);
-	})
+		let fragmentName = newVariableName;
+  	let fragmentMacro = newVariableName + " := " + variableOldName +";";
+ 		result = compare.compareRequirements(reqDoc, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements);
+ 		console.log("controller, result = " + result);
 
-	return true;
+		if(!result)
+		{
+			console.log("+++ check failed aborting +++")
+			console.log("+++ failed on the following requirement +++")
+			console.log(reqDoc);
+			break;
+		}
+	}
+
+
+	if(result){
+		model.FetchVariableFromDB(variableDBID).then((variableDBObject) => {
+			
+			variableDBObject._id = newVariableName;
+			variableDBObject.variable_name = newVariableName;
+
+			model.ReplaceVariableInDB(variableDBID, variableDBObject);
+		})
+
+		targetRequirements.map((req) => {
+
+			let reqDoc = req.doc;
+
+			let replacedFulltext = refactoring_utils.replaceVariableName(reqDoc, variableOldName, newVariableName);
+			reqDoc.fulltext = replacedFulltext;
+
+			let newSemantics = fretSemantics.compile(replacedFulltext);
+			reqDoc.semantics = newSemantics.collectedSemantics;
+
+			model.AddRequirementToDB(reqDoc);
+		})
+	}
+
+	return result;
 }
 exports.RenameVariable = RenameVariable;
 
