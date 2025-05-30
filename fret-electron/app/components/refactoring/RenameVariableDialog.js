@@ -235,7 +235,7 @@ class RenameVariableDialog extends React.Component
           var variableTypeMap = new Map(); // map to hold varname |-> type
           var varList = [];
 
-          // For each requirement that has the fragment in...
+          // For each requirement that has the variable in...
           for (var i = 0; i < requirementsWithVariable.length; i++)
           {
             let this_req = requirementsWithVariable[i].doc;
@@ -270,7 +270,7 @@ class RenameVariableDialog extends React.Component
 
   }
 
-  //Mostly copying this in for now
+
   handleTypesOK = () => {
 
     let varTypeMap = this.state.variables;
@@ -587,9 +587,8 @@ class RenameVariableDialog extends React.Component
                   ,
                   <Divider variant="inset" component="li" />
                 )
-
-            }
-            </ul>
+              }
+              </ul>
 
             <ul>
             {variableErrorMessages.map(message => (

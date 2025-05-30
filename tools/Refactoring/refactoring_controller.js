@@ -414,26 +414,55 @@ function RenameRequirement(requirement, newName, childRequirements, renameVariab
 // Step 3
 //update the knockons
 
+	if(renameVariableArgs.length == 0){
+		requirement.reqid = newName;
+		model.AddRequirementToDB(requirement);
 
-	requirement.reqid = newName;
-	model.AddRequirementToDB(requirement);
-
-	childRequirements.map(kreq => {
-		kreq.parent_reqid = newName;
-		model.AddRequirementToDB(kreq)
-	})
-
-	if(renameVariableArgs.length == 3){//If renameVariableArgs is non-empty, then we are renaming a variable as well. So we fetch the requirements with
-																		 // that variable and call RenameVariable. RenameVariable requires four parameters
+		childRequirements.map(kreq => {
+			kreq.parent_reqid = newName;
+			model.AddRequirementToDB(kreq)
+		})
+		return true;
+	}
+	else if(renameVariableArgs.length > 0){//If renameVariableArgs is non-empty, then we are renaming a variable as well. So we fetch the requirements with
+																		 // that variable and call RenameVariable.
 		let variableDBID = renameVariableArgs[1];
 
-		return model.getRequirementsWithVariable(variableDBID).then((reqsWithVariable) => {
-			renameVariableArgs.push(reqsWithVariable.rows);
+		//We fetch the requirements with the variable to be renamed, and then call RenameVariable (Exactly like if the user had used the RenameVariableDialog)
+		let renameVariableresult = model.getRequirementsWithVariable(variableDBID).then((reqsWithVariable) => {
+			renameVariableArgs[3] = reqsWithVariable.rows;
 			return RenameVariable(...renameVariableArgs);
 		})
 
+		//If the variable renaming was successful, we fetch the (potentially) updated versions of the selected requirement and its children,
+		//update the name and parent_reqid fields respectively, and add them back into the database.
+		renameVariableresult.then((result) => {
+			if(result){
+				console.log("Inside if(result)");
+
+				childRequirements.map(kreq => {
+					console.log("updatingChildRequirement: " + kreq.reqid);
+					console.log("dbid: " + kreq._id);
+					model.FetchRequirementFromDB(kreq._id).then((updatedKReq) => {
+						updatedKReq.parent_reqid = newName;
+						model.AddRequirementToDB(updatedKReq);
+					})
+				})
+
+				console.log("renaming " + requirement.reqid);
+				console.log("dbid: " + requirement._id)
+				model.FetchRequirementFromDB(requirement._id).then((updatedRequirement) => {
+					updatedRequirement.reqid = newName;
+					model.AddRequirementToDB(updatedRequirement);
+				})
+			}
+		})
+
+		return renameVariableresult;
+
 	}else{
-		return true;
+		console.log("RenameRequirement: something weird happened, final else statement");
+		return false;
 	}
 
 
@@ -465,12 +494,12 @@ function RenameVariable(variableOldName, variableDBID, newVariableName, targetRe
 
 		let newDummySemantics = fretSemantics.compile(replacedFulltext);
 		dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
-		
+
 
 		let fragmentName = newVariableName;
   	let fragmentMacro = newVariableName + " := " + variableOldName +";";
  		result = compare.compareRequirements(reqDoc, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements);
- 		console.log("controller, result = " + result);
+ 		console.log("controller.RenameVariable, result = " + result);
 
 		if(!result)
 		{
@@ -483,6 +512,7 @@ function RenameVariable(variableOldName, variableDBID, newVariableName, targetRe
 
 
 	if(result){
+		/*
 		model.FetchVariableFromDB(variableDBID).then((variableDBObject) => {
 			
 			variableDBObject._id = newVariableName;
@@ -490,6 +520,9 @@ function RenameVariable(variableOldName, variableDBID, newVariableName, targetRe
 
 			model.ReplaceVariableInDB(variableDBID, variableDBObject);
 		})
+		*	Through experimentation, I have found that I don't actually need to do this manual update of the variable.
+		*	Seemingly, updating the requirements automatically does that.
+		*/
 
 		targetRequirements.map((req) => {
 

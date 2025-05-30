@@ -128,6 +128,29 @@ function DBAddCallback(err, responses)
 
 }
 
+function DBGetCallback(err, responses)
+{
+  if (err) {
+    console.log("Getting Requirement Failed...");
+    return console.log(err);
+  }
+  else {
+    console.log("Requirement Fetched");
+    console.log(responses);
+  }
+
+}
+
+/**
+ * Fetches the requirement with the given uuid from the database
+ * Oisín: I'm surprised we didn't have a function for this already
+ * 
+ * @param {String} dbid the uuid of the requested requirement
+ */
+export function FetchRequirementFromDB(dbid)
+{
+  return db.get(dbid, DBGetCallback);
+}
 
 /**
  * Adds the requirement, req, to the Database
@@ -393,6 +416,32 @@ export function getChildRequirements(requirement)
 
 }
 
+function ModelDBAddCallback(err, responses)
+{
+  if (err) {
+    console.log("Adding Variable Failed...");
+    return console.log(err);
+  }
+  else {
+    console.log("Variable Added");
+    console.log(responses);
+  }
+
+}
+
+function ModelDBGetCallback(err, responses)
+{
+  if (err) {
+    console.log("Getting Variable Failed...");
+    return console.log(err);
+  }
+  else {
+    console.log("Variable Fetched");
+    console.log(responses);
+  }
+
+}
+
 
 //Oisín: Exists purely for debugging purposes, so I can print the variables database to the electron console
 export function fetchModelDatabase()
@@ -407,7 +456,8 @@ export function fetchModelDatabase()
  */
 export function FetchVariableFromDB(variableID)
 {
-  return modeldb.get(variableID);
+  console.log("Fetching variableID: " + variableID);
+  return modeldb.get(variableID, ModelDBGetCallback);
 }
 
 /**
@@ -418,6 +468,9 @@ export function FetchVariableFromDB(variableID)
  */
 export function ReplaceVariableInDB(oldVariableID, newVariableObject)
 {
-  modeldb.remove(oldVariableID);
-  modeldb.put(newVariableObject);
+  console.log("Removing oldVariableID: " + oldVariableID);
+  modeldb.remove(oldVariableID, ModelDBGetCallback); 
+  console.log("Adding variableID: " + newVariableObject._id);
+  modeldb.put(newVariableObject, ModelDBAddCallback);
+  
 }

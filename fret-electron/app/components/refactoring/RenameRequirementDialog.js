@@ -91,6 +91,7 @@ class RenameRequirementDialog extends React.Component
     fragmentVariable: '',
     reqsWithVariable: [],
     dummyUpdatedReqs: [],
+    variableErrorMessages: [],
   };
 
   componentWillReceiveProps = (props) => {
@@ -122,6 +123,7 @@ class RenameRequirementDialog extends React.Component
       fragmentVariable: '',
       reqsWithVariable: [],
       dummyUpdatedReqs: [],
+      variableErrorMessages: [],
     });
     this.state.dialogCloseListener();
   };
@@ -179,6 +181,7 @@ class RenameRequirementDialog extends React.Component
 
   handleInitialOK = () => {
 
+    let selectedRequirement = this.state.selectedRequirement;
     let fragmentVariable = this.state.fragmentVariable;//Check if the user wants to rename the variable as well
 
     //                           | Regex for a requirement and a variable | Regex for only a requirement name
@@ -191,23 +194,24 @@ class RenameRequirementDialog extends React.Component
     }
     else{
 
-      let getChildRequirementsPromise = ipcRenderer.invoke('getChildRequirements', this.state.selectedRequirement);
+      let getChildRequirementsPromise = ipcRenderer.invoke('getChildRequirements', selectedRequirement);
 
 
-      let reqsWithVariablePromise = [[], []];//Initialised to the default values for reqsWithVariable and dummyUpdatedReqs, i.e. two empty arrays
+      let reqsWithVariablePromise = [[], [], [], new Map()];//Initialised to the default values for reqsWithVariable, dummyUpdatedReqs, varibaleDocs and variableTypeMap i.e. three empty arrays and an empty Map
       if(fragmentVariable){
 
-        let semantics = this.state.selectedRequirement.semantics;
+        let semantics = selectedRequirement.semantics;
         let component_name = semantics.component_name;
-        let varNameID = this.state.selectedRequirement.project+component_name+fragmentVariable;
+        let varNameID = selectedRequirement.project+component_name+fragmentVariable;
 
         reqsWithVariablePromise = ipcRenderer.invoke('getRequirementsWithVariable', varNameID).then((reqsWithVariableResult) => {
 
           //Rename the variable in the retrieved requirements, to provide a preview
-          let dummyUpdatedReqs = reqsWithVariableResult.rows.map((req) => {
+          let reqsWithVariableResultRows = reqsWithVariableResult.rows;
+          let dummyUpdatedReqs = reqsWithVariableResultRows.map((req) => {
               
             let replacedFulltext = RefactoringUtils.replaceVariableName(req, fragmentVariable, newName);
-            let oldReqID = this.state.selectedRequirement.reqid;
+            let oldReqID = selectedRequirement.reqid;
 
             let updatedReqObject = {
               dbid: req.id,
@@ -217,17 +221,42 @@ class RenameRequirementDialog extends React.Component
             return updatedReqObject;
           });
 
-          return [reqsWithVariableResult, dummyUpdatedReqs]
+
+          var variableTypeMap = new Map(); // map to hold varname |-> type
+          var varList = [];
+
+          // For each requirement that has the variable in...
+          for (var i = 0; i < reqsWithVariableResultRows.length; i++)
+          {
+            let this_req = reqsWithVariableResultRows[i].doc;
+            // Get the variable names embedded in this requirement...
+            let varNames = RefactoringUtils.getVariableNames(this_req);
+            let newVarList = varList.concat(varNames); // Javascript is a silly language
+            varList = newVarList;
+          }
+
+          let createVariableMapArgs = [selectedRequirement.project, varList];
+          return ipcRenderer.invoke('createVariableMap', createVariableMapArgs).then((result) => {
+
+            let variableDocs = result[0];
+            let variableTypeMap = result[1];
+
+            return [reqsWithVariableResultRows, dummyUpdatedReqs, variableDocs, variableTypeMap]
+          })//This is ugly but it works; basically, we need to return the whole array at once as a single promise
+
         });
       }
 
       //If we aren't renaming a variable, reqsWithVariablePromise stays as just an empty 2D array and is thus effectively ignored.
       Promise.all([getChildRequirementsPromise, reqsWithVariablePromise]).then((values) => {
+        console.log(values);
         this.setState({
           invalidNewName: false,
           childRequirements: values[0].docs,
-          reqsWithVariable: values[1][0].rows,
+          reqsWithVariable: values[1][0],
           dummyUpdatedReqs: values[1][1],
+          variableDocs: values[1][2],
+          variables : values[1][3],
           dialogState : STATE.TYPES,
         });
       });
@@ -238,10 +267,9 @@ class RenameRequirementDialog extends React.Component
 
   handleTypesOK = () => {
 
-    //let varTypeMap = this.state.variables;
+    let varTypeMap = this.state.variables;
 
     let allVarsDefined = true; // we assume, but...
-    /*
     let undefinedVars = [];
     let variableErrorMessages = [];
     //Check for unsupported variables
@@ -261,7 +289,6 @@ class RenameRequirementDialog extends React.Component
     }
 
     this.setState({allVarsDefined : allVarsDefined, variableErrorMessages: variableErrorMessages});
-    */
 
     if(allVarsDefined){
 
@@ -272,35 +299,43 @@ class RenameRequirementDialog extends React.Component
       let renameVariableArgs = [];
       if(this.state.fragmentVariable){
         let varNameID = selectedRequirement.project + selectedRequirement.semantics.component_name + this.state.fragmentVariable;
-        renameVariableArgs = [this.state.fragmentVariable, varNameID, this.state.newName];
+        renameVariableArgs = [this.state.fragmentVariable, varNameID, this.state.newName, [], this.state.variables, this.state.requirements];
       }
       let renameRequirementArgs = [selectedRequirement, this.state.newName, this.state.childRequirements, renameVariableArgs];
 
       ipcRenderer.invoke('renameRequirement', renameRequirementArgs).then((renameReqResult) => {
-        ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
 
-          this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
-                                                requirements: result.requirements,
-                                                // analysis
-                                                components : result.components,
-                                                completedComponents : result.completedComponents,
-                                                cocospecData : result.cocospecData,
-                                                cocospecModes : result.cocospecModes,
-                                                // variables
-                                                variable_data : result.variable_data,
-                                                modelComponent : result.modelComponent,
-                                                modelVariables : result.modelVariables,
-                                                selectedVariable : result.selectedVariable,
-                                                importedComponents : result.importedComponents,
-                                                })
+        if(renameReqResult==true){
+          ipcRenderer.invoke('initializeFromDB', undefined).then((result) => {
 
-          this.handleClose();
-        })
+            this.props.createOrUpdateRequirement({ type: 'actions/createOrUpdateRequirement',
+                                                  requirements: result.requirements,
+                                                  // analysis
+                                                  components : result.components,
+                                                  completedComponents : result.completedComponents,
+                                                  cocospecData : result.cocospecData,
+                                                  cocospecModes : result.cocospecModes,
+                                                  // variables
+                                                  variable_data : result.variable_data,
+                                                  modelComponent : result.modelComponent,
+                                                  modelVariables : result.modelVariables,
+                                                  selectedVariable : result.selectedVariable,
+                                                  importedComponents : result.importedComponents,
+                                                  })
+
+            this.setState({dialogState:STATE.RESULT_TRUE, refactoringCheckresult: renameReqResult});
+          })
+        }
+        else
+        {
+          this.setState({dialogState:STATE.RESULT_FALSE, refactoringCheckresult: renameReqResult});
+        }
 
       })
     }
 
-    this.handleClose();
+    //We don't need an else statement, because if any variables are undefined, we will stay on the TYPES screen and any error messages will
+    //be displayed at the bottom of the dialog.
 
   }
 
@@ -424,6 +459,15 @@ class RenameRequirementDialog extends React.Component
         let childRequirements = this.state.childRequirements;
         let dummyUpdatedReqs = this.state.dummyUpdatedReqs;
 
+        let reqVariables = [];
+        this.state.variables.forEach (function(value, key) {
+          reqVariables.push(key);
+        })
+
+        let {allVarsDefined, variableErrorMessages} = this.state;
+
+        let self = this;
+
         return (
         <div>
           <Dialog
@@ -435,6 +479,16 @@ class RenameRequirementDialog extends React.Component
             <DialogTitle id="simple-dialog-title">  Rename Requirement: {reqid}</DialogTitle>
 
             <DialogContent>
+
+              <DialogContentText>
+                Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
+
+                Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
+
+                Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
+
+                If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
+              </DialogContentText>
               
 
               <Grid container spacing={2} direction="row">
@@ -521,6 +575,54 @@ class RenameRequirementDialog extends React.Component
               </Grid>
 
 
+              <ul>
+              {
+              reqVariables.map(varName =>
+                    (
+                      <li key={varName}>
+                          {varName} :
+                        <Select
+                              labelId={varName}
+                              id={varName}
+                              name = {varName}
+                              onChange={self.handleTypeChange(varName)}
+                              value = {self.getType(varName)}
+                              autoWidth
+                              renderValue={(value) => {
+                               if (unsupported_types.indexOf(value) >= 0) {
+                                      return <div style={{color:'red'}}>{value} <WarningIcon  fontSize="small" /></div> ;
+                                }
+                                else if (value == "unsigned integer") {
+                                  return <div style={{color:'orange'}}>{value} <ErrorOutlineIcon  fontSize="small" /></div> ;
+                                }
+                                else{
+                                  return <div>{value}</div>;
+                                }
+                              }}
+                        >
+                          <MenuItem value={"boolean"}>Boolean</MenuItem>
+                          <MenuItem value={"integer"}>Integer</MenuItem>
+                          <MenuItem value={"undefined"}>Unknown</MenuItem>
+                        </Select>
+                      </li>
+                    )
+                  ,
+                  <Divider variant="inset" component="li" />
+                )
+              }
+              </ul>
+
+            <ul>
+            {variableErrorMessages.map(message => (
+                <li key = {message}>
+                <p style={{ color: "red" }}>{message}</p>
+                </li>
+              ))
+            }
+            </ul>
+
+
+
             </DialogContent>
 
             <DialogActions>
@@ -539,6 +641,61 @@ class RenameRequirementDialog extends React.Component
           </Dialog>
         </div>
         );
+        break;
+
+
+      case STATE.RESULT_TRUE:
+      // Check has passed
+        return(
+          <Dialog
+            open={this.state.open}
+            onClose={this.handleClose}
+            aria-labelledby="form-dialog-title"
+            maxWidth="md"
+          >
+          <DialogTitle id="simple-dialog-title">  Sucessfully Renamed Requirement: '{reqid}'
+          </DialogTitle>
+            <DialogContent>
+                <DialogContentText>
+                  The checks have passed and the refactoring is complete. You may Close this dialogue.
+                </DialogContentText>
+                <CheckCircleIcon/> Checks Passed. The original and new requirements behave the same.
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={this.handleClose} color="secondary">
+                Close
+              </Button>
+            </DialogActions>
+          </Dialog>
+        );
+        break;
+
+      case STATE.RESULT_FALSE:
+      // Check has failed. The user should probably never see this
+        return(
+          <Dialog
+            open={this.state.open}
+            onClose={this.handleClose}
+            aria-labelledby="form-dialog-title"
+            maxWidth="md"
+          >
+          <DialogTitle id="simple-dialog-title">  Rename Requirement Failed: '{reqid}'
+          </DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                The checks have failed and the refactoring was not performed. Please Close this dialogue, review the types and part of the requirement you were trying to extract, and try again.
+              </DialogContentText>
+              <CancelIcon/> The check failed, the original and new requirement behave differently.
+              Result: {this.state.refactoringCheckresult}
+            </DialogContent>
+            <DialogActions>
+            <Button onClick={this.handleClose} color="secondary">
+              Close
+            </Button>
+            </DialogActions>
+          </Dialog>
+        );
+        break;
       
 
     }
