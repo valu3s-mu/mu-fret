@@ -418,12 +418,15 @@ class InlineRequirementDialog extends React.Component
               <Button onClick={this.handleClose} color="secondary">
                 Cancel
               </Button>
+              {/*
+                *This is currently redundant, so commenting it out for now.
               <Button
                 onClick={this.handleInitialOK}
                 color="secondary"
               >
                 Ok
               </Button>
+              */}
             </DialogActions>
 
           </Dialog>
