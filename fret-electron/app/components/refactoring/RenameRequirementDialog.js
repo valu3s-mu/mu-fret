@@ -249,7 +249,6 @@ class RenameRequirementDialog extends React.Component
 
       //If we aren't renaming a variable, reqsWithVariablePromise stays as just an empty 2D array and is thus effectively ignored.
       Promise.all([getChildRequirementsPromise, reqsWithVariablePromise]).then((values) => {
-        console.log(values);
         this.setState({
           invalidNewName: false,
           childRequirements: values[0].docs,
@@ -525,7 +524,7 @@ class RenameRequirementDialog extends React.Component
 
               {/*Displaying any child requirements of the selected requirement, that are going to be updated*/}
               <br/>
-              Child requirements to be updated:
+              {childRequirements.length > 0 ? <div>Child requirements to be updated:</div> : <div></div>}
 
               <Grid container spacing={2}>
               {childRequirements.map(req => {
