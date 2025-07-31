@@ -68,8 +68,11 @@ function substitutePlaceholders (ltlspec,n) {
 * @param {String} fragmentName - the name/reqid of the fragment involved in the current refactoring
 * @param {String} fragmentMacro - an NuSMV macro used to check the current refactoring
 * @param {Set} requirementSet - the set of requirements the requirement belongs to
+* @param {Bool} checkingMoveRequirement - True if Move Definition is the refactoring being performed (and thus checked), False otherwise
+* @param {Object?} preMoveDestination - If Move Definition is being performed, the destination requirement before refactoring
+* @param {Object?} postMoveDestination - If Move Definition is being performed, the destination requirement after refactoring
 */
-function compareRequirements(originalReq, newReq, variableMap, fragmentName, fragmentMacro, requirementSet)
+function compareRequirements(originalReq, newReq, variableMap, fragmentName, fragmentMacro, requirementSet, checkingMoveRequirement, preMoveDestination, postMoveDestination)
 {
   let len = 11;
   let n = 4;
@@ -87,7 +90,7 @@ function compareRequirements(originalReq, newReq, variableMap, fragmentName, fra
   //console.log("requirementSet");
   //console.log(requirementSet);
 
-  let checkResult = checkInNuSMV(originalReq, newReq, variableMap, fragmentName, fragmentMacro, len, n, requirementSet);
+  let checkResult = checkInNuSMV(originalReq, newReq, variableMap, fragmentName, fragmentMacro, len, n, requirementSet, checkingMoveRequirement, preMoveDestination, postMoveDestination);
 
   if (checkResult)
   {
@@ -114,14 +117,17 @@ exports.compareRequirements = compareRequirements;
  * @param {int} len 
  * @param {int} n 
  * @param {Array<Object>} allRequirements 
+ * @param {Bool} checkingMoveRequirement
+ * @param {Object?} preMoveDestination
+ * @param {Object?} postMoveDestination
  * 
  */
-function checkInNuSMV (originalReq, newReq, variableMap, fragmentName, fragmentMacro, len, n, allRequirements)
+function checkInNuSMV (originalReq, newReq, variableMap, fragmentName, fragmentMacro, len, n, allRequirements, checkingMoveRequirement, preMoveDestination, postMoveDestination)
 {
   //console.log("checkInNuSMV allRequirements -> ");
   //console.log(allRequirements); Oisín: this log is horrible in backend code so I'm getting rid of it
   
-  let r = generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequirements);
+  let r = generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequirements, checkingMoveRequirement, preMoveDestination, postMoveDestination);
   let smvCode = preamble(r.vars, len, fragmentMacro) + r.specs.join('\n') + '\n'; //
 
   let checkName =  originalReq.reqid;
@@ -160,9 +166,12 @@ function checkInNuSMV (originalReq, newReq, variableMap, fragmentName, fragmentM
  * @param {String} fragmentName
  * @param {int} n 
  * @param {Array<Object>} allRequirements 
+ * @param {Bool} checkingMoveRequirement
+ * @param {Object?} preMoveDestination
+ * @param {Object?} postMoveDestination
  * @returns 
  */
-function generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequirements)
+function generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequirements, checkingMoveRequirement, preMoveDestination, postMoveDestination)
 {
   let ltlspecs = [];
   let fragList = [];
@@ -181,7 +190,7 @@ function generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequi
   console.log("origFT = " + origFT)
 
   // check if the original requirement has fragments that should be merged back in
-  if ("fragments" in originalReq)
+  if ("fragments" in originalReq & !checkingMoveRequirement)
   {
     console.log("merging original req")
 
@@ -201,7 +210,7 @@ function generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequi
   // Check if the new requirement has any fragments in the database that should be merged back in
   console.log("newReq.fragments:");
   console.log(newReq.fragments);
-  if ("fragments" in newReq)
+  if ("fragments" in newReq & !checkingMoveRequirement)
   {
     console.log("merging new req")
 
@@ -215,10 +224,18 @@ function generateSMV(originalReq, newReq, variableMap, fragmentName, n, allRequi
   }
 
 
-  let variables = getVars(originalReq, newReq, variableMap, fragmentName, fragList);
+  let variables = getVars(originalReq, newReq, variableMap, fragmentName, fragList, checkingMoveRequirement, preMoveDestination, postMoveDestination);
   let name = originalReq.reqid;
 
-    let rawSaltSpec = `${origFT} <-> ${newFT}`;
+  let rawSaltSpec = '';
+
+  if (!checkingMoveRequirement){
+    rawSaltSpec = `${origFT} <-> ${newFT}`;
+  }else{
+    let preMoveFT = preMoveDestination.semantics.ftExpanded;
+    let postMoveFT = postMoveDestination.semantics.ftExpanded;
+    rawSaltSpec = `(${origFT} & ${preMoveFT}) <-> (${newFT} & ${postMoveFT})`;
+  }
     //let nothingAfterLast = "G(LAST -> (G (!pre & !post & !m)))";
     //let checkEquiv = `((G(LAST -> ${ptexp})) <-> ${ftexp})`;
     //let rawSaltSpec = nothingAfterLast + ' -> ' + checkEquiv;
@@ -349,9 +366,12 @@ function mergeFragment(property, fragment)
  * @param {Object} newReq 
  * @param {Map<String, String>} variableMap 
  * @param {Array<Object>} fragList 
+ * @param {Bool} checkingMoveRequirement
+ * @param {Object?} preMoveDestination
+ * @param {Object?} postMoveDestination
  * @returns {String} The variable names and types for the SMV file
  */
-function getVars(originalReq, newReq, variableMap, fragmentName, fragList)
+function getVars(originalReq, newReq, variableMap, fragmentName, fragList, checkingMoveRequirement, preMoveDestination, postMoveDestination)
 {
   console.log("getVars");
   let varSet = new Set();
@@ -374,6 +394,28 @@ function getVars(originalReq, newReq, variableMap, fragmentName, fragList)
     if (v != fragmentName)
     {
       varSet.add(v);
+    }
+  }
+
+  if(checkingMoveRequirement)
+  {
+    let preMoveVars = refactoring_utils.getVariableNames(preMoveDestination);
+    let postMoveVars = refactoring_utils.getVariableNames(postMoveDestination);
+
+    for (let v of preMoveVars)
+    {    
+      if (v != fragmentName)
+      {
+        varSet.add(v);
+      }
+    }
+
+    for (let v of postMoveVars)
+    {
+      if (v != fragmentName)
+      {
+        varSet.add(v);
+      }
     }
   }
 

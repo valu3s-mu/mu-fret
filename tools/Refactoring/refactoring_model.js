@@ -77,37 +77,6 @@ export function ReplaceFragment(req, fragment, replacement)
 
 
 /**
-* Moves a fragement from one requirement to another
-* @todo Implement, should be used by refactoring_controller.MoveDefinition()
-*/
-function MoveFragment(sourceReq, fragment, destinationReq)
-{
-  // Use CopyFragment, then delete fragment from srouceReq's fretish with ReplaceFragment(sourceReq, "", destinationReq)
-}
-// exports.MoveFragment = MoveFragment;
-
-/**
-* Copies a fragement from one requirement to another
-* @todo Implement, intended to be used by refactoring_controller somewhere
-*/
-function CopyFragment(fragment, destinationReq)
-{
-  // Either this needs to assume we're only moving fragments from the condition
-  // or we need a more sophisticated aproach, that knows where to copy it to.
-  let destinationFretish = destinationReq.getFretish();
-
-  // get the right part of the fretish requirement
-  // Maybe asssume it's the condition
-  var newFretish;
-  // eg newFretish = condition + " AND " + fragment;
-
-  destinationReq.setFretish(newFretish);
-
-  return destinationReq;
-}
-
-
-/**
  * The Database Callback function,
 * handles the result from the database
 

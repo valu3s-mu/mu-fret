@@ -52,6 +52,7 @@ import BuildIcon from '@material-ui/icons/Build';
 import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
 import RenameRequirementDialog from './refactoring/RenameRequirementDialog';
 import RenameVariableDialog from './refactoring/RenameVariableDialog';
+import MoveDefinitionDialog from './refactoring/MoveDefinitionDialog';
 
 import SearchSortableTableDialog from './SearchSortableTableDialog';
 
@@ -382,6 +383,7 @@ class SortableTable extends React.Component {
     searchTableDialogOpen: false,
     refactorAnchorEl: null,
     refactorMenuCurrentN: null,
+    moveDefinitionDialogOpen: false
   };
 
   constructor(props){
@@ -674,7 +676,7 @@ class SortableTable extends React.Component {
   }
 
   //Oisín: This simpler method gets passed to DisplayRequirementDialog to
-  //allow inlining from there.
+  //allow renaming from there.
   //(We already know which requirement we want, so we just need to show the
   // rename dialog).
   handleRenameRequirementfromDialog = () => {
@@ -718,7 +720,7 @@ class SortableTable extends React.Component {
   }
 
   //Oisín: This simpler method gets passed to DisplayRequirementDialog to
-  //allow inlining from there.
+  //allow renaming from there.
   //(We already know which requirement we want, so we just need to show the
   // rename dialog).
   handleRenameVariablefromDialog = () => {
@@ -730,6 +732,50 @@ class SortableTable extends React.Component {
   handleRenameVariableDialogClose = () => {
     this.setState({
       renameVariableDialogOpen: false
+    });
+  }
+
+
+  handleMoveDefinition = (row) => event => {
+    event.stopPropagation();
+
+    if (row.dbkey) {
+      // context isolation
+      // 
+
+      var argList = [row];
+      // ipcRenderer call main with argLit and main returns result to update Redux store
+      ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
+        /*
+        this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
+                                        //selectedRequirement: result.selectedRequirement,
+                                        }) */
+        this.setState({
+          selectedRequirement: result.doc,
+          moveDefinitionDialogOpen: true,})        
+      }).catch((err) => {
+        console.log(err);
+      })
+
+    }
+
+    //Oisín: Closes the dropdown menu
+    this.setState({refactorAnchorEl: null, refactorMenuCurrentN: null})
+  }
+
+  //Oisín: This simpler method gets passed to DisplayRequirementDialog to
+  //allow renaming from there.
+  //(We already know which requirement we want, so we just need to show the
+  // rename dialog).
+  handleMoveDefinitionfromDialog = () => {
+    this.setState({
+      moveDefinitionDialogOpen: true
+    })
+  }
+
+  handleMoveDefinitionDialogClose = () => {
+    this.setState({
+      moveDefinitionDialogOpen: false
     });
   }
 
@@ -1184,6 +1230,13 @@ class SortableTable extends React.Component {
                 <ListItemText primary = "Rename Variable" />
               </MenuItem>
 
+              <MenuItem
+                onClick={this.handleMoveDefinition(refactorMenuCurrentN)}
+                dense
+                >
+                <ListItemText primary = "Move Definition" />
+              </MenuItem>
+
             </Menu>
 
           </Table>
@@ -1233,6 +1286,13 @@ class SortableTable extends React.Component {
         requirements={this.props.requirements}
       />
 
+      <MoveDefinitionDialog
+        selectedRequirement={this.state.selectedRequirement}
+        open={this.state.moveDefinitionDialogOpen}
+        handleDialogClose={this.handleMoveDefinitionDialogClose}
+        requirements={this.props.requirements}
+      />
+
       <DisplayRequirementDialog
         selectedRequirement={this.state.selectedRequirement}
         open={this.state.displayRequirementOpen}
@@ -1245,6 +1305,7 @@ class SortableTable extends React.Component {
         handleInlineDialogOpen={this.handleInlinefromDialog}
         handleRenameRequirementDialogOpen={this.handleRenameRequirementfromDialog}
         handleRenameVariableDialogOpen={this.handleRenameVariablefromDialog}
+        handleMoveDefinitionDialogOpen={this.handleMoveDefinitionfromDialog}
         />
       <CreateRequirementDialog
         open={this.state.createDialogOpen}

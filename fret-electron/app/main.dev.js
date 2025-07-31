@@ -343,6 +343,10 @@ ipcMain.handle('renameVariable', async(evt, args) => {
   return refactoringController.RenameVariable(...args);
 })
 
+ipcMain.handle('moveDefinition', async(evt, args) => {
+  return refactoringController.MoveDefinition(...args);
+})
+
 
 //Oisín: Added for debugging, since it's impossible to parse anything printed from the
 // main process (gets put in the command line rather than the electron console)

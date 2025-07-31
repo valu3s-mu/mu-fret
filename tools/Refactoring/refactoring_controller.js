@@ -122,7 +122,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 	console.log("dummyUpdatedReq semantics = ...");
  	console.log(dummyUpdatedReq.semantics);
  	// Recompile the dummy's sematics...
- 	let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
+ 	let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext);
  	dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
  	console.log("dummyUpdatedReq semantics after compile = ...");
  	console.log(dummyUpdatedReq.semantics);
@@ -142,7 +142,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
   // Verify
   let fragmentName = destinationReq.reqid;
   let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
-	var result = compare.compareRequirements(req, dummyUpdatedReq, reqVars, fragmentName, fragmentMacro, allRequirements);
+	var result = compare.compareRequirements(req, dummyUpdatedReq, reqVars, fragmentName, fragmentMacro, allRequirements, false, null, null);
 	console.log("controller, result = " + result);
 	if(result)
 	{
@@ -284,7 +284,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 			// contain the fragment being extracted.
 			let fragmentName = destinationReq.reqid;
   		let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
-			result = compare.compareRequirements(kreq, dummyUpdatedReq, reqVars, fragmentName, fragmentMacro, allRequirements);
+			result = compare.compareRequirements(kreq, dummyUpdatedReq, reqVars, fragmentName, fragmentMacro, allRequirements, false, null, null);
 			console.log("controller, result = " + result);
 
 			if(!result)
@@ -368,25 +368,62 @@ exports.updateVariableTypes = updateVariableTypes;
 * not a definition within a requirement.
 * @todo Implement
 */
-function MoveDefinition(sourceReq, definition, destinationReq)
+function MoveDefinition(sourceReq, destinationReq, newSourceDefinition, newDestinationDefinition, varMap, allRequirements)
 {
   // Ramos
   // 1. Select the activities you want to move.
   // 2. Move them to the desired requirement.
- // 3. Update references to these activities if needed.
+  // 3. Update references to these activities if needed.
 
-// Step 1 is done in the View
+	// Step 1 is done in the View
+
+	// Step 2
+
+	//Make dummy versions of each requirement to update them
+	let dummyUpdatedSource = makeDummyUpdatedReq(sourceReq);
+	dummyUpdatedSource.fulltext = newSourceDefinition;
+	let newDummySourceSemantics = fretSemantics.compile(newSourceDefinition);
+ 	dummyUpdatedSource.semantics = newDummySourceSemantics.collectedSemantics;
+
+ 	let dummyUpdatedDestination = makeDummyUpdatedReq(sourceReq);
+	dummyUpdatedDestination.fulltext = newDestinationDefinition;
+	let newDummyDestinationSemantics = fretSemantics.compile(newDestinationDefinition);
+ 	dummyUpdatedDestination.semantics = newDummyDestinationSemantics.collectedSemantics;
+
+	// Step 3
+  	// (Ramos' step 3 isn't needed so...) Verify
+
+ 	let result = true;
+ 	let fragmentName = sourceReq.reqid;
+ 	let fragmentMacro = "";
+ 	result = compare.compareRequirements(sourceReq, dummyUpdatedSource, varMap, fragmentName, fragmentMacro, allRequirements, true, destinationReq, dummyUpdatedDestination);
+
+ 	//Step 4
+ 		//If verification passes, perform the Move on the real requirements
+ 	if(!result)
+	{
+		console.log("+++ check failed aborting +++")
+	}
+
+ 	if(result)
+ 	{
+	 	sourceReq.fulltext = newSourceDefinition;
+	 	let newSourceSemantics = fretSemantics.compile(newSourceDefinition);
+	 	sourceReq.semantics = newSourceSemantics.collectedSemantics;
+	 	model.AddRequirementToDB(sourceReq);
+
+	 	destinationReq.fulltext = newDestinationDefinition;
+	 	let newDestinationSemantics = fretSemantics.compile(newDestinationDefinition);
+	 	destinationReq.semantics = newDestinationSemantics.collectedSemantics;
+	 	model.AddRequirementToDB(destinationReq);
+ 	}
+ 	return result;
 
 
-// Step 2
-model.MoveFragment(sourceReq, definition, destinationReq) // Not yet working
-
-// Step 3
- // (Ramos' step 3 isn't needed so...) Verify
 
 
 }
-
+exports.MoveDefinition = MoveDefinition;
 
 /**
 * Handles one request to rename a requirement, including the knock-on effect to
@@ -498,7 +535,7 @@ function RenameVariable(variableOldName, variableDBID, newVariableName, targetRe
 
 		let fragmentName = newVariableName;
   	let fragmentMacro = newVariableName + " := " + variableOldName +";";
- 		result = compare.compareRequirements(reqDoc, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements);
+ 		result = compare.compareRequirements(reqDoc, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements, false, null, null);
  		console.log("controller.RenameVariable, result = " + result);
 
 		if(!result)
@@ -585,7 +622,7 @@ function InlineRequirement(source, destinationReqs, varMap, allRequirements)
 
 		let fragmentName = source.reqid;
   	let fragmentMacro = source.reqid + " := " + source.semantics.pre_condition +";";
- 		result = compare.compareRequirements(currentDestination, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements);
+ 		result = compare.compareRequirements(currentDestination, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements, false, null, null);
  		console.log("controller, result = " + result);
 
 		if(!result)

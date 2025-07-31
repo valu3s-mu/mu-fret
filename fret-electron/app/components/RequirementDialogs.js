@@ -21,6 +21,7 @@ import RefactorRequirementDialog from './refactoring/RefactorRequirementDialog';
 import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
 import RenameRequirementDialog from './refactoring/RenameRequirementDialog';
 import RenameVariableDialog from './refactoring/RenameVariableDialog';
+import MoveDefinitionDialog from './refactoring/MoveDefinitionDialog';
 
 
 const styles = theme => ({
@@ -36,6 +37,7 @@ class RequirementDialogs extends React.Component {
     inlineDialogOpen: false,
     renameRequirementDialogOpen: false,
     renameVariableDialogOpen: false,
+    moveDefinitionDialogOpen: false,
   };
 
   constructor(props){
@@ -115,6 +117,14 @@ class RequirementDialogs extends React.Component {
     this.setState({renameVariableDialogOpen: false});
   }
 
+  handleMoveDefinitionDialogOpen = () => {
+    this.setState({moveDefinitionDialogOpen: true});
+  }
+
+  handleMoveDefinitionDialogClose = () => {
+    this.setState({moveDefinitionDialogOpen: false});
+  }
+
   render() {
     const {
       classes, selectedProject, listOfProjects, selectedRequirement, handleDialogClose
@@ -133,6 +143,7 @@ class RequirementDialogs extends React.Component {
           handleInlineDialogOpen={this.handleInlineDialogOpen}
           handleRenameRequirementDialogOpen={this.handleRenameRequirementDialogOpen}
           handleRenameVariableDialogOpen={this.handleRenameVariableDialogOpen}
+          handleMoveDefinitionDialogOpen={this.handleMoveDefinitionDialogOpen}
         />
         <CreateRequirementDialog
           open={this.state.createDialogOpen}
@@ -171,6 +182,12 @@ class RequirementDialogs extends React.Component {
           selectedRequirement={selectedRequirement}
           open={this.state.renameVariableDialogOpen}
           handleDialogClose={this.handleRenameVariableDialogClose}
+          requirements={this.props.requirements}
+        />
+        <MoveDefinitionDialog
+          selectedRequirement={selectedRequirement}
+          open={this.state.moveDefinitionDialogOpen}
+          handleDialogClose={this.handleMoveDefinitionDialogClose}
           requirements={this.props.requirements}
         />
 

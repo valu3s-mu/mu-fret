@@ -116,6 +116,11 @@ class DisplayRequirementDialog extends React.Component {
     this.state.openRenameVariableDialog();
   }
 
+  handleMoveDefinition = () => {
+    this.handleClose();
+    this.state.openMoveDefinitionDialog();
+  }
+
 
   /**
    * Conversion to WEST
@@ -137,6 +142,7 @@ class DisplayRequirementDialog extends React.Component {
       openInlineDialog: props.handleInlineDialogOpen,
       openRenameRequirementDialog: props.handleRenameRequirementDialogOpen,
       openRenameVariableDialog: props.handleRenameVariableDialogOpen,
+      openMoveDefinitionDialog : props.handleMoveDefinitionDialogOpen,
     })
   }
 
@@ -274,6 +280,13 @@ class DisplayRequirementDialog extends React.Component {
                 >
                 <ListItemText primary = "Rename Variable" />
               </MenuItem>
+
+              <MenuItem
+                onClick={this.handleMoveDefinition}
+                dense
+                >
+                <ListItemText primary = "Move Definition" />
+              </MenuItem>
             </Menu>
           
           <Divider/>
@@ -382,6 +395,7 @@ DisplayRequirementDialog.propTypes = {
   handleInlineDialogOpen: PropTypes.func.isRequired,
   handleRenameRequirementDialogOpen: PropTypes.func.isRequired,
   handleRenameVariableDialogOpen: PropTypes.func.isRequired,
+  handleMoveDefinitionDialogOpen: PropTypes.func.isRequired,
 };
 
 export default withStyles(styles)(DisplayRequirementDialog);
