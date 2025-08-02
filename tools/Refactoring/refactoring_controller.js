@@ -142,7 +142,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
   // Verify
   let fragmentName = destinationReq.reqid;
   let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
-	var result = compare.compareRequirements(req, dummyUpdatedReq, reqVars, fragmentName, fragmentMacro, allRequirements, false, null, null);
+	var result = compare.compareRequirements([req], [dummyUpdatedReq], reqVars, fragmentName, fragmentMacro, allRequirements);
 	console.log("controller, result = " + result);
 	if(result)
 	{
@@ -284,7 +284,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 			// contain the fragment being extracted.
 			let fragmentName = destinationReq.reqid;
   		let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
-			result = compare.compareRequirements(kreq, dummyUpdatedReq, reqVars, fragmentName, fragmentMacro, allRequirements, false, null, null);
+			result = compare.compareRequirements([kreq], [dummyUpdatedReq], reqVars, fragmentName, fragmentMacro, allRequirements);
 			console.log("controller, result = " + result);
 
 			if(!result)
@@ -396,7 +396,7 @@ function MoveDefinition(sourceReq, destinationReq, newSourceDefinition, newDesti
  	let result = true;
  	let fragmentName = sourceReq.reqid;
  	let fragmentMacro = "";
- 	result = compare.compareRequirements(sourceReq, dummyUpdatedSource, varMap, fragmentName, fragmentMacro, allRequirements, true, destinationReq, dummyUpdatedDestination);
+ 	result = compare.compareRequirements([sourceReq, destinationReq], [dummyUpdatedSource, dummyUpdatedDestination], varMap, fragmentName, fragmentMacro, allRequirements);
 
  	//Step 4
  		//If verification passes, perform the Move on the real requirements
@@ -535,7 +535,7 @@ function RenameVariable(variableOldName, variableDBID, newVariableName, targetRe
 
 		let fragmentName = newVariableName;
   	let fragmentMacro = newVariableName + " := " + variableOldName +";";
- 		result = compare.compareRequirements(reqDoc, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements, false, null, null);
+ 		result = compare.compareRequirements([reqDoc], [dummyUpdatedReq], varMap, fragmentName, fragmentMacro, allRequirements);
  		console.log("controller.RenameVariable, result = " + result);
 
 		if(!result)
@@ -622,7 +622,7 @@ function InlineRequirement(source, destinationReqs, varMap, allRequirements)
 
 		let fragmentName = source.reqid;
   	let fragmentMacro = source.reqid + " := " + source.semantics.pre_condition +";";
- 		result = compare.compareRequirements(currentDestination, dummyUpdatedReq, varMap, fragmentName, fragmentMacro, allRequirements, false, null, null);
+ 		result = compare.compareRequirements([currentDestination], [dummyUpdatedReq], varMap, fragmentName, fragmentMacro, allRequirements);
  		console.log("controller, result = " + result);
 
 		if(!result)
