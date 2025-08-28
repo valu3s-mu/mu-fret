@@ -1,7 +1,7 @@
 /**
 * Controller code for the refactoring module backend
 * @module Refactoring/refactoring_controller
-* @author Matt Luckcuck 
+* @author Matt Luckcuck, Oisín Sheridan
 * 2022, 2025
 */
 
@@ -361,69 +361,98 @@ function updateVariableTypes(variableDocs, variables)
 }
 exports.updateVariableTypes = updateVariableTypes;
 
-
 /**
-* Handles one request to move a definition to another requirement
-* This should have no knock-on effects, since we can only refer to a requirement
-* not a definition within a requirement.
-* @todo Implement
+* Handles one request to inline a requirement, including the knock-on effects to
+* other requirements that reference the requirement being inlined.
+* 
+* @param {Object} source the requirement (currently, specifically a fragment) that is being inlined from
+* @param {Array<Object>} destinationReqs a list of the requirements that are being inlined into
+* @param {Map<String, String>} varMap map of the requirements' variables mapped to their types
+* @param {Array<Object>} allRequirements List of all the other requirements in the project, which is used for the NuSMV check(s)
+* @returns {Boolean} True if NuSMV says that the original and refactored requirement behave the same, and thus if the refactoring was performed
 */
-function MoveDefinition(sourceReq, destinationReq, newSourceDefinition, newDestinationDefinition, varMap, allRequirements)
+function InlineRequirement(source, destinationReqs, varMap, allRequirements)
 {
-  // Ramos
-  // 1. Select the activities you want to move.
-  // 2. Move them to the desired requirement.
-  // 3. Update references to these activities if needed.
 
-	// Step 1 is done in the View
+// Ramos
+// 1. Copy the activities (including pre and post conditions if applicable) described in the requirement to all requirements that uses this one.
+// 2. Update the affected requirements to reflect the inlined activities and other requirements information.
+// 3. Remove references to the inlined requirement.
+// 4. Remove the inlined requirement.
 
-	// Step 2
 
-	//Make dummy versions of each requirement to update them
-	let dummyUpdatedSource = makeDummyUpdatedReq(sourceReq);
-	dummyUpdatedSource.fulltext = newSourceDefinition;
-	let newDummySourceSemantics = fretSemantics.compile(newSourceDefinition);
- 	dummyUpdatedSource.semantics = newDummySourceSemantics.collectedSemantics;
+	//Retrieve the parts of the source requirement that we need
+  let semantics = source.semantics; //We pull from the source requirement's semantics
+  let sourceResponse = semantics.post_condition_SMV_pt; //The text to be replaced
+  let sourceCondition = semantics.pre_condition; //The text to be inlined
 
- 	let dummyUpdatedDestination = makeDummyUpdatedReq(sourceReq);
-	dummyUpdatedDestination.fulltext = newDestinationDefinition;
-	let newDummyDestinationSemantics = fretSemantics.compile(newDestinationDefinition);
- 	dummyUpdatedDestination.semantics = newDummyDestinationSemantics.collectedSemantics;
+  //For each destination requirement, we create a copy and check if the inlining changes the meaning
+  let result = false;
+	for (let i = 0; i < destinationReqs.length; i++){
 
-	// Step 3
-  	// (Ramos' step 3 isn't needed so...) Verify
+		let currentDestination = destinationReqs[i].doc;
 
- 	let result = true;
- 	let fragmentName = sourceReq.reqid;
- 	let fragmentMacro = "";
- 	result = compare.compareRequirements([sourceReq, destinationReq], [dummyUpdatedSource, dummyUpdatedDestination], varMap, fragmentName, fragmentMacro, allRequirements);
+		let destinationText = currentDestination.fulltext;
 
- 	//Step 4
- 		//If verification passes, perform the Move on the real requirements
- 	if(!result)
-	{
-		console.log("+++ check failed aborting +++")
+    let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
+
+    let dummyUpdatedReq = makeDummyUpdatedReq(currentDestination);
+    dummyUpdatedReq.fulltext = inlineResult;
+    let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
+ 		dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
+
+
+		let fragmentName = source.reqid;
+  	let fragmentMacro = source.reqid + " := " + source.semantics.pre_condition +";";
+ 		result = compare.compareRequirements([currentDestination], [dummyUpdatedReq], varMap, fragmentName, fragmentMacro, allRequirements);
+ 		console.log("controller, result = " + result);
+
+		if(!result)
+		{
+			console.log("+++ check failed aborting +++")
+			console.log("+++ failed on the following requirement +++")
+			console.log(currentDestination);
+			break;
+		}
+  }
+
+  //If the check(s) passed, now we do the inlining for real
+  if(result){
+		for (let i = 0; i < destinationReqs.length; i++){
+
+			let currentDestination = destinationReqs[i].doc;
+
+			let destinationText = currentDestination.fulltext;
+
+	    let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
+
+	    currentDestination.fulltext = inlineResult;
+
+	    //Recompile the requirement's semantics based on the new text
+	    let newSemantics = fretSemantics.compile(inlineResult);
+			currentDestination.semantics = newSemantics.collectedSemantics;
+
+			//Remove reference to the source fragment from the destination's list of fragments
+			if(currentDestination.fragments){
+				let fragIndex = currentDestination.fragments.indexOf(source._id);
+				if(fragIndex > -1){
+					currentDestination.fragments.splice(fragIndex, 1);
+				}
+				
+			}
+
+			//Add to the database
+	    model.AddRequirementToDB(currentDestination);
+
+		}
 	}
 
- 	if(result)
- 	{
-	 	sourceReq.fulltext = newSourceDefinition;
-	 	let newSourceSemantics = fretSemantics.compile(newSourceDefinition);
-	 	sourceReq.semantics = newSourceSemantics.collectedSemantics;
-	 	model.AddRequirementToDB(sourceReq);
 
-	 	destinationReq.fulltext = newDestinationDefinition;
-	 	let newDestinationSemantics = fretSemantics.compile(newDestinationDefinition);
-	 	destinationReq.semantics = newDestinationSemantics.collectedSemantics;
-	 	model.AddRequirementToDB(destinationReq);
- 	}
- 	return result;
-
-
-
+	return result;
 
 }
-exports.MoveDefinition = MoveDefinition;
+exports.InlineRequirement = InlineRequirement;
+
 
 /**
 * Handles one request to rename a requirement, including the knock-on effect to
@@ -579,94 +608,63 @@ function RenameVariable(variableOldName, variableDBID, newVariableName, targetRe
 }
 exports.RenameVariable = RenameVariable;
 
+
 /**
-* Handles one request to inline a requirement, including the knock-on effects to
-* other requirements that reference the requirement being inlined.
-* 
-* @param {Object} source the requirement (currently, specifically a fragment) that is being inlined from
-* @param {Array<Object>} destinationReqs a list of the requirements that are being inlined into
-* @param {Map<String, String>} varMap map of the requirements' variables mapped to their types
-* @param {Array<Object>} allRequirements List of all the other requirements in the project, which is used for the NuSMV check(s)
-* @returns {Boolean} True if NuSMV says that the original and refactored requirement behave the same, and thus if the refactoring was performed
+* Handles one request to move a definition to another requirement
+* This should have no knock-on effects, since we can only refer to a requirement
+* not a definition within a requirement.
+* @todo Implement
 */
-function InlineRequirement(source, destinationReqs, varMap, allRequirements)
+function MoveDefinition(sourceReq, destinationReq, newSourceDefinition, newDestinationDefinition, varMap, allRequirements)
 {
+  // Ramos
+  // 1. Select the activities you want to move.
+  // 2. Move them to the desired requirement.
+  // 3. Update references to these activities if needed.
 
-// Ramos
-// 1. Copy the activities (including pre and post conditions if applicable) described in the requirement to all requirements that uses this one.
-// 2. Update the affected requirements to reflect the inlined activities and other requirements information.
-// 3. Remove references to the inlined requirement.
-// 4. Remove the inlined requirement.
+	// Step 1 is done in the View
 
+	// Step 2
 
-	//Retrieve the parts of the source requirement that we need
-  let semantics = source.semantics; //We pull from the source requirement's semantics
-  let sourceResponse = semantics.post_condition_SMV_pt; //The text to be replaced
-  let sourceCondition = semantics.pre_condition; //The text to be inlined
+	//Make dummy versions of each requirement to update them
+	let dummyUpdatedSource = makeDummyUpdatedReq(sourceReq);
+	dummyUpdatedSource.fulltext = newSourceDefinition;
+	let newDummySourceSemantics = fretSemantics.compile(newSourceDefinition);
+ 	dummyUpdatedSource.semantics = newDummySourceSemantics.collectedSemantics;
 
-  //For each destination requirement, we create a copy and check if the inlining changes the meaning
-  let result = false;
-	for (let i = 0; i < destinationReqs.length; i++){
+ 	let dummyUpdatedDestination = makeDummyUpdatedReq(sourceReq);
+	dummyUpdatedDestination.fulltext = newDestinationDefinition;
+	let newDummyDestinationSemantics = fretSemantics.compile(newDestinationDefinition);
+ 	dummyUpdatedDestination.semantics = newDummyDestinationSemantics.collectedSemantics;
 
-		let currentDestination = destinationReqs[i].doc;
+	// Step 3
+  	// (Ramos' step 3 isn't needed so...) Verify
 
-		let destinationText = currentDestination.fulltext;
+ 	let result = true;
+ 	let fragmentName = sourceReq.reqid;
+ 	let fragmentMacro = "";
+ 	result = compare.compareRequirements([sourceReq, destinationReq], [dummyUpdatedSource, dummyUpdatedDestination], varMap, fragmentName, fragmentMacro, allRequirements);
 
-    let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
-
-    let dummyUpdatedReq = makeDummyUpdatedReq(currentDestination);
-    dummyUpdatedReq.fulltext = inlineResult;
-    let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
- 		dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
-
-
-		let fragmentName = source.reqid;
-  	let fragmentMacro = source.reqid + " := " + source.semantics.pre_condition +";";
- 		result = compare.compareRequirements([currentDestination], [dummyUpdatedReq], varMap, fragmentName, fragmentMacro, allRequirements);
- 		console.log("controller, result = " + result);
-
-		if(!result)
-		{
-			console.log("+++ check failed aborting +++")
-			console.log("+++ failed on the following requirement +++")
-			console.log(currentDestination);
-			break;
-		}
-  }
-
-  //If the check(s) passed, now we do the inlining for real
-  if(result){
-		for (let i = 0; i < destinationReqs.length; i++){
-
-			let currentDestination = destinationReqs[i].doc;
-
-			let destinationText = currentDestination.fulltext;
-
-	    let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
-
-	    currentDestination.fulltext = inlineResult;
-
-	    //Recompile the requirement's semantics based on the new text
-	    let newSemantics = fretSemantics.compile(inlineResult);
-			currentDestination.semantics = newSemantics.collectedSemantics;
-
-			//Remove reference to the source fragment from the destination's list of fragments
-			if(currentDestination.fragments){
-				let fragIndex = currentDestination.fragments.indexOf(source._id);
-				if(fragIndex > -1){
-					currentDestination.fragments.splice(fragIndex, 1);
-				}
-				
-			}
-
-			//Add to the database
-	    model.AddRequirementToDB(currentDestination);
-
-		}
+ 	//Step 4
+ 		//If verification passes, perform the Move on the real requirements
+ 	if(!result)
+	{
+		console.log("+++ check failed aborting +++")
 	}
 
+ 	if(result)
+ 	{
+	 	sourceReq.fulltext = newSourceDefinition;
+	 	let newSourceSemantics = fretSemantics.compile(newSourceDefinition);
+	 	sourceReq.semantics = newSourceSemantics.collectedSemantics;
+	 	model.AddRequirementToDB(sourceReq);
 
-	return result;
+	 	destinationReq.fulltext = newDestinationDefinition;
+	 	let newDestinationSemantics = fretSemantics.compile(newDestinationDefinition);
+	 	destinationReq.semantics = newDestinationSemantics.collectedSemantics;
+	 	model.AddRequirementToDB(destinationReq);
+ 	}
+ 	return result;
 
 }
-exports.InlineRequirement = InlineRequirement;
+exports.MoveDefinition = MoveDefinition;
