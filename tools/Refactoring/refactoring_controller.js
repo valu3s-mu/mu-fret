@@ -361,6 +361,7 @@ function updateVariableTypes(variableDocs, variables)
 }
 exports.updateVariableTypes = updateVariableTypes;
 
+
 /**
 * Handles one request to inline a requirement, including the knock-on effects to
 * other requirements that reference the requirement being inlined.
@@ -668,3 +669,59 @@ function MoveDefinition(sourceReq, destinationReq, newSourceDefinition, newDesti
 
 }
 exports.MoveDefinition = MoveDefinition;
+
+
+/**
+* Handles one request to merge the responses of two requirements, leaving a single requirement.
+* 
+* @param {Object} sourceReq - the selected requirement
+* @param {Object} partnerReq - the second selected requirement to be merged with sourceReq
+* @param {String} newName - the name for the final merged requirement
+* @param {String} mergedFulltext - the text for the new merged requirement, (hopefully) combining the responses of sourceReq and partnerReq
+* @param {Map<String, String>} varMap - the variables of the requirements, mapped to their types
+* @param {Set} allRequirements - the full set of requirements the requirement(s) belong to
+* @returns {boolean} the result of the check
+*/
+function MergeResponses(sourceReq, partnerReq, newName, mergedFulltext, varMap, allRequirements)
+{
+
+
+ 	let dummyMergedRequirement = makeDummyUpdatedReq(sourceReq);
+ 	dummyMergedRequirement.fulltext = mergedFulltext;
+ 	dummyMergedRequirement.reqid = newName;
+ 	dummyMergedRequirement.semantics = fretSemantics.compile(mergedFulltext).collectedSemantics;
+
+
+ 	let result = true;
+ 	let fragmentMacro = "";
+ 	result = compare.compareRequirements([sourceReq, partnerReq], [dummyMergedRequirement], varMap, newName, fragmentMacro, allRequirements);
+
+ 	//Step 4
+ 		//If verification passes, perform the Merge on the real requirements
+ 	if(!result)
+	{
+		console.log("+++ check failed, aborting +++")
+	}
+
+ 	if(result)
+ 	{
+	 	sourceReq.rationale += "\n\nThis requirement was Merged with " + partnerReq.reqid +". Rationale:\n" + partnerReq.rationale;
+
+	 	sourceReq.comments += "\n\nThis requirement was Merged with " + partnerReq.reqid +". Comments:\n" + partnerReq.comments + "\n Original requirement texts:";
+	 	sourceReq.comments += "\n" + sourceReq.reqid + ": " + sourceReq.fulltext;
+	 	sourceReq.comments += "\n" + partnerReq.reqid + ": " + partnerReq.fulltext;
+
+	 	sourceReq.reqid = newName;
+	 	sourceReq.fulltext = mergedFulltext;
+
+	 	let newSourceSemantics = fretSemantics.compile(mergedFulltext);
+	 	sourceReq.semantics = newSourceSemantics.collectedSemantics;
+
+
+	 	model.AddRequirementToDB(sourceReq);
+
+ 	}
+ 	return result;
+
+}
+exports.MergeResponses = MergeResponses;

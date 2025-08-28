@@ -53,6 +53,7 @@ import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
 import RenameRequirementDialog from './refactoring/RenameRequirementDialog';
 import RenameVariableDialog from './refactoring/RenameVariableDialog';
 import MoveDefinitionDialog from './refactoring/MoveDefinitionDialog';
+import MergeResponsesDialog from './refactoring/MergeResponsesDialog';
 
 import SearchSortableTableDialog from './SearchSortableTableDialog';
 
@@ -383,7 +384,8 @@ class SortableTable extends React.Component {
     searchTableDialogOpen: false,
     refactorAnchorEl: null,
     refactorMenuCurrentN: null,
-    moveDefinitionDialogOpen: false
+    moveDefinitionDialogOpen: false,
+    mergeResponsesDialogOpen: false,
   };
 
   constructor(props){
@@ -564,7 +566,7 @@ class SortableTable extends React.Component {
       // 
 
       var argList = [row];
-      // ipcRenderer call main with argLit and main returns result to update Redux store
+      // ipcRenderer call main with argList and main returns result to update Redux store
       ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
         /*
         this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
@@ -613,7 +615,7 @@ class SortableTable extends React.Component {
       // 
 
       var argList = [row];
-      // ipcRenderer call main with argLit and main returns result to update Redux store
+      // ipcRenderer call main with argList and main returns result to update Redux store
       ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
         /*
         this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
@@ -656,7 +658,7 @@ class SortableTable extends React.Component {
       // 
 
       var argList = [row];
-      // ipcRenderer call main with argLit and main returns result to update Redux store
+      // ipcRenderer call main with argList and main returns result to update Redux store
       ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
         /*
         this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
@@ -700,7 +702,7 @@ class SortableTable extends React.Component {
       // 
 
       var argList = [row];
-      // ipcRenderer call main with argLit and main returns result to update Redux store
+      // ipcRenderer call main with argList and main returns result to update Redux store
       ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
         /*
         this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
@@ -744,7 +746,7 @@ class SortableTable extends React.Component {
       // 
 
       var argList = [row];
-      // ipcRenderer call main with argLit and main returns result to update Redux store
+      // ipcRenderer call main with argList and main returns result to update Redux store
       ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
         /*
         this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
@@ -764,9 +766,9 @@ class SortableTable extends React.Component {
   }
 
   //Oisín: This simpler method gets passed to DisplayRequirementDialog to
-  //allow renaming from there.
+  //allow refactoring from there.
   //(We already know which requirement we want, so we just need to show the
-  // rename dialog).
+  // dialog).
   handleMoveDefinitionfromDialog = () => {
     this.setState({
       moveDefinitionDialogOpen: true
@@ -776,6 +778,49 @@ class SortableTable extends React.Component {
   handleMoveDefinitionDialogClose = () => {
     this.setState({
       moveDefinitionDialogOpen: false
+    });
+  }
+
+  handleMergeResponses = (row) => event => {
+    event.stopPropagation();
+
+    if (row.dbkey) {
+      // context isolation
+      // 
+
+      var argList = [row];
+      // ipcRenderer call main with argList and main returns result to update Redux store
+      ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
+        /*
+        this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
+                                        //selectedRequirement: result.selectedRequirement,
+                                        }) */
+        this.setState({
+          selectedRequirement: result.doc,
+          mergeResponsesDialogOpen: true,})        
+      }).catch((err) => {
+        console.log(err);
+      })
+
+    }
+
+    //Oisín: Closes the dropdown menu
+    this.setState({refactorAnchorEl: null, refactorMenuCurrentN: null})
+  }
+
+  //Oisín: This simpler method gets passed to DisplayRequirementDialog to
+  //allow refactoring from there.
+  //(We already know which requirement we want, so we just need to show the
+  // dialog).
+  handleMergeResponsesfromDialog = () => {
+    this.setState({
+      mergeResponsesDialogOpen: true
+    })
+  }
+
+  handleMergeResponsesDialogClose = () => {
+    this.setState({
+      mergeResponsesDialogOpen: false
     });
   }
 
@@ -1237,6 +1282,13 @@ class SortableTable extends React.Component {
                 <ListItemText primary = "Move Definition" />
               </MenuItem>
 
+              <MenuItem
+                onClick={this.handleMergeResponses(refactorMenuCurrentN)}
+                dense
+                >
+                <ListItemText primary = "Merge Responses" />
+              </MenuItem>
+
             </Menu>
 
           </Table>
@@ -1292,6 +1344,12 @@ class SortableTable extends React.Component {
         handleDialogClose={this.handleMoveDefinitionDialogClose}
         requirements={this.props.requirements}
       />
+      <MergeResponsesDialog
+        selectedRequirement={this.state.selectedRequirement}
+        open={this.state.mergeResponsesDialogOpen}
+        handleDialogClose={this.handleMergeResponsesDialogClose}
+        requirements={this.props.requirements}
+      />
 
       <DisplayRequirementDialog
         selectedRequirement={this.state.selectedRequirement}
@@ -1306,6 +1364,7 @@ class SortableTable extends React.Component {
         handleRenameRequirementDialogOpen={this.handleRenameRequirementfromDialog}
         handleRenameVariableDialogOpen={this.handleRenameVariablefromDialog}
         handleMoveDefinitionDialogOpen={this.handleMoveDefinitionfromDialog}
+        handleMergeResponsesDialogOpen={this.handleMergeResponsesfromDialog}
         />
       <CreateRequirementDialog
         open={this.state.createDialogOpen}

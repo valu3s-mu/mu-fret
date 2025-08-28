@@ -22,6 +22,7 @@ import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
 import RenameRequirementDialog from './refactoring/RenameRequirementDialog';
 import RenameVariableDialog from './refactoring/RenameVariableDialog';
 import MoveDefinitionDialog from './refactoring/MoveDefinitionDialog';
+import MergeResponsesDialog from './refactoring/MergeResponsesDialog';
 
 
 const styles = theme => ({
@@ -38,6 +39,7 @@ class RequirementDialogs extends React.Component {
     renameRequirementDialogOpen: false,
     renameVariableDialogOpen: false,
     moveDefinitionDialogOpen: false,
+    mergeResponsesDialogOpen: false,
   };
 
   constructor(props){
@@ -125,6 +127,15 @@ class RequirementDialogs extends React.Component {
     this.setState({moveDefinitionDialogOpen: false});
   }
 
+  handleMergeResponsesDialogOpen = () => {
+    this.setState({mergeResponsesDialogOpen: true});
+  }
+
+  handleMergeResponsesDialogClose = () => {
+    this.setState({mergeResponsesDialogOpen: false});
+  }
+
+
   render() {
     const {
       classes, selectedProject, listOfProjects, selectedRequirement, handleDialogClose
@@ -144,6 +155,7 @@ class RequirementDialogs extends React.Component {
           handleRenameRequirementDialogOpen={this.handleRenameRequirementDialogOpen}
           handleRenameVariableDialogOpen={this.handleRenameVariableDialogOpen}
           handleMoveDefinitionDialogOpen={this.handleMoveDefinitionDialogOpen}
+          handleMergeResponsesDialogOpen={this.handleMergeResponsesDialogOpen}
         />
         <CreateRequirementDialog
           open={this.state.createDialogOpen}
@@ -188,6 +200,12 @@ class RequirementDialogs extends React.Component {
           selectedRequirement={selectedRequirement}
           open={this.state.moveDefinitionDialogOpen}
           handleDialogClose={this.handleMoveDefinitionDialogClose}
+          requirements={this.props.requirements}
+        />
+        <MergeResponsesDialog
+          selectedRequirement={selectedRequirement}
+          open={this.state.mergeResponsesDialogOpen}
+          handleDialogClose={this.handleMergeResponsesDialogClose}
           requirements={this.props.requirements}
         />
 

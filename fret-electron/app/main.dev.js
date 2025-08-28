@@ -347,8 +347,12 @@ ipcMain.handle('moveDefinition', async(evt, args) => {
   return refactoringController.MoveDefinition(...args);
 })
 
+ipcMain.handle('mergeResponses', async(evt, args) => {
+  return refactoringController.MergeResponses(...args);
+})
 
-//Oisín: Added for debugging, since it's impossible to parse anything printed from the
+
+//Oisín: Added for debugging, since it's impossible to read anything printed from the
 // main process (gets put in the command line rather than the electron console)
 ipcMain.handle('fetchModelDatabase', async() => {
   return refactoringModel.fetchModelDatabase();

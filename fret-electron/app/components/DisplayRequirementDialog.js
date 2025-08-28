@@ -121,6 +121,10 @@ class DisplayRequirementDialog extends React.Component {
     this.state.openMoveDefinitionDialog();
   }
 
+  handleMergeResponses = () => {
+    this.handleClose();
+    this.state.openMergeResponsesDialog();
+  }
 
   /**
    * Conversion to WEST
@@ -143,6 +147,7 @@ class DisplayRequirementDialog extends React.Component {
       openRenameRequirementDialog: props.handleRenameRequirementDialogOpen,
       openRenameVariableDialog: props.handleRenameVariableDialogOpen,
       openMoveDefinitionDialog : props.handleMoveDefinitionDialogOpen,
+      openMergeResponsesDialog : props.handleMergeResponsesDialogOpen,
     })
   }
 
@@ -287,6 +292,13 @@ class DisplayRequirementDialog extends React.Component {
                 >
                 <ListItemText primary = "Move Definition" />
               </MenuItem>
+
+              <MenuItem
+                onClick={this.handleMergeResponses}
+                dense
+                >
+                <ListItemText primary = "Merge Responses" />
+              </MenuItem>
             </Menu>
           
           <Divider/>
@@ -396,6 +408,7 @@ DisplayRequirementDialog.propTypes = {
   handleRenameRequirementDialogOpen: PropTypes.func.isRequired,
   handleRenameVariableDialogOpen: PropTypes.func.isRequired,
   handleMoveDefinitionDialogOpen: PropTypes.func.isRequired,
+  handleMergeResponsesDialogOpen: PropTypes.func.isRequired,
 };
 
 export default withStyles(styles)(DisplayRequirementDialog);
