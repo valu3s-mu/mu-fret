@@ -83,7 +83,6 @@ class MergeResponsesDialog extends React.Component
     requirements: [],
     refactoringCheckresult: null,
     variableDocs : {},
-    newName: '',
     chosenOriginalName: '',
     listOfTargets: [],
     //Array with the fulltext of the above requirements after the replacement has been done
@@ -92,6 +91,7 @@ class MergeResponsesDialog extends React.Component
     variableErrorMessages: [],
     partnerReq: {},
     newName: "",
+    invalidNewName: false,
     mergedFulltext: "",
   };
 
@@ -119,7 +119,6 @@ class MergeResponsesDialog extends React.Component
       requirements: [],
       refactoringCheckresult: null,
       variableDocs : {},
-      newName: '',
       listOfTargets: [],
       invalidNewName: false,
       dummyUpdatedReqs: [],
@@ -127,6 +126,7 @@ class MergeResponsesDialog extends React.Component
       variableErrorMessages: [],
       partnerReq: {},
       newName: "",
+      invalidNewName: false,
       mergedFulltext: "",
     });
     this.state.dialogCloseListener();
@@ -275,10 +275,11 @@ class MergeResponsesDialog extends React.Component
       }
 
     }
-    this.setState({allVarsDefined : allVarsDefined, variableErrorMessages: variableErrorMessages});
+    let validNewName = this.validRequirementName(this.state.newName);
+    this.setState({allVarsDefined : allVarsDefined, variableErrorMessages: variableErrorMessages, invalidNewName: !validNewName});
 
 
-    if(allVarsDefined){
+    if(allVarsDefined & validNewName){
 
       ipcRenderer.invoke('updateVariableTypes', [this.state.variableDocs, this.state.variables]);
 
@@ -325,6 +326,10 @@ class MergeResponsesDialog extends React.Component
 
   }
 
+  validRequirementName = (reqName) => {
+    const validNameRegex = /^[A-Za-z0-9]([A-Za-z0-9_.-\s])*$/;
+    return(validNameRegex.test(reqName))
+  }
 
 
   render() 
@@ -537,7 +542,9 @@ class MergeResponsesDialog extends React.Component
                 />
               </Grid>
 
-
+              {this.state.invalidNewName == true &&
+              <p style={{ color: "red" }}>Invalid new name; Requirement IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, dots, or spaces</p>
+              }
 
 
               <DialogContentText>

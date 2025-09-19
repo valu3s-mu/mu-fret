@@ -462,10 +462,10 @@ getType = (variableName) =>
             </Grid>
 
             {this.state.invalidUpdatedName == true &&
-              <p style={{ color: "red" }}>Invalid updated name; IDs must start with a letter and include only letters, numbers, and underscores</p>
+              <p style={{ color: "red" }}>Invalid updated name; Requirement IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, dots, or spaces</p>
             }
             {this.state.invalidNewName == true &&
-              <p style={{ color: "red" }}>Invalid new name; IDs must start with a letter and include only letters, numbers, and underscores</p>
+              <p style={{ color: "red" }}>Invalid new name; Requirement IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, dots, or spaces</p>
             }
 
             </DialogContent>

@@ -185,7 +185,7 @@ class RenameRequirementDialog extends React.Component
     let fragmentVariable = this.state.fragmentVariable;//Check if the user wants to rename the variable as well
 
     //                           | Regex for a requirement and a variable | Regex for only a requirement name
-    const validNameRegex = fragmentVariable ? /^[A-Za-z]([A-Za-z0-9_])*$/ : /^[A-Za-z0-9]([A-Za-z0-9_.-])*$/;
+    const validNameRegex = fragmentVariable ? /^[A-Za-z]([A-Za-z0-9_])*$/ : /^[A-Za-z0-9]([A-Za-z0-9_.-\s])*$/;
     let newName = this.state.newName;
     let testResult = validNameRegex.test(newName);
 
@@ -403,7 +403,7 @@ class RenameRequirementDialog extends React.Component
               {this.state.invalidNewName == true &&
                 <p style={{ color: "red" }}>Invalid new name
                   <br/>
-                  Requirement IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, or dots
+                  Requirement IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, dots, or spaces
                   <br/>
                   Variable IDs cannot start with numbers, and cannot include hyphens or dots.
                 </p>
