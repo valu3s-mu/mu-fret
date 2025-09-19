@@ -126,6 +126,11 @@ class DisplayRequirementDialog extends React.Component {
     this.state.openMergeResponsesDialog();
   }
 
+  handleSplitResponse = () => {
+    this.handleClose();
+    this.state.openSplitResponseDialog();
+  }
+
   /**
    * Conversion to WEST
    */
@@ -148,6 +153,7 @@ class DisplayRequirementDialog extends React.Component {
       openRenameVariableDialog: props.handleRenameVariableDialogOpen,
       openMoveDefinitionDialog : props.handleMoveDefinitionDialogOpen,
       openMergeResponsesDialog : props.handleMergeResponsesDialogOpen,
+      openSplitResponseDialog : props.handleSplitResponseDialogOpen,
     })
   }
 
@@ -299,6 +305,13 @@ class DisplayRequirementDialog extends React.Component {
                 >
                 <ListItemText primary = "Merge Responses" />
               </MenuItem>
+
+              <MenuItem
+                onClick={this.handleSplitResponse}
+                dense
+                >
+                <ListItemText primary = "Split Response" />
+              </MenuItem>
             </Menu>
           
           <Divider/>
@@ -409,6 +422,7 @@ DisplayRequirementDialog.propTypes = {
   handleRenameVariableDialogOpen: PropTypes.func.isRequired,
   handleMoveDefinitionDialogOpen: PropTypes.func.isRequired,
   handleMergeResponsesDialogOpen: PropTypes.func.isRequired,
+  handleSplitResponseDialogOpen: PropTypes.func.isRequired,
 };
 
 export default withStyles(styles)(DisplayRequirementDialog);

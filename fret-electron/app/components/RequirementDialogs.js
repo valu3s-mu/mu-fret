@@ -23,6 +23,7 @@ import RenameRequirementDialog from './refactoring/RenameRequirementDialog';
 import RenameVariableDialog from './refactoring/RenameVariableDialog';
 import MoveDefinitionDialog from './refactoring/MoveDefinitionDialog';
 import MergeResponsesDialog from './refactoring/MergeResponsesDialog';
+import SplitResponseDialog from './refactoring/SplitResponseDialog';
 
 
 const styles = theme => ({
@@ -40,6 +41,7 @@ class RequirementDialogs extends React.Component {
     renameVariableDialogOpen: false,
     moveDefinitionDialogOpen: false,
     mergeResponsesDialogOpen: false,
+    splitResponseDialogOpen: false,
   };
 
   constructor(props){
@@ -135,6 +137,13 @@ class RequirementDialogs extends React.Component {
     this.setState({mergeResponsesDialogOpen: false});
   }
 
+  handleSplitResponseDialogOpen = () => {
+    this.setState({splitResponseDialogOpen: true});
+  }
+
+  handleSplitResponseDialogClose = () => {
+    this.setState({splitResponseDialogOpen: false});
+  }
 
   render() {
     const {
@@ -156,6 +165,7 @@ class RequirementDialogs extends React.Component {
           handleRenameVariableDialogOpen={this.handleRenameVariableDialogOpen}
           handleMoveDefinitionDialogOpen={this.handleMoveDefinitionDialogOpen}
           handleMergeResponsesDialogOpen={this.handleMergeResponsesDialogOpen}
+          handleSplitResponseDialogOpen={this.handleSplitResponseDialogOpen}
         />
         <CreateRequirementDialog
           open={this.state.createDialogOpen}
@@ -206,6 +216,12 @@ class RequirementDialogs extends React.Component {
           selectedRequirement={selectedRequirement}
           open={this.state.mergeResponsesDialogOpen}
           handleDialogClose={this.handleMergeResponsesDialogClose}
+          requirements={this.props.requirements}
+        />
+        <SplitResponseDialog
+          selectedRequirement={selectedRequirement}
+          open={this.state.splitResponseDialogOpen}
+          handleDialogClose={this.handleSplitResponseDialogClose}
           requirements={this.props.requirements}
         />
 

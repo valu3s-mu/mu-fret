@@ -351,6 +351,10 @@ ipcMain.handle('mergeResponses', async(evt, args) => {
   return refactoringController.MergeResponses(...args);
 })
 
+ipcMain.handle('splitResponse', async(evt, args) => {
+  return refactoringController.SplitResponse(...args);
+})
+
 
 //Oisín: Added for debugging, since it's impossible to read anything printed from the
 // main process (gets put in the command line rather than the electron console)

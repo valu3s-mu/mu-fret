@@ -114,7 +114,7 @@ function checkInNuSMV (originalReqs, refactoredReqs, variableMap, fragmentName, 
   let r = generateSMV(originalReqs, refactoredReqs, variableMap, fragmentName, n, allRequirements);
   let smvCode = preamble(r.vars, len, fragmentMacro) + r.specs.join('\n') + '\n'; //
 
-  let checkName =  originalReqs[0].reqid;
+  let checkName =  originalReqs[0].reqid.replace(/\s+/g, '');
   
 
   var smvModelFileName = modelFileName + '_' + checkName + '.smv'
@@ -209,14 +209,14 @@ function generateSMV(originalReqs, refactoredReqs, variableMap, fragmentName, n,
       }
     }
 
-    refactoredFTConjunction = newFT + " & ";
+    refactoredFTConjunction += newFT + " & ";
   }
 
   refactoredFTConjunction = refactoredFTConjunction.slice(0, -3);//Cut off the final " & "
 
 
   let variables = getVars(originalReqs, refactoredReqs, variableMap, fragmentName, fragList);
-  let name = originalReqs[0].reqid;
+  let name = originalReqs[0].reqid.replace(/\s+/g, '');
 
   let rawSaltSpec = '(' + originalFTConjunction + ') <-> (' + refactoredFTConjunction + ')';
 

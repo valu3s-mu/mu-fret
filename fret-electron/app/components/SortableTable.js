@@ -54,6 +54,7 @@ import RenameRequirementDialog from './refactoring/RenameRequirementDialog';
 import RenameVariableDialog from './refactoring/RenameVariableDialog';
 import MoveDefinitionDialog from './refactoring/MoveDefinitionDialog';
 import MergeResponsesDialog from './refactoring/MergeResponsesDialog';
+import SplitResponseDialog from './refactoring/SplitResponseDialog';
 
 import SearchSortableTableDialog from './SearchSortableTableDialog';
 
@@ -386,6 +387,7 @@ class SortableTable extends React.Component {
     refactorMenuCurrentN: null,
     moveDefinitionDialogOpen: false,
     mergeResponsesDialogOpen: false,
+    splitResponseDialogOpen: false,
   };
 
   constructor(props){
@@ -821,6 +823,50 @@ class SortableTable extends React.Component {
   handleMergeResponsesDialogClose = () => {
     this.setState({
       mergeResponsesDialogOpen: false
+    });
+  }
+
+
+  handleSplitResponse = (row) => event => {
+    event.stopPropagation();
+
+    if (row.dbkey) {
+      // context isolation
+      // 
+
+      var argList = [row];
+      // ipcRenderer call main with argList and main returns result to update Redux store
+      ipcRenderer.invoke('retrieveRequirement',argList).then((result) => {
+        /*
+        this.props.retrieveRequirement({ type: 'actions/retrieveRequirement',
+                                        //selectedRequirement: result.selectedRequirement,
+                                        }) */
+        this.setState({
+          selectedRequirement: result.doc,
+          splitResponseDialogOpen: true,})        
+      }).catch((err) => {
+        console.log(err);
+      })
+
+    }
+
+    //Oisín: Closes the dropdown menu
+    this.setState({refactorAnchorEl: null, refactorMenuCurrentN: null})
+  }
+
+  //Oisín: This simpler method gets passed to DisplayRequirementDialog to
+  //allow refactoring from there.
+  //(We already know which requirement we want, so we just need to show the
+  // dialog).
+  handleSplitResponsefromDialog = () => {
+    this.setState({
+      splitResponseDialogOpen: true
+    })
+  }
+
+  handleSplitResponseDialogClose = () => {
+    this.setState({
+      splitResponseDialogOpen: false
     });
   }
 
@@ -1288,6 +1334,12 @@ class SortableTable extends React.Component {
                 >
                 <ListItemText primary = "Merge Responses" />
               </MenuItem>
+              <MenuItem
+                onClick={this.handleSplitResponse(refactorMenuCurrentN)}
+                dense
+                >
+                <ListItemText primary = "Split Response" />
+              </MenuItem>
 
             </Menu>
 
@@ -1350,6 +1402,12 @@ class SortableTable extends React.Component {
         handleDialogClose={this.handleMergeResponsesDialogClose}
         requirements={this.props.requirements}
       />
+      <SplitResponseDialog
+        selectedRequirement={this.state.selectedRequirement}
+        open={this.state.splitResponseDialogOpen}
+        handleDialogClose={this.handleSplitResponseDialogClose}
+        requirements={this.props.requirements}
+      />
 
       <DisplayRequirementDialog
         selectedRequirement={this.state.selectedRequirement}
@@ -1365,6 +1423,7 @@ class SortableTable extends React.Component {
         handleRenameVariableDialogOpen={this.handleRenameVariablefromDialog}
         handleMoveDefinitionDialogOpen={this.handleMoveDefinitionfromDialog}
         handleMergeResponsesDialogOpen={this.handleMergeResponsesfromDialog}
+        handleSplitResponseDialogOpen={this.handleSplitResponsefromDialog}
         />
       <CreateRequirementDialog
         open={this.state.createDialogOpen}

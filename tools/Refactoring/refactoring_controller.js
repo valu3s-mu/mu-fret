@@ -725,3 +725,47 @@ function MergeResponses(sourceReq, partnerReq, newName, mergedFulltext, varMap, 
 
 }
 exports.MergeResponses = MergeResponses;
+
+
+
+function SplitResponse(sourceReq, updatedName, updatedDefinition, newRequirementName, newRequirementDefinition, newUUID, varMap, allRequirements)
+{
+
+	//Make updated version of source requirement
+	let dummyUpdatedReq = makeDummyUpdatedReq(sourceReq);
+	dummyUpdatedReq.reqid = updatedName;
+	dummyUpdatedReq.fulltext = updatedDefinition;
+	dummyUpdatedReq.semantics = fretSemantics.compile(updatedDefinition).collectedSemantics;
+
+	//Make new requirement
+	let destinationReq = newRequirement();
+	destinationReq.reqid = newRequirementName;
+	destinationReq._id = newUUID;
+	destinationReq.project = sourceReq.project;
+	destinationReq.rationale = "Split from " + sourceReq.reqid;
+	destinationReq.fulltext = newRequirementDefinition;
+	destinationReq.semantics = fretSemantics.compile(newRequirementDefinition).collectedSemantics;
+
+	let fragmentMacro = "";
+	let result = compare.compareRequirements([sourceReq], [dummyUpdatedReq, destinationReq], varMap, updatedName, fragmentMacro, allRequirements);
+
+	if(!result)
+	{
+		console.log("+++ check failed, aborting +++")
+	}
+
+	if(result){
+		sourceReq.rationale += "\n\nPart of this requirement's response was split into " + newRequirementName;
+
+		sourceReq.reqid = updatedName;
+		sourceReq.fulltext = updatedDefinition;
+		sourceReq.semantics = fretSemantics.compile(updatedDefinition).collectedSemantics;
+
+		model.AddRequirementToDB(sourceReq);
+		model.AddRequirementToDB(destinationReq);
+	}
+
+	return result;
+
+}
+exports.SplitResponse = SplitResponse;
