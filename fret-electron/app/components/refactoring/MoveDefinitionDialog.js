@@ -455,7 +455,7 @@ class MoveDefinitionDialog extends React.Component
               </DialogContentText>
 
 
-              <Grid style={{ textAlign: 'right' }} item xs={3}>
+              <Grid style={{ textAlign: 'left' }} item xs={3}>
                 {reqid}:
               </Grid>
               <Grid item xs={9}>
@@ -470,8 +470,8 @@ class MoveDefinitionDialog extends React.Component
                 />
                   
               </Grid>
-
-              <Grid style={{ textAlign: 'right' }} item xs={3}>
+              <br/>
+              <Grid style={{ textAlign: 'left' }} item xs={3}>
                 {destinationReq.reqid}:
               </Grid>
               <Grid item xs={9}>
@@ -489,7 +489,7 @@ class MoveDefinitionDialog extends React.Component
 
 
 
-
+              <h3>Declare Variable Types</h3>
               <DialogContentText>
                 Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
 

@@ -395,16 +395,16 @@ function InlineRequirement(source, destinationReqs, varMap, allRequirements)
 
 		let destinationText = currentDestination.fulltext;
 
-    let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
+    	let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
 
-    let dummyUpdatedReq = makeDummyUpdatedReq(currentDestination);
-    dummyUpdatedReq.fulltext = inlineResult;
-    let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
+    	let dummyUpdatedReq = makeDummyUpdatedReq(currentDestination);
+    	dummyUpdatedReq.fulltext = inlineResult;
+    	let newDummySemantics = fretSemantics.compile(dummyUpdatedReq.fulltext)
  		dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
 
 
 		let fragmentName = source.reqid;
-  	let fragmentMacro = source.reqid + " := " + source.semantics.pre_condition +";";
+  		let fragmentMacro = source.reqid + " := " + source.semantics.pre_condition +";";
  		result = compare.compareRequirements([currentDestination], [dummyUpdatedReq], varMap, fragmentName, fragmentMacro, allRequirements);
  		console.log("controller, result = " + result);
 
@@ -425,12 +425,12 @@ function InlineRequirement(source, destinationReqs, varMap, allRequirements)
 
 			let destinationText = currentDestination.fulltext;
 
-	    let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
+	    	let inlineResult = destinationText.replace(sourceResponse, sourceCondition);
 
-	    currentDestination.fulltext = inlineResult;
+	    	currentDestination.fulltext = inlineResult;
 
-	    //Recompile the requirement's semantics based on the new text
-	    let newSemantics = fretSemantics.compile(inlineResult);
+	    	//Recompile the requirement's semantics based on the new text
+	    	let newSemantics = fretSemantics.compile(inlineResult);
 			currentDestination.semantics = newSemantics.collectedSemantics;
 
 			//Remove reference to the source fragment from the destination's list of fragments
@@ -564,7 +564,7 @@ function RenameVariable(variableOldName, variableDBID, newVariableName, targetRe
 
 
 		let fragmentName = newVariableName;
-  	let fragmentMacro = newVariableName + " := " + variableOldName +";";
+  		let fragmentMacro = newVariableName + " := " + variableOldName +";";
  		result = compare.compareRequirements([reqDoc], [dummyUpdatedReq], varMap, fragmentName, fragmentMacro, allRequirements);
  		console.log("controller.RenameVariable, result = " + result);
 

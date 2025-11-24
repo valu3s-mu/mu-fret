@@ -120,6 +120,7 @@ class RenameRequirementDialog extends React.Component
       variableDocs : {},
       newName: '',
       invalidNewName: false,
+      renamingVariable: false,
       fragmentVariable: '',
       reqsWithVariable: [],
       dummyUpdatedReqs: [],
@@ -139,13 +140,10 @@ class RenameRequirementDialog extends React.Component
     this.setState({ newName: event.target.value });
   };
 
-  handleVariableRenaming = (fragmentVariable) => event => {
+  updateVariableRenamingStatus = () => event => {
 
-    this.setState({
-      fragmentVariable: fragmentVariable,
-    })
-
-  }
+  this.setState({renamingVariable: event.target.checked});
+};
 
   /**
    * Updates the type of a variable in the states variables map
@@ -182,7 +180,14 @@ class RenameRequirementDialog extends React.Component
   handleInitialOK = () => {
 
     let selectedRequirement = this.state.selectedRequirement;
-    let fragmentVariable = this.state.fragmentVariable;//Check if the user wants to rename the variable as well
+    //let fragmentVariable = this.state.fragmentVariable;
+    //Check if the user wants to rename the variable as well
+    let fragmentVariable = "";
+    if(this.state.renamingVariable){
+      fragmentVariable = selectedRequirement.semantics.post_condition_SMV_pt;
+    }
+
+
 
     //                           | Regex for a requirement and a variable | Regex for only a requirement name
     const validNameRegex = fragmentVariable ? /^[A-Za-z]([A-Za-z0-9_])*$/ : /^[A-Za-z0-9]([A-Za-z0-9_.-\s])*$/;
@@ -251,6 +256,7 @@ class RenameRequirementDialog extends React.Component
       Promise.all([getChildRequirementsPromise, reqsWithVariablePromise]).then((values) => {
         this.setState({
           invalidNewName: false,
+          fragmentVariable: fragmentVariable,
           childRequirements: values[0].docs,
           reqsWithVariable: values[1][0],
           dummyUpdatedReqs: values[1][1],
@@ -365,8 +371,8 @@ class RenameRequirementDialog extends React.Component
           >
             <DialogTitle id="simple-dialog-title">  Rename Requirement: {reqid}</DialogTitle>
 
-            <DialogContent>
-              
+
+            <DialogContent>              
 
               <Grid container spacing={2} direction="row">
 
@@ -410,26 +416,22 @@ class RenameRequirementDialog extends React.Component
               }
 
               {isFragment ? 
-                <DialogContentText>
-                  This is a fragment. Would you like to also rename the corresponding variable, {response}?
-                  
-                  <Button
-                    onClick={this.handleVariableRenaming(response)}
-                    color="secondary"
-                  >
-                    Yes  
-                  </Button>
-
-                </DialogContentText>
+                <Grid container spacing={2}>
+                  <Grid style={{ textAlign: 'left' }} item size={6}>
+                    This is a fragment. Would you like to also rename the corresponding variable, {response}:
+                  </Grid>
+                  <Grid item size={3}>
+                    <Checkbox
+                      inputProps={{ 'aria-label': 'controlled' }}
+                      onChange={this.updateVariableRenamingStatus()}
+                      />
+                  </Grid>
+                </Grid>
                 : 
                 <DialogContentText>
                 This is not a fragment. Don't worry about this for now!
                 </DialogContentText>
               }
-
-
-
-
 
             </DialogContent>
 
@@ -475,20 +477,9 @@ class RenameRequirementDialog extends React.Component
             aria-labelledby="form-dialog-title"
             maxWidth="md"
           >
-            <DialogTitle id="simple-dialog-title">  Rename Requirement: {reqid}</DialogTitle>
+            <DialogTitle id="simple-dialog-title">  Review Changes {fragmentVariable ? "and Variable Types" : ""} for Rename Requirement: {reqid}</DialogTitle>
 
             <DialogContent>
-
-              <DialogContentText>
-                Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
-
-                Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
-
-                Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
-
-                If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
-              </DialogContentText>
-              
 
               <Grid container spacing={2} direction="row">
 
@@ -524,13 +515,13 @@ class RenameRequirementDialog extends React.Component
 
               {/*Displaying any child requirements of the selected requirement, that are going to be updated*/}
               <br/>
-              {childRequirements.length > 0 ? <div>Child requirements to be updated:</div> : <div></div>}
+              {childRequirements.length > 0 ? <h3>Child requirements to be updated:</h3> : <div></div>}
 
               <Grid container spacing={2}>
               {childRequirements.map(req => {
 
                 return(//React yells at you if the items don't have unique keys
-                  <Grid item xs={3} key={req._id}>
+                  <Grid item xs={6} key={req._id}>
                     {req.reqid}
                     <br/>
                     {"Parent: " + req.parent_reqid}
@@ -552,11 +543,11 @@ class RenameRequirementDialog extends React.Component
 
               <br/>
               <br/>
-              {fragmentVariable ? <div>Requirements including the fragment variable:</div> : <div></div>}
+              {fragmentVariable ? <h3>Requirements referencing the fragment variable (after renaming):</h3> : <div></div>}
               <Grid container spacing={2}>
               {dummyUpdatedReqs.map(req => {
                 return(//React yells at you if the items don't have unique keys
-                  <Grid item xs={3} key={req.dbid}>
+                  <Grid item xs={6} key={req.dbid}>
                     {req.reqid}
                     <br/>
                     <TextField
@@ -573,6 +564,22 @@ class RenameRequirementDialog extends React.Component
               )}
               </Grid>
 
+              {fragmentVariable ?
+              <div>
+                <h3>Declare Variable Types</h3>
+                <DialogContentText>
+                  Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
+
+                  Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
+
+                  Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
+
+                  If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
+                </DialogContentText>
+              </div>
+              :
+              <div></div>
+              }
 
               <ul>
               {

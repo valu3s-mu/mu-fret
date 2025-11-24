@@ -300,18 +300,19 @@ class DisplayRequirementDialog extends React.Component {
               </MenuItem>
 
               <MenuItem
+                onClick={this.handleSplitResponse}
+                dense
+                >
+                <ListItemText primary = "Split Response" />
+              </MenuItem>
+
+              <MenuItem
                 onClick={this.handleMergeResponses}
                 dense
                 >
                 <ListItemText primary = "Merge Responses" />
               </MenuItem>
 
-              <MenuItem
-                onClick={this.handleSplitResponse}
-                dense
-                >
-                <ListItemText primary = "Split Response" />
-              </MenuItem>
             </Menu>
           
           <Divider/>

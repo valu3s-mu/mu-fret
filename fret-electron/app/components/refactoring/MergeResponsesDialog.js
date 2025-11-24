@@ -384,7 +384,7 @@ class MergeResponsesDialog extends React.Component
               <ul>
               {isFragment ?
                   <p style={{ color: "red" }}>
-                    WARNING: This appears to be a fragment. Please ensure that there are no other requirements that depend on it before merging.
+                    WARNING: This appears to be a fragment. Please ensure that there are no other requirements that depends on it before merging.
                     You can do so using Inline Requirement.
                   </p>
                 :
@@ -480,12 +480,7 @@ class MergeResponsesDialog extends React.Component
 
             <DialogContent>
 
-              <DialogContentText>
-                Mu-FRET has generated a new requirement that has merged the responses of {reqid} and {partnerReq.reqid}. Please give the requirement a new name (if you wish) and check that the requirement text is correct.
-              </DialogContentText>
-
-
-              <Grid style={{ textAlign: 'right' }} item xs={3}>
+              <Grid style={{ textAlign: 'left' }} item xs={3}>
                 {reqid}:
               </Grid>
               <Grid item xs={9}>
@@ -501,7 +496,7 @@ class MergeResponsesDialog extends React.Component
 
               <br/>
               
-              <Grid style={{ textAlign: 'right' }} item xs={3}>
+              <Grid style={{ textAlign: 'left' }} item xs={3}>
                 {partnerReq.reqid}:
               </Grid>
               <Grid item xs={9}>
@@ -516,15 +511,18 @@ class MergeResponsesDialog extends React.Component
               </Grid>
 
               <br/>
-
-              <Grid style={{ textAlign: 'right' }} item xs={3}>
+              <DialogContentText>
+                Mu-FRET has generated a new requirement that has merged the responses of {reqid} and {partnerReq.reqid}. Please give the requirement a new name (if you wish) and check that the requirement text is correct.
+              </DialogContentText>
+              <Grid style={{ textAlign: 'left' }} item xs={3}>
                 Merged Requirement:
               </Grid>
-              <Grid item xs={9}>
+              <Grid item xs={6}>
                 <TextField
                   id="newReqName"
                   label="New Name"
                   placeholder="Type the name you want to give to the merged requirement"
+                  fullWidth
                   spellCheck="false"
                   value={this.state.newName}
                   onChange={this.updateNewName()}
@@ -546,7 +544,7 @@ class MergeResponsesDialog extends React.Component
               <p style={{ color: "red" }}>Invalid new name; Requirement IDs must start with a letter or number and include only letters, numbers, underscores, hyphens, dots, or spaces</p>
               }
 
-
+              <br/>
               <DialogContentText>
                 Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
 
@@ -604,9 +602,8 @@ class MergeResponsesDialog extends React.Component
             }
             </ul>
 
-
-
             </DialogContent>
+
 
             <DialogActions>
 

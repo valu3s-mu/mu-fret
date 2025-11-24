@@ -327,17 +327,10 @@ class InlineRequirementDialog extends React.Component
           >
             <DialogTitle id="simple-dialog-title">  Inline Requirement: {reqid}</DialogTitle>
 
+
             <DialogContent>
-
-              <DialogContentText>
-                Response: {semantics ? semantics.post_condition_SMV_pt : ""}
-                <br/>
-                {isFragment ? "This is a fragment" : "This is not a fragment"}
-              </DialogContentText>
               
-
               <Grid container spacing={2} direction="row">
-
                 <Grid style={{ textAlign: 'right' }} item xs={3}>
                   Definition:
                 </Grid>
@@ -351,11 +344,9 @@ class InlineRequirementDialog extends React.Component
                     label="Definition"
                     value={fulltext} />
                 </Grid>
-
               </Grid>
 
               {isFragment ? 
-
                 <DialogContentText>
                   This is a fragment. Would you like to inline it in place of the variable {semantics ? semantics.post_condition_SMV_pt : ""}?
                   
@@ -367,7 +358,6 @@ class InlineRequirementDialog extends React.Component
                   </Button>
 
                 </DialogContentText>
-
                 : 
                 <DialogContentText>
                 This is not a fragment. Support coming soon!
@@ -381,7 +371,7 @@ class InlineRequirementDialog extends React.Component
 
                 if(req.doc.reqid != reqid){
                   return(//React yells at you if the items don't have unique keys
-                    <Grid item xs={3} key={req.id}>
+                    <Grid item xs={6} key={req.id}>
                       {req.doc.reqid}
                       <br/>
                       <TextField
@@ -407,9 +397,6 @@ class InlineRequirementDialog extends React.Component
               )}
 
               </Grid>
-
-
-
 
             </DialogContent>
 
@@ -454,19 +441,9 @@ class InlineRequirementDialog extends React.Component
             aria-labelledby="form-dialog-title"
             maxWidth="md"
           >
-            <DialogTitle id="simple-dialog-title">  Inline Requirement: {reqid}</DialogTitle>
+            <DialogTitle id="simple-dialog-title"> Check Types Before Inlining Requirement: {reqid} </DialogTitle>
 
             <DialogContent>
-
-              <DialogContentText>
-                Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
-
-                Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
-
-                Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
-
-                If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
-              </DialogContentText>
               
               {reqid}:
               <TextField
@@ -491,6 +468,15 @@ class InlineRequirementDialog extends React.Component
                 value={inlinedRequirementPlaceholder}
               />
 
+              <DialogContentText>
+                Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
+
+                Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
+
+                Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
+
+                If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
+              </DialogContentText>
 
               <ul>
               {

@@ -509,6 +509,52 @@ getType = (variableName) =>
 
           <DialogContent>
 
+            <Grid spaceing={2}>
+              <Grid item xs={12}>
+                {reqid}, Original Definition:
+              </Grid>
+              <Grid item xs={9}>
+                <TextField
+
+                  multiline
+                  fullWidth
+                  spellCheck="false"
+
+                  value={fulltext} />
+              </Grid>
+            </Grid>
+            <br/>
+            <Grid spaceing={2}>
+              <Grid item xs={3}>
+                {this.state.updatedName}:
+              </Grid>
+              <Grid item xs={9}>
+                <TextField
+
+                  multiline
+                  fullWidth
+                  spellCheck="false"
+
+                  value={this.state.updatedDefinition} />
+              </Grid>
+            </Grid>
+            <br/>
+            <Grid spaceing={2}>
+              <Grid item xs={3}>
+                {this.state.newName}:
+              </Grid>
+              <Grid item xs={9}>
+                <TextField
+
+                  multiline
+                  fullWidth
+                  spellCheck="false"
+
+                  value={this.state.newRequirementDefinition} />
+              </Grid>
+            </Grid>
+
+            <br/>
             <DialogContentText>
             Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
 
@@ -519,87 +565,42 @@ getType = (variableName) =>
             If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
             </DialogContentText>
 
-          <Grid spaceing={2}>
-            <Grid item xs={3}>
-              {reqid} Original Definition:
-            </Grid>
-            <Grid item xs={9}>
-              <TextField
-
-                multiline
-                fullWidth
-                spellCheck="false"
-
-                value={fulltext} />
-            </Grid>
-          </Grid>
-          <br/>
-          <Grid spaceing={2}>
-            <Grid item xs={3}>
-              {this.state.updatedName}:
-            </Grid>
-            <Grid item xs={9}>
-              <TextField
-
-                multiline
-                fullWidth
-                spellCheck="false"
-
-                value={this.state.updatedDefinition} />
-            </Grid>
-          </Grid>
-          <br/>
-          <Grid spaceing={2}>
-            <Grid item xs={3}>
-              {this.state.newName}:
-            </Grid>
-            <Grid item xs={9}>
-              <TextField
-
-                multiline
-                fullWidth
-                spellCheck="false"
-
-                value={this.state.newRequirementDefinition} />
-            </Grid>
-          </Grid>
-
-              <ul>
-              {
-              reqVariables.map(varName =>
-                    (
-                      <li key={varName}>
-                          {varName} :
-                        <Select
-                              labelId={varName}
-                              id={varName}
-                              name = {varName}
-                              onChange={self.handleTypeChange(varName)}
-                              value = {self.getType(varName)}
-                              autoWidth
-                              renderValue={(value) => {
-                           if (unsupported_types.indexOf(value) >= 0) {
-                                  return <div style={{color:'red'}}>{value} <WarningIcon  fontSize="small" /></div> ;
-                          }
-                          else if (value == "unsigned integer")
-                          {
-                            return <div style={{color:'orange'}}>{value} <ErrorOutlineIcon  fontSize="small" /></div> ;
-                          }
-                          else
-                          {
-                              return <div>{value}</div>;
-                          }
-                                }}
-                        >
-                        <MenuItem value={"boolean"}>Boolean</MenuItem>
-                        <MenuItem value={"integer"}>Integer</MenuItem>
-                        <MenuItem value={"undefined"}>Unknown</MenuItem>
-                        </Select>
-                      </li>
-                    )
-                  ,
-                  <Divider variant="inset" component="li" />
-                )
+            <ul>
+            {
+            reqVariables.map(varName =>
+                  (
+                    <li key={varName}>
+                        {varName} :
+                      <Select
+                            labelId={varName}
+                            id={varName}
+                            name = {varName}
+                            onChange={self.handleTypeChange(varName)}
+                            value = {self.getType(varName)}
+                            autoWidth
+                            renderValue={(value) => {
+                         if (unsupported_types.indexOf(value) >= 0) {
+                                return <div style={{color:'red'}}>{value} <WarningIcon  fontSize="small" /></div> ;
+                        }
+                        else if (value == "unsigned integer")
+                        {
+                          return <div style={{color:'orange'}}>{value} <ErrorOutlineIcon  fontSize="small" /></div> ;
+                        }
+                        else
+                        {
+                            return <div>{value}</div>;
+                        }
+                              }}
+                      >
+                      <MenuItem value={"boolean"}>Boolean</MenuItem>
+                      <MenuItem value={"integer"}>Integer</MenuItem>
+                      <MenuItem value={"undefined"}>Unknown</MenuItem>
+                      </Select>
+                    </li>
+                  )
+                ,
+                <Divider variant="inset" component="li" />
+              )
 
             }
             </ul>

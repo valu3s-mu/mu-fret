@@ -444,60 +444,61 @@ getType = (variableName) =>
               Copy the part of {reqid} that you want to extract from its Definition into the Extract field, and add the New Requirement Name. The Apply to all Requirements tick box toggles if the extraction will search for the Extract field in all requirements in this project.
             </DialogContentText>
 
-          <Grid container spacing={2} >
+            <Grid container spacing={2} >
 
-                      <Grid style={{ textAlign: 'right' }} item xs={3}>
-                        Definition:
-                      </Grid>
-                      <Grid item xs={9}>
-                        <TextField
-                          id="definition"
-                          multiline
-                          fullWidth
-                          spellCheck="false"
-                          label="Definition"
-                          value={fulltext} />
-                      </Grid>
+              <Grid style={{ textAlign: 'right' }} item xs={3}>
+                Definition:
+              </Grid>
+              <Grid item xs={9}>
+                <TextField
+                  id="definition"
+                  multiline
+                  fullWidth
+                  spellCheck="false"
+                  label="Definition"
+                  value={fulltext} />
+              </Grid>
 
-                      <Grid style={{ textAlign: 'right' }} item xs={3}>
-                        Extract:
-                      </Grid>
-                      <Grid item xs={9}>
-                        <TextField
-                          id="extract"
-                          multiline
-                          fullWidth
-                          spellCheck="false"
-                          label="Extract"
-                          placeholder="Copy the part of the definition to extract"
-                          value={this.state.extract}
-                          onChange={this.handleChangeExtract()}
-                        />
-                      </Grid>
-                          <Grid style={{ textAlign: 'right' }} item xs={3}>
-                            New Requirement Name:
-                          </Grid>
-                          <Grid item xs={9}>
-                            <TextField
-                              id="newReqName"
-                              label="New Name"
-                              placeholder="Type the name you want to give to the extracted requirement"
-                              spellCheck="false"
-                              value={this.state.newName}
-                              onChange={this.updateNewName()}
-                            />
-                          </Grid>
+              <Grid style={{ textAlign: 'right' }} item xs={3}>
+                Extract:
+              </Grid>
+              <Grid item xs={9}>
+                <TextField
+                  id="extract"
+                  multiline
+                  fullWidth
+                  spellCheck="false"
+                  label="Extract"
+                  placeholder="Copy the part of the definition to extract"
+                  value={this.state.extract}
+                  onChange={this.handleChangeExtract()}
+                />
+              </Grid>
+              <Grid style={{ textAlign: 'right' }} item xs={3}>
+                New Requirement Name:
+              </Grid>
+              <Grid item xs={9}>
+                <TextField
+                  id="newReqName"
+                  label="New Name"
+                  placeholder="Type the name you want to give to the extracted requirement"
+                  spellCheck="false"
+                  value={this.state.newName}
+                  onChange={this.updateNewName()}
+                />
+              </Grid>
 
-                          <Grid style={{ textAlign: 'right' }} item xs={3}>
-                            Apply to all {req_component_name} Requirements in {project}:
-                          </Grid>
-                          <Grid item xs={9}>
-                            <Checkbox
-                              inputProps={{ 'aria-label': 'controlled' }}
-                              onChange={this.updateApplytoAllStatus()}
-                              />
-                          </Grid>
-                    </Grid>
+              <Grid style={{ textAlign: 'right' }} item xs={3}>
+                Apply to all {req_component_name} Requirements in {project}:
+              </Grid>
+              <Grid item xs={9}>
+                <Checkbox
+                  inputProps={{ 'aria-label': 'controlled' }}
+                  onChange={this.updateApplytoAllStatus()}
+                  />
+              </Grid>
+
+            </Grid>
 
             {this.state.invalidNewName == true &&
               <p style={{ color: "red" }}>Invalid new name; IDs must start with a letter and include only letters, numbers, and underscores</p>
@@ -538,8 +539,8 @@ getType = (variableName) =>
       var self = this;
 
       let dialogTitle = this.state.applyToAll ?
-                          "Check Types Before Extracting:" :
-                          "Check Types Before Extracting Requirement:" + reqid;
+                          "Check Types Before Extracting: " :
+                          "Check Types Before Extracting Requirement: " + reqid;
 
      return(
           <Dialog
@@ -558,16 +559,6 @@ getType = (variableName) =>
             {this.state.applyToAll && ("Requirements to be refactored: " + this.state.applicableRequirementsNames)}
             {this.state.applyToAll && <br/>}
 
-            <DialogContentText>
-            Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
-
-            Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
-
-            Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
-
-            If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
-            </DialogContentText>
-
           <Grid spaceing={2}>
             <Grid item xs={3}>
               {reqid} Definition:
@@ -583,45 +574,54 @@ getType = (variableName) =>
             </Grid>
           </Grid>
 
-              <ul>
-              {
-              reqVariables.map(varName =>
-                    (
-                      <li key={varName}>
-                          {varName} :
-                        <Select
-                              labelId={varName}
-                              id={varName}
-                              name = {varName}
-                              onChange={self.handleTypeChange(varName)}
-                              value = {self.getType(varName)}
-                              autoWidth
-                              renderValue={(value) => {
-                           if (unsupported_types.indexOf(value) >= 0) {
-                                  return <div style={{color:'red'}}>{value} <WarningIcon  fontSize="small" /></div> ;
-                          }
-                          else if (value == "unsigned integer")
-                          {
-                            return <div style={{color:'orange'}}>{value} <ErrorOutlineIcon  fontSize="small" /></div> ;
-                          }
-                          else
-                          {
-                              return <div>{value}</div>;
-                          }
-                                }}
-                        >
-                        <MenuItem value={"boolean"}>Boolean</MenuItem>
-                        <MenuItem value={"integer"}>Integer</MenuItem>
-                        <MenuItem value={"undefined"}>Unknown</MenuItem>
-                        </Select>
-                      </li>
-                    )
-                  ,
-                  <Divider variant="inset" component="li" />
-                )
+          <DialogContentText>
+            Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
 
-            }
-            </ul>
+            Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
+
+            Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
+
+            If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
+          </DialogContentText>
+          <ul>
+          {
+          reqVariables.map(varName =>
+                (
+                  <li key={varName}>
+                      {varName} :
+                    <Select
+                          labelId={varName}
+                          id={varName}
+                          name = {varName}
+                          onChange={self.handleTypeChange(varName)}
+                          value = {self.getType(varName)}
+                          autoWidth
+                          renderValue={(value) => {
+                       if (unsupported_types.indexOf(value) >= 0) {
+                              return <div style={{color:'red'}}>{value} <WarningIcon  fontSize="small" /></div> ;
+                      }
+                      else if (value == "unsigned integer")
+                      {
+                        return <div style={{color:'orange'}}>{value} <ErrorOutlineIcon  fontSize="small" /></div> ;
+                      }
+                      else
+                      {
+                          return <div>{value}</div>;
+                      }
+                            }}
+                    >
+                    <MenuItem value={"boolean"}>Boolean</MenuItem>
+                    <MenuItem value={"integer"}>Integer</MenuItem>
+                    <MenuItem value={"undefined"}>Unknown</MenuItem>
+                    </Select>
+                  </li>
+                )
+              ,
+              <Divider variant="inset" component="li" />
+            )
+
+          }
+          </ul>
 
           </DialogContent>
 

@@ -1329,16 +1329,17 @@ class SortableTable extends React.Component {
               </MenuItem>
 
               <MenuItem
-                onClick={this.handleMergeResponses(refactorMenuCurrentN)}
-                dense
-                >
-                <ListItemText primary = "Merge Responses" />
-              </MenuItem>
-              <MenuItem
                 onClick={this.handleSplitResponse(refactorMenuCurrentN)}
                 dense
                 >
                 <ListItemText primary = "Split Response" />
+              </MenuItem>
+
+              <MenuItem
+                onClick={this.handleMergeResponses(refactorMenuCurrentN)}
+                dense
+                >
+                <ListItemText primary = "Merge Responses" />
               </MenuItem>
 
             </Menu>

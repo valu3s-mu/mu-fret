@@ -391,7 +391,8 @@ class RenameVariableDialog extends React.Component
 
               </Grid>
 
-              {isFragment ? 
+              {/*
+                isFragment ? 
 
                 <DialogContentText>
                   This is a fragment. Would you like to also rename the corresponding variable, {semantics ? semantics.post_condition_SMV_pt : ""}?
@@ -409,7 +410,7 @@ class RenameVariableDialog extends React.Component
                 <DialogContentText>
                 This is not a fragment. Don't worry about this for now!
                 </DialogContentText>
-              }
+              */}
 
 
               <Grid container spacing={2}>
@@ -513,27 +514,16 @@ class RenameVariableDialog extends React.Component
             aria-labelledby="form-dialog-title"
             maxWidth="md"
           >
-            <DialogTitle id="simple-dialog-title">  Rename Variable: '{chosenOriginalName}' to '{this.state.newName}'</DialogTitle>
+            <DialogTitle id="simple-dialog-title"> Review Changes and Variable Types for Rename Variable: '{chosenOriginalName}' to '{this.state.newName}'</DialogTitle>
 
             <DialogContent>
 
-              <DialogContentText>
-                Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
 
-                Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
-
-                Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
-
-                If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
-              </DialogContentText>
-
-
+              <h3>Requirements referencing the variable (after renaming):</h3>
               <Grid container spacing={2}>
-
               {dummyUpdatedReqs.map(req => {
-
                 return(//React yells at you if the items don't have unique keys
-                  <Grid item xs={3} key={req.dbid}>
+                  <Grid item xs={6} key={req.dbid}>
                     {req.reqid}
                     <br/>
                     <TextField
@@ -549,9 +539,18 @@ class RenameVariableDialog extends React.Component
                 }
 
               )}
-
               </Grid>
 
+              <h3>Declare Variable Types</h3>
+              <DialogContentText>
+                Please check the variable types listed below. Correct any that are wrong and update any that are "Unknown". Existing variable types are shown in the analysis portal.<br/>
+
+                Mu-FRET will use the Integer type for both signed and Unsigned Integers. If a variable is already set to Unsigned Integer, the list will show a <ErrorOutlineIcon  fontSize="small" /> to warn you. <br/>
+
+                Mu-FRET cannot check Single or Double typed variables, so they must be manually changed to Integers (including any literal values in a requirement, e.g. 2.4). If a variable is already set to Single or Double, then the list will show a <WarningIcon  fontSize="small" /> to warn you. <br/>
+
+                If any variables are left with Unknown, Single, or Double type, pressing OK will provide a warning. You will not be able to proceed with the refactoring until the types are changed.
+              </DialogContentText>
 
               <ul>
               {
