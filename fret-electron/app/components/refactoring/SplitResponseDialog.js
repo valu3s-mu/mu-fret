@@ -657,10 +657,10 @@ getType = (variableName) =>
         </DialogTitle>
           <DialogContent>
             <DialogContentText>
-              The checks have failed and the refactoring was not performed. Please Close this dialogue, review the types and part of the requirement you were trying to extract, and try again.
+              The checks have failed and the refactoring was not performed. Please Close this dialogue, review the variable types and the compatibility of the requirements, and try again.
             </DialogContentText>
             <CancelIcon/> The check failed, the original and new requirement behave differently.
-            Result: {this.state.refactoringCheckresult}
+            Check result: {this.state.refactoringCheckresult}
           </DialogContent>
           <DialogActions>
           <Button onClick={this.handleClose} color="secondary">

@@ -173,11 +173,6 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 		//req.fulltext = reqBackup;
 	}
 
-	console.log(req);
-
-
-	console.log(destinationReq);
-
 	//Matt: This is empty if the check fails. I'm expecting NuSMV to return some information if the check fails,
  	// but it seems to not, because boolResults in callNuSMV is empty... This, in turn, means that the 
  	// dialogue has nothing to show.
