@@ -182,12 +182,13 @@ class MergeResponsesDialog extends React.Component
   getPossibleTargetRequirements = () => {
     let {requirements, selectedRequirement} = this.state;
     let project = selectedRequirement.project;
+    let component = selectedRequirement.semantics.component;
 
     let listOfTargets = [];
 
     for (let i = 0; i < requirements.length; i++){
       let doc = requirements[i].doc;
-      if (doc.project==project){
+      if (doc.project==project && doc.semantics.component==component){
         listOfTargets.push(doc);
       }
     }
@@ -363,7 +364,7 @@ class MergeResponsesDialog extends React.Component
             <DialogContent>
               
 
-              <Grid container spacing={2} direction="row">
+              <Grid container spacing={2}>
 
                 <Grid style={{ textAlign: 'right' }} item xs={3}>
                   {reqid}
@@ -406,7 +407,7 @@ class MergeResponsesDialog extends React.Component
               {listOfTargets.map(req => {
                 if(req.reqid != reqid){
                   return(//React yells at you if the items don't have unique keys
-                    <Grid item xs={3} key={req._id}>
+                    <Grid item xs={6} key={req._id}>
                       {req.reqid}
                       <br/>
                       <TextField
