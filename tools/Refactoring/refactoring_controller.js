@@ -1,7 +1,7 @@
 /**
 * Controller code for the refactoring module backend
 * @module Refactoring/refactoring_controller
-* @author Matt Luckcuck 
+* @author Matt Luckcuck and Oisín Sheriden
 * 2022,2025
 */
 
@@ -156,13 +156,15 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 		// Replace fragment in original requirement with reference to new requirement
 		model.ReplaceFragment(req, fragment, fretishDestinationName);
 
+		//Oisín: Recompile the semantics for the source requirement
+		let recompiledSemantics = fretSemantics.compile(req.fulltext);
+		req.semantics = recompiledSemantics.collectedSemantics;
 
 		model.AddRequirementToDB(req);
 
-	 // Adding extracted requirement
-		 model.AddRequirementToDB(destinationReq);
-
-		 model.UpdateFragmentVariable(fretishDestinationName, component, req.project)
+	 	// Adding extracted requirement
+		model.AddRequirementToDB(destinationReq);
+		model.UpdateFragmentVariable(fretishDestinationName, component, req.project, [req._id, newReq._id])
 	}
 	else
 	{
@@ -300,6 +302,8 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 		}
 
+		let dbIDList = [newReq._id]
+
 		if(result)
 		{
 			console.log("+++ adding requirements to the database +++")
@@ -311,16 +315,21 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 				kreq.fragments = [destinationReq.reqid]
 				model.ReplaceFragment(kreq, fragment, fretishDestinationName);
+
+				let recompiledSemantics = fretSemantics.compile(kreq.fulltext);
+				kreq.semantics = recompiledSemantics.collectedSemantics;
+				dbIDList.concat(kreq._id);
+
 				model.AddRequirementToDB(kreq);
 
 			}
 
 			console.log("+++ Adding Extracted Requirement +++")
-		// Adding extracted requirement
+			// Adding extracted requirement
 			model.AddRequirementToDB(destinationReq);
 
 		}
-		 model.UpdateFragmentVariable(fretishDestinationName, component, req.project)
+		model.UpdateFragmentVariable(fretishDestinationName, component, req.project, dbIDList);
 	}
 	return result;
 }

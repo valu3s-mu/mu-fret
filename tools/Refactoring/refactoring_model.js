@@ -1,7 +1,7 @@
 /**
 * Model (lower-level and database) functions for the refactoring module's backend
 * @module Refactoring/refactoring_model
-* @author Matt Luckcuck 
+* @author Matt Luckcuck  and Oisín Sheriden
 * 2022
 */
 
@@ -16,13 +16,14 @@ const modeldb = require('electron').remote.getGlobal('sharedObj').modeldb;
 /**
  * Updates the database entry for the new variable that represents the
  * 'call' to the newly created requirement. Sets the variable, fragmentName,
- * to be a boolean and adds a description for traceing. 
+ * to be a boolean and adds a description for tracing. 
 
  * @param {String?} fragmentName 
  * @param {String?} component 
  * @param {String?} project 
+ * @param {Array<String>} dbIDList List of the database IDs for all the requirements now containing the variable (including the new fragment)
  */
-export function UpdateFragmentVariable(fragmentName, component, project)
+export function UpdateFragmentVariable(fragmentName, component, project, dbIDList)
 {
   //This feels kinda hacky, but it seems to work ok.
   console.log("Update Fragement Variable")
@@ -30,13 +31,24 @@ export function UpdateFragmentVariable(fragmentName, component, project)
   console.log("2 -> " + component)
   console.log("3 -> " + project)
 
+  // Updated from Oisín's fix but removed the data type to make it work with what I had
   var doc = {
-    _id : project+component+fragmentName,
-    variable_name : fragmentName,
-    project : project,
-    component_name	: component,
+    _id: project+component+fragmentName,
+    project: project,
+    component_name: component,
+    variable_name: fragmentName,
+    reqs: [dbIDList],    
     description : "Variable Type added by Mu-FRET Refactoring Dialogue. (refactoring_model.UpdateFragmentVariable())",
-    dataType : "boolean"
+    idType: '',
+    moduleName:'',
+    description: '',
+    assignment: '',
+    copilotAssignment: '',
+    modeRequirement: '',
+    modeldoc: false,
+    modelComponent: '', //Oisín: Making this just be blank for now, hopefully that's fine (it seems to try and get copied from somewhere in modelDBSetters, but just ends up blank anyway)
+    modeldoc_id: '',
+    completed: false,
    }
 
 
