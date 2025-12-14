@@ -164,7 +164,7 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 
 	 	// Adding extracted requirement
 		model.AddRequirementToDB(destinationReq);
-		model.UpdateFragmentVariable(fretishDestinationName, component, req.project, [req._id, newReq._id])
+		model.UpdateFragmentVariable(fretishDestinationName, component, req.project, [req._id, destinationReq._id])
 	}
 	else
 	{
@@ -302,7 +302,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 
 		}
 
-		let dbIDList = [newReq._id]
+		let dbIDList = [destinationReq._id]
 
 		if(result)
 		{
