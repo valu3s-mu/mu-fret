@@ -1,7 +1,7 @@
 {
   "name": "fret",
   "productName": "MU-FRET",
-  "version": "2.2.2-mu.fret",
+  "version": "2.2.3-mu.fret",
   "description": "MU-FRET",
   "scripts": {
     "build": "concurrently \"npm run build-main\" \"npm run build-renderer\"",
@@ -82,7 +82,7 @@
     "url": "https://github.com/valu3s-mu/mu-fret"
   },
   "author": {
-    "name": "Matt Luckcuck",
+    "name": "Matt Luckcuck and Oisín Sheriden",
     "email": "",
     "url": ""
   },
