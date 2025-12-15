@@ -112,7 +112,8 @@ function checkInNuSMV (originalReq, originalReqVars, newReq, destinationReq, len
   console.log("checkInNuSMV allRequirements -> ");
   console.log(allRequirements);
   let r = generateSMV(originalReq, originalReqVars, newReq, destinationReq, n, allRequirements);
-  fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";"
+  let preCondition = destinationReq.semantics.pre_condition.replaceAll("=>","->");
+  fragmentMacro = destinationReq.reqid + " := " + preCondition +";"
   let smvCode = preamble(r.vars, len, fragmentMacro) + r.specs.join('\n') + '\n'; //
 
   let checkName =  originalReq.reqid;
