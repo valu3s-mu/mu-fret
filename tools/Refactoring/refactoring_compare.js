@@ -112,7 +112,7 @@ function checkInNuSMV (originalReqs, refactoredReqs, variableMap, fragmentName, 
 {
   
   let r = generateSMV(originalReqs, refactoredReqs, variableMap, fragmentName, n, allRequirements);
-  let smvCode = preamble(r.vars, len, fragmentMacro) + r.specs.join('\n') + '\n'; //
+  let smvCode = preamble(r.vars, len, fragmentMacro.replace("=>", "->") ) + r.specs.join('\n') + '\n'; //
 
   let checkName =  originalReqs[0].reqid.replace(/\s+/g, '');
   

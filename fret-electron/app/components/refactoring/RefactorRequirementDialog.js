@@ -107,6 +107,8 @@ class RefactorRequirementDialog extends React.Component
     applicableRequirementsNames: "",
     //Variable for an invalid entered name
     invalidNewName: false,
+    allVarsDefined: true,
+    variableErrorMessages: [],
   };
 
   componentWillReceiveProps = (props) => {
@@ -131,7 +133,21 @@ class RefactorRequirementDialog extends React.Component
    */
   handleClose = () => {
     // Reset the state
-    this.setState({ open: false, dialogState: STATE.INITIAL, selectedRequirement: {}, requirements: [], refactoringCheckresult: null, applyToAll: false, newName: '', fragmentNotFoundinSelected: false, fragmentNotFoundinAll: false, applicableRequirementsNames: "", invalidNewName: false});
+    this.setState({ 
+      open: false, 
+      dialogState: STATE.INITIAL, 
+      selectedRequirement: {}, 
+      requirements: [], 
+      refactoringCheckresult: null, 
+      applyToAll: false, 
+      newName: '', 
+      fragmentNotFoundinSelected: false, 
+      fragmentNotFoundinAll: false, 
+      applicableRequirementsNames: "", 
+      invalidNewName: false,
+      allVarsDefined: true,
+      variableErrorMessages: [],
+    });
     this.state.dialogCloseListener();
   };
 
@@ -279,14 +295,14 @@ fragmentInCurrent = () => {
 * Event Handler for the OK Button on the types dialogue
 * Calls the requested extract requirement method
 */
-handleOk = () => {
+handleTypesOK = () => {
   var newID = uuidv1();
-  var result;
-  var varTypeMap = this.state.variables;
+  let varTypeMap = this.state.variables;
 
 
-  var undefinedVars = []
-  var allVarsDefined = true; // we assume, but...
+  let undefinedVars = []
+  let allVarsDefined = true; // we assume, but...
+  let variableErrorMessages = [];
   //Check for unsupported variables
   for (const variable of varTypeMap)
   {
@@ -294,11 +310,15 @@ handleOk = () => {
     // If the variable's type is one we don't support
     {
       allVarsDefined = false;
+      undefinedVars.push(variable);
+
       console.log("Error - " + variable[0] + " is undefined. Please update its type and try again.");
-      undefinedVars.push(variable)
+      variableErrorMessages.push("Error - " + variable[0] + " is undefined. Please update its type and try again.");
     }
 
   }
+  this.setState({allVarsDefined : allVarsDefined, variableErrorMessages: variableErrorMessages});
+
 
   if(allVarsDefined)
   {
@@ -344,11 +364,8 @@ handleOk = () => {
     })
 
   }
-  else
-  {
-    this.setState({dialogState : STATE.ERROR_UNDEF, undefinedVariables : undefinedVars });
-    return;
-  }
+  //We don't need an else statement, because if any variables are undefined, we will stay on the TYPES screen and any error messages will
+  //be displayed at the bottom of the dialog.
 
 };
 
@@ -536,6 +553,8 @@ getType = (variableName) =>
         reqVariables.push(key);
       })
 
+      let {allVarsDefined, variableErrorMessages} = this.state;
+
       var self = this;
 
       let dialogTitle = this.state.applyToAll ?
@@ -623,10 +642,19 @@ getType = (variableName) =>
           }
           </ul>
 
+           <ul>
+            {variableErrorMessages.map(message => (
+                <li key = {message}>
+                <p style={{ color: "red" }}>{message}</p>
+                </li>
+              ))
+            }
+            </ul>
+
           </DialogContent>
 
           <DialogActions>
-            <Button   onClick={this.handleOk} color="secondary">
+            <Button   onClick={this.handleTypesOK} color="secondary">
               Ok
             </Button>
           </DialogActions>

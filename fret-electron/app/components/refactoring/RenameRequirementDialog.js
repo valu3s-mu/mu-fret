@@ -99,7 +99,8 @@ class RenameRequirementDialog extends React.Component
       selectedRequirement: props.selectedRequirement,
       open: props.open,
       dialogCloseListener: props.handleDialogClose,
-      requirements: props.requirements
+      requirements: props.requirements,
+      newName: props.selectedRequirement.reqid,
     });
   }
 
