@@ -304,9 +304,9 @@ class InlineRequirementDialog extends React.Component
   {
   
 
-    var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext, _id } = this.state.selectedRequirement
+    var { project, reqid, parent_reqid, rationale, ltl, semantics, fulltext, _id } = this.state.selectedRequirement;
 
-    var isFragment = (this.state.selectedRequirement.isFragment | (rationale && rationale.includes("EXTRACT REQUIREMENT: ") ))
+    var isFragment = (this.state.selectedRequirement.isFragment | (rationale && rationale.includes("EXTRACT REQUIREMENT: ") ));
     var requirementsWithResponse = this.state.requirementsWithResponse;
 
     var dialog_state = this.state.dialogState;

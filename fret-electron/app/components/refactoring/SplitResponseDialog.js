@@ -110,7 +110,7 @@ class SplitResponseDialog extends React.Component
   }
 
   cutOffResponse = (requirement) => {
-    if (requirement.semantics){
+    if (requirement.semantics && requirement.semantics.responseTextRange){
       let responseStart = requirement.semantics.responseTextRange[0] + 7;
       let result = requirement.fulltext.substring(0, responseStart);
       return result;
@@ -540,7 +540,7 @@ getType = (variableName) =>
                   value={fulltext} />
               </Grid>
             </Grid>
-            <br/>
+            <h3>Requirements after refactoring:</h3>
             <Grid spaceing={2}>
               <Grid item xs={3}>
                 {this.state.updatedName}:

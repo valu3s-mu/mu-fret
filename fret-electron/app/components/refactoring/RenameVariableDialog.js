@@ -412,7 +412,7 @@ class RenameVariableDialog extends React.Component
                 </DialogContentText>
               */}
 
-
+              <h3>Choose a variable to rename:</h3>
               <Grid container spacing={2}>
 
               {//Populates the grid with the variables from the chosen requirement, each having a button to choose that one for renaming.

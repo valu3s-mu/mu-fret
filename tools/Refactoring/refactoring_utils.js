@@ -47,6 +47,8 @@ exports.getVariableNames = function getVariableNames(requirement)
 exports.replaceVariableName = function replaceVariableName(requirement, chosenOriginalName, newName){
   
   let simpleReplaceRegexString = "(?<=^|[^A-Za-z0-9_.%])" + chosenOriginalName + "(?=$|[^A-Za-z0-9_.%])";
+  //"(?<=^|[^A-Za-z0-9_.%])" means chosenOriginalName must be preceded by the beginning of input (^) or *not* any of the listed characters
+  //"(?=$|[^A-Za-z0-9_.%])" means chosenOriginalName must be followed by the end of input ($) or *not* any of the listed characters
   const simpleReplaceRegex = new RegExp(simpleReplaceRegexString);
 
   let reqFulltext = requirement.doc ? requirement.doc.fulltext : requirement.fulltext;//Just in case I get inconsistent with how this gets passed in

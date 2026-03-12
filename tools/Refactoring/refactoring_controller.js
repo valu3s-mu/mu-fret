@@ -73,8 +73,6 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 {
 	console.log("Extract One");
 
-	let dummyUpdatedReq = makeDummyUpdatedReq(req);
-
 
 
 	// Ramos Step 1: Make New requirement
@@ -100,22 +98,23 @@ function extractRequirement(req, reqVars, fragment, destinationName, newID, allR
 
 
 	// Step 2
-  // Build new fretish requirement
+	// Build new fretish requirement
 	let component = req.semantics.component_name;
 
-
-  // New fretish requirement
+	// New fretish requirement
 	let newFretish = "whenever " + fragment + " " + component + " shall at the same timepoint satisfy " + fretishDestinationName;
 
-	 destinationReq.fulltext = newFretish;
-	 // Compile the new semantics and add to the new req
-	 let newSemantics = fretSemantics.compile(newFretish);
-	 destinationReq.semantics = newSemantics.collectedSemantics;
-	 console.log("destinationReq's semantics = ...");
- 	 console.log(destinationReq.semantics);
+	destinationReq.fulltext = newFretish;
+	// Compile the new semantics and add to the new req
+	let newSemantics = fretSemantics.compile(newFretish);
+	destinationReq.semantics = newSemantics.collectedSemantics;
+	console.log("destinationReq's semantics = ...");
+	console.log(destinationReq.semantics);
+
 
 	// Step 3
-
+	let dummyUpdatedReq = makeDummyUpdatedReq(req);
+	
 	// Dummy Run on the Dummy Req
 	model.ReplaceFragment(dummyUpdatedReq, fragment, fretishDestinationName);
 
@@ -219,23 +218,23 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 	destinationReq.rationale = "EXTRACT REQUIREMENT: extracted " + fragment + " from " + req.reqid;
 
 	// Step 2
-  // Build new fretish requirement
+  	// Build new fretish requirement
 	let component = req.semantics.component_name;
 
-  // New fretish requirement
+  	// New fretish requirement
 	let newFretish = "whenever " + fragment + " " + component + " shall at the same timepoint satisfy " + fretishDestinationName;
 
-	 destinationReq.fulltext = newFretish;
-	 // Compile the new semantics and add to the new req
-	 let newSemantics = fretSemantics.compile(newFretish)
-	 destinationReq.semantics = newSemantics.collectedSemantics;
+	destinationReq.fulltext = newFretish;
+	// Compile the new semantics and add to the new req
+	let newSemantics = fretSemantics.compile(newFretish)
+	destinationReq.semantics = newSemantics.collectedSemantics;
 
 	console.log("Made New Requirement")
 	console.log(destinationReq);
 
 	console.log("knockons");
-  // Do the thing
-  // Similar to this method, but the destination requirement already exists.
+  	// Do the thing
+  	// Similar to this method, but the destination requirement already exists.
 
 	let reqKnockons = exports.requirementsWithFragment(allRequirements, req, fragment, fretishDestinationName);
 
@@ -278,7 +277,7 @@ function extractRequirement_ApplyAll(req, reqVars, fragment,  destinationName, n
 			// then `reqvars` will contain all the variables (and types) for all the requirements that
 			// contain the fragment being extracted.
 			let fragmentName = destinationReq.reqid;
-  		let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
+  			let fragmentMacro = destinationReq.reqid + " := " + destinationReq.semantics.pre_condition +";";
 			result = compare.compareRequirements([kreq], [dummyUpdatedReq], reqVars, fragmentName, fragmentMacro, allRequirements);
 			console.log("controller, result = " + result);
 
@@ -398,8 +397,8 @@ function InlineRequirement(source, destinationReqs, varMap, allRequirements)
  		dummyUpdatedReq.semantics = newDummySemantics.collectedSemantics;
 
 
-		let fragmentName = source.reqid;
-  		let fragmentMacro = source.reqid + " := " + source.semantics.pre_condition +";";
+		let fragmentName = sourceResponse;
+  		let fragmentMacro = fragmentName + " := " + source.semantics.pre_condition +";";
  		result = compare.compareRequirements([currentDestination], [dummyUpdatedReq], varMap, fragmentName, fragmentMacro, allRequirements);
  		console.log("controller, result = " + result);
 
@@ -539,6 +538,8 @@ exports.RenameRequirement = RenameRequirement;
  * @param {String} variableDBID the chosen variable's database ID, of the form Project+Component+variableOldName
  * @param {String} newVariableName the new name entered by the user
  * @param {Array<Object>} targetRequirements an array of the JSONs of all the requirements that contain the chosen variable
+ * @param {Map<String, String>} varMap map of the requirements' variables mapped to their types
+ * @param {Array<Object>} allRequirements List of all the other requirements in the project, which is used for the NuSMV check(s)
  * @returns {Boolean} True
  */
 function RenameVariable(variableOldName, variableDBID, newVariableName, targetRequirements, varMap, allRequirements)

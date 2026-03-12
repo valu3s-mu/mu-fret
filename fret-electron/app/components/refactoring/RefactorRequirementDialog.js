@@ -207,7 +207,7 @@ handleInitialOK = () =>
     if(this.fragmentInCurrent() == false){
       this.setState({fragmentNotFoundinSelected: true});
     }else{
-      let selectedRequirement = this.state.selectedRequirement
+      let selectedRequirement = this.state.selectedRequirement;
       let varList = RefactoringUtils.getVariableNames(selectedRequirement);
 
       let args = [selectedRequirement.project, varList];
@@ -246,7 +246,7 @@ handleInitialOK = () =>
           let this_req = applicableRequirements[i];
           // Get the variable names embedded in this requirement...
           let varNames = RefactoringUtils.getVariableNames(this_req);
-          let newVarList = varList.concat(varNames); // Javascript is a silly language
+          let newVarList = varList.concat(varNames); // Matt: Javascript is a silly language
           varList = newVarList;
 
           //Oisín: Add the requirement names to a list, so we can display them to the user
@@ -548,7 +548,7 @@ getType = (variableName) =>
       case STATE.TYPES:
 
 
-      let reqVariables = []
+      let reqVariables = [];
       this.state.variables.forEach (function(value, key) {
         reqVariables.push(key);
       })
