@@ -1,7 +1,7 @@
 /**
 * Dialog component for refactoring, based on existing FRET Code.
 *
-* @module refactoring/RefactorRequirementDialog
+* @module refactoring/ExtractRequirementDialog
 * @author Matt Luckcuck 
 * Started: May 2022
 */
@@ -86,7 +86,7 @@ const styles = theme => ({
  * 
  * @extends React.Component
  */
-class RefactorRequirementDialog extends React.Component 
+class ExtractRequirementDialog extends React.Component 
 {
   state = {
     open: false,
@@ -123,9 +123,9 @@ class RefactorRequirementDialog extends React.Component
   /**
    * Opens the refactor requirements dialogue
    */
-  handleRefactorRequirement = () => {
+  handleExtractRequirement = () => {
     this.handleClose();
-    this.state.openRefactorDialog();
+    this.state.openExtractDialog();
   }
 
   /**
@@ -758,7 +758,7 @@ getType = (variableName) =>
 }
 }
 
-RefactorRequirementDialog.propTypes = {
+ExtractRequirementDialog.propTypes = {
   selectedRequirement: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
   handleDialogClose: PropTypes.func.isRequired,
@@ -776,4 +776,4 @@ const mapDispatchToProps = {
 };
 
 export default withStyles(styles)
-  (connect(mapStateToProps,mapDispatchToProps)(RefactorRequirementDialog));
+  (connect(mapStateToProps,mapDispatchToProps)(ExtractRequirementDialog));

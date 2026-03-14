@@ -46,7 +46,7 @@ import DisplayRequirementDialog from './DisplayRequirementDialog';
 import CreateRequirementDialog from './CreateRequirementDialog';
 import DeleteRequirementDialog from './DeleteRequirementDialog';
 
-import RefactorRequirementDialog from './refactoring/RefactorRequirementDialog';
+import ExtractRequirementDialog from './refactoring/ExtractRequirementDialog';
 import BuildIcon from '@material-ui/icons/Build';
 
 import InlineRequirementDialog from './refactoring/InlineRequirementDialog';
@@ -373,7 +373,7 @@ class SortableTable extends React.Component {
     selectedProject: 'All Projects',
     bulkChangeMode: false,
     deleteUsingCheckBoxes: false,
-    refactorDialogOpen: false,
+    extractDialogOpen: false,
     inlineDialogOpen: false,
     renameRequirementDialogOpen: false,
     renameVariableDialogOpen: false,
@@ -559,7 +559,7 @@ class SortableTable extends React.Component {
     });
   }
 
-  handleRefactorRequirement = (row) => event => {
+  handleExtractRequirement = (row) => event => {
     event.stopPropagation();
 
     //Oisín: this is pretty much just copied from handleRequirementDialogOpen, as the old version was
@@ -576,7 +576,7 @@ class SortableTable extends React.Component {
                                         }) */
         this.setState({
           selectedRequirement: result.doc,
-          refactorDialogOpen: true,})        
+          extractDialogOpen: true,})        
       }).catch((err) => {
         console.log(err);
       })
@@ -587,7 +587,7 @@ class SortableTable extends React.Component {
     this.setState({refactorAnchorEl: null, refactorMenuCurrentN: null})
 
     // this.setState({
-    //  refactorDialogOpen: true,
+    //  extractDialogOpen: true,
     //  selectedRequirement: selectedReqId,
     //  parentProject: parentProject
     // });
@@ -597,15 +597,15 @@ class SortableTable extends React.Component {
   //allow refactoring from there.
   //(We already know which requirement we want, so we just need to show the
   // refactoring dialog).
-  handleRefactorfromDialog = () => {
+  handleExtractfromDialog = () => {
     this.setState({
-      refactorDialogOpen: true
+      extractDialogOpen: true
     })
   }
 
-  handleRefactorDialogClose = () => {
+  handleExtractDialogClose = () => {
     this.setState({
-      refactorDialogOpen: false
+      extractDialogOpen: false
     });
   }
 
@@ -1294,7 +1294,7 @@ class SortableTable extends React.Component {
               onClose={this.handleRefactorMenuClose}
             >
               <MenuItem
-                onClick={this.handleRefactorRequirement(refactorMenuCurrentN)}
+                onClick={this.handleExtractRequirement(refactorMenuCurrentN)}
                 dense
                 >
                 <ListItemText primary = "Extract Requirement" />
@@ -1363,10 +1363,10 @@ class SortableTable extends React.Component {
         />
       </Paper>
 
-      <RefactorRequirementDialog
+      <ExtractRequirementDialog
         selectedRequirement={this.state.selectedRequirement}
-        open={this.state.refactorDialogOpen}
-        handleDialogClose={this.handleRefactorDialogClose}
+        open={this.state.extractDialogOpen}
+        handleDialogClose={this.handleExtractDialogClose}
         requirements={this.props.requirements}
       />
 
@@ -1418,7 +1418,7 @@ class SortableTable extends React.Component {
         handleDeleteDialogClose={this.handleDeleteDialogClose}
         handleDeleteDialogOpen={this.handleDeleteDialogOpen}
         //Oisín: added this so we can refactor straight from the dialog
-        handleRefactorDialogOpen={this.handleRefactorfromDialog}
+        handleExtractDialogOpen={this.handleExtractfromDialog}
         handleInlineDialogOpen={this.handleInlinefromDialog}
         handleRenameRequirementDialogOpen={this.handleRenameRequirementfromDialog}
         handleRenameVariableDialogOpen={this.handleRenameVariablefromDialog}

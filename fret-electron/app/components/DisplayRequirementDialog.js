@@ -90,9 +90,9 @@ class DisplayRequirementDialog extends React.Component {
     this.setState({refactorAnchorEl: null});
   };
 
-  handleRefactorRequirement = () => {
+  handleExtractRequirement = () => {
     this.handleClose();
-    this.state.openRefactorDialog();
+    this.state.openExtractDialog();
     //Oisín: I don't think there's any actual need to set the function to a state variable
     //(calling it as a prop seems to work fine), but I think it's best to follow
     //the existing format
@@ -147,7 +147,7 @@ class DisplayRequirementDialog extends React.Component {
       dialogCloseListener : props.handleDialogClose,
       openCreateDialog: props.handleCreateDialogOpen,
       openDeleteDialog: props.handleDeleteDialogOpen,
-      openRefactorDialog: props.handleRefactorDialogOpen,
+      openExtractDialog: props.handleExtractDialogOpen,
       openInlineDialog: props.handleInlineDialogOpen,
       openRenameRequirementDialog: props.handleRenameRequirementDialogOpen,
       openRenameVariableDialog: props.handleRenameVariableDialogOpen,
@@ -265,7 +265,7 @@ class DisplayRequirementDialog extends React.Component {
               onClose={this.handleRefactorMenuClose}
             >
               <MenuItem
-                onClick={this.handleRefactorRequirement}
+                onClick={this.handleExtractRequirement}
                 dense
                 >
                 <ListItemText primary = "Extract Requirement" />
@@ -417,7 +417,7 @@ DisplayRequirementDialog.propTypes = {
   handleDialogClose: PropTypes.func.isRequired,
   handleCreateDialogOpen: PropTypes.func.isRequired,
   handleDeleteDialogOpen: PropTypes.func.isRequired,
-  handleRefactorDialogOpen: PropTypes.func.isRequired,
+  handleExtractDialogOpen: PropTypes.func.isRequired,
   handleInlineDialogOpen: PropTypes.func.isRequired,
   handleRenameRequirementDialogOpen: PropTypes.func.isRequired,
   handleRenameVariableDialogOpen: PropTypes.func.isRequired,
